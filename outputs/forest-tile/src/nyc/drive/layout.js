@@ -8,12 +8,12 @@
 export const G=.12;              // street level (top of the land)
 export const CURB=.25;           // sidewalks stand this high above the street
 // Road cross section (each side of the centre line, about 1.5 m per unit):
-// double yellow centre line, a travel lane (centre 2.5 from the middle, 3.7 m
-// wide), a solid white edge line at 3.85, a parking lane (centre 4.75), the curb
-// at 6. An 18 m carriageway between curbs, as on a Manhattan street.
+// double yellow centre line, a travel lane (5.8 m wide, its centre halfway
+// between the yellow and the white line), a solid white edge line at 3.85, a
+// parking lane (centre 4.75), the curb at 6. An 18 m carriageway between curbs.
 export const HALF=6;             // centre line to curb
-export const LANE=2.5;           // travel lane centre
 export const EDGE=3.85;          // white edge line between travel and parking lanes
+export const LANE=EDGE/2;        // travel lane centre: arrows, traffic and the car sit mid lane
 export const PARK=4.75;          // parking lane centre
 export const WALK=2.6;           // sidewalk width inside each block
 

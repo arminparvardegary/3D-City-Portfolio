@@ -1,6 +1,6 @@
 import './style.css';
 import * as THREE from 'three';
-import { EffectComposer, RenderPass, EffectPass, ToneMappingEffect, ToneMappingMode, HueSaturationEffect } from 'postprocessing';
+import { EffectComposer, RenderPass, EffectPass, ToneMappingEffect, ToneMappingMode, HueSaturationEffect, BloomEffect } from 'postprocessing';
 import { N8AOPostPass } from 'n8ao';
 import { ART, TILE_SPEC } from './config.js';
 import { createMaterials } from './materials.js';
@@ -107,13 +107,16 @@ const toneMapping=new ToneMappingEffect({mode:ToneMappingMode.NEUTRAL});
 // effect here pushed the darkest shadows below zero, which tone mapping turned
 // white; contrast comes from the light instead: strong sun, low fill, deep AO.)
 const saturation=new HueSaturationEffect({saturation:.08});
-composer.addPass(new EffectPass(camera,toneMapping,saturation));
+// A gentle bloom: only the brightest highlights (lamps, sun glints) glow, as on film.
+const bloom=new BloomEffect({luminanceThreshold:.92,luminanceSmoothing:.2,intensity:.35,mipmapBlur:true,radius:.6});
+composer.addPass(new EffectPass(camera,bloom,toneMapping,saturation));
 const TONE={neutral:ToneMappingMode.NEUTRAL,agx:ToneMappingMode.AGX,aces:ToneMappingMode.ACES_FILMIC};
 function applyArt(){
   applyLighting(art,lights,scene);if(typeof placeSun==='function')placeSun();
   renderer.toneMappingExposure=art.exposure;toneMapping.mode=TONE[art.toneMapping]??ToneMappingMode.NEUTRAL;
   Object.assign(ao.configuration,{intensity:art.ao.intensity,aoRadius:art.ao.radius,distanceFalloff:art.ao.falloff});ao.configuration.color.set(art.ao.color);
   if(art.grade)saturation.saturation=art.grade.saturation;
+  bloom.intensity=art.bloom??0;
   renderer.shadowMap.needsUpdate=true;needsRender=true;
 }
 

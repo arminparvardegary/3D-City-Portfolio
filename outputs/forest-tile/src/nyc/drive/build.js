@@ -19,8 +19,9 @@ export function buildCity({reserved=new Set(),fills=[]}={}){
   // Animated film palette: candy coloured walls with painted windows, brick, and
   // pastel towers for the skyline. (Keys kept from the realistic set: brick,
   // office, lime, brown, glass.)
-  const story=(c,kind)=>{const m=mat('#ffffff',{map:storyFacade(c,kind),roughness:.85});m.userData.uvSize=2;return m;};
-  const tower=c=>{const m=mat('#ffffff',{map:towerFacade(c),roughness:.7});m.userData.uvSize=2;return m;};
+  // The painted facade doubles as its bump map: bricks, recesses and sills catch the light.
+  const story=(c,kind)=>{const t=storyFacade(c,kind),m=mat('#ffffff',{map:t,bumpMap:t,bumpScale:1.4,roughness:.85});m.userData.uvSize=2;return m;};
+  const tower=c=>{const t=towerFacade(c),m=mat('#ffffff',{map:t,bumpMap:t,bumpScale:1,roughness:.55,metalness:.1});m.userData.uvSize=2;return m;};
   const WALLS=['#e88fa2','#f0a07a','#7fc8b0','#5aa9a4','#f2cf74','#b7a3d9','#86b9e3','#f3b28c','#e6c9a4','#a8d08d'];
   const PAL={brick:WALLS.map(c=>story(c,'arch')),office:WALLS.map(c=>story(c,'square')),brown:['#c25b45','#b8664a','#a8523e','#c97a5a'].map(c=>story(c,'brick')),
     lime:['#f3dcc0','#f1d2b2','#e8d6c8'].map(tower),glass:['#cfe2f0','#d9cdea','#f6d9c4','#bfd9ee'].map(tower)};
@@ -32,7 +33,7 @@ export function buildCity({reserved=new Set(),fills=[]}={}){
   const top=G+CURB;
 
   // --- Land, water, waterfront ------------------------------------------------------
-  const asphalt=mat('#4b4d53',{map:FACADE.asphalt(),roughness:.92});asphalt.userData.uvSize=14;
+  const asphaltTex=FACADE.asphalt(),asphalt=mat('#4b4d53',{map:asphaltTex,bumpMap:asphaltTex,bumpScale:.8,roughness:.92});asphalt.userData.uvSize=14;
   const land=(x0,x1)=>{box(x1-x0,1.4,NS.z1-NS.z0,(x0+x1)/2,G-1.4,0,asphalt);box(x1-x0+.02,1.2,NS.z1-NS.z0+.02,(x0+x1)/2,G-2.6,0,stone);};
   land(MAN.x0,MAN.x1);land(BKN.x0,BKN.x1);
   {const water=new THREE.Mesh(new THREE.PlaneGeometry(3000,3000).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({color:'#36677f',roughness:.12,metalness:.15,envMapIntensity:1.4}));
@@ -78,7 +79,7 @@ export function buildCity({reserved=new Set(),fills=[]}={}){
   const tri=(w,l)=>{const sh=new THREE.Shape([new THREE.Vector2(-w/2,0),new THREE.Vector2(w/2,0),new THREE.Vector2(0,l)]);return new THREE.ShapeGeometry(sh).rotateX(-Math.PI/2).rotateY(Math.PI);};
   const arrow=(moves)=>{const parts=[new THREE.BoxGeometry(.22,.02,1.6).translate(0,0,.8)];
     if(moves.s)parts.push(new THREE.BoxGeometry(.22,.02,.9).translate(0,0,2),tri(.75,.75).translate(0,.01,2.45));
-    for(const [m,sd] of [['r',-1],['l',1]])if(moves[m]){parts.push(new THREE.BoxGeometry(.8,.02,.22).translate(sd*.4,0,1.5),tri(.7,.65).rotateY(sd*Math.PI/2).translate(sd*.8,.01,1.5));}
+    for(const [m,sd] of [['r',-1],['l',1]])if(moves[m]){parts.push(new THREE.BoxGeometry(.55,.02,.22).translate(sd*.275,0,1.5),tri(.7,.6).rotateY(sd*Math.PI/2).translate(sd*.55,.01,1.5));}
     return parts;};
   for(const n of nodes){if(n.degree<3)continue;
     for(const e of n.out){
@@ -251,6 +252,9 @@ export function buildCity({reserved=new Set(),fills=[]}={}){
     for(const [z,x0,x1] of [[ST[5],-106,-40],[ST[4],-106,-40]])for(let x=x0;x<=x1;x+=11){
       const pts=[];for(let k=0;k<=12;k++){const t=k/12,zz=z-HALF-1+t*(2*HALF+2),y=top+6.2-Math.sin(t*Math.PI)*1.1;pts.push(new THREE.Vector3(x,y,zz));}
       add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),24,.03,4),wire);
+      // Each wire hangs between two iron posts on the sidewalks (base, post, finial).
+      for(const p of [pts[0],pts[12]]){cyl(.14,.16,.3,10,p.x,top,p.z,wire);cyl(.06,.07,p.y+.35-top,8,p.x,top,p.z,wire);
+        add(new THREE.SphereGeometry(.1,8,6),wire,[p.x,p.y+.42,p.z]);}
       for(let k=1;k<12;k++){const p=pts[k];add(new THREE.SphereGeometry(.13,6,4),bulb,[p.x,p.y-.18,p.z]);}}}
 
   // --- New York street details ------------------------------------------------------

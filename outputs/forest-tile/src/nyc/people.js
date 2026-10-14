@@ -53,7 +53,7 @@ export function createPeople({loops,perLoop=3,seed=7}){
       people.push({L,pts,len,s:rand()*len,v:standing?0:(1.05+rand()*.45)*U*(rand()<.5?1:-1),dir:rand()<.5?1:-1,phase:rand()*6,scale:.9+rand()*.18,style,
         skin:pick(SKIN),hair:style==='beanie'?pick(BEANIE):pick(HAIR),top:pick(TOPS),bottom:pick(BOTTOMS)});}
   }
-  const N=people.length,mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.62});
+  const N=people.length,mat=new THREE.MeshPhysicalMaterial({vertexColors:true,roughness:.7,sheen:.6,sheenRoughness:.75,sheenColor:new THREE.Color('#ffe8dc')});   // fabric and skin sheen
   const make=(g,count)=>{const m=new THREE.InstancedMesh(g,mat,Math.max(1,count));m.count=count;m.castShadow=m.receiveShadow=true;m.frustumCulled=false;root.add(m);return m;};
   const M={torso:make(geo.torso,N),hips:make(geo.hips,N),head:make(geo.head,N),face:make(geo.face,N),leg:make(geo.leg,N*2),shoe:make(geo.shoe,N*2),arm:make(geo.arm,N*2),hand:make(geo.hand,N*2)};
   const H={};for(const st of styles){const list=people.filter(p=>p.style===st);H[st]={mesh:make(HAIRS[st],list.length),list};list.forEach((p,i)=>p.hairIdx=i);}
