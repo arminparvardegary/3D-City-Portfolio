@@ -72,7 +72,8 @@ const tb=tileGrid.bounds,bounds=world.bounds??{x0:tb.x0+.4,x1:tb.x1-.4,z0:tb.z0+
 const skyTint=WORLD==='nyc'?THEME.nyc.sky:THEME.sky;
 document.documentElement.style.setProperty('--sky-top',skyTint.top);document.documentElement.style.setProperty('--sky-horizon',skyTint.horizon);
 // Your car: blocked by the world's solids (sidewalks, plinths, the river) and its traffic.
-const car=createCarControls(scene,materials,{prep:softenShadows,index:VEHICLES.findIndex(v=>v.name==='City'),home:world.start??{x:0,z:0,h:Math.PI/2}});
+const CAR_MODEL=world.vehicle??'City';
+const car=createCarControls(scene,materials,{prep:softenShadows,index:VEHICLES.findIndex(v=>v.name===CAR_MODEL),home:world.start??{x:0,z:0,h:Math.PI/2}});
 car.setBounds(bounds);car.addStatic([],world.solids);car.paint.color.set(world.carColor??THEME.campus.car);
 if(world.obstacles)car.setObstacles(world.obstacles);
 if(world.surface)car.setSurface(world.surface);if(world.circles)car.addStatic(world.circles);
@@ -246,7 +247,9 @@ addEventListener('keydown',e=>{if(e.key==='Enter'&&!prompt.hidden&&!e.repeat){e.
 
 car.onHit=s=>{if(!reducedMotion.matches&&s>.2)trauma=Math.min(1,trauma+s*.8);};
 
+let holdCamera=false;   // dev: keep the camera where a test put it
 function updateView(dt){
+  if(holdCamera)return true;
   if(CHASE)return chaseView(dt);
   let moved=false;
   // Zoom glides in log space, so it feels the same zoomed in or out.
@@ -388,7 +391,7 @@ for(const b of document.querySelectorAll('[data-drive]')){
 }
 
 // The vehicle is hardcoded: the City car.
-car.select(VEHICLES.findIndex(v=>v.name==='City'));
+car.select(VEHICLES.findIndex(v=>v.name===CAR_MODEL));
 // X-ray: where a building hides the car, its outline shows through in its colour
 // (drawn only where something is in front of it). Not needed behind the car.
 if(!CHASE){const ghost=new THREE.MeshBasicMaterial({color:world.carColor??'#ff6b5e',transparent:true,opacity:.55,depthWrite:false,depthFunc:THREE.GreaterDepth});
@@ -402,6 +405,7 @@ window.forestTile={car,playground,world,get story(){return story;},grid:{GRID,HO
 // composer) back to back, each synced with a 1 px read so GPU time is included.
 if(import.meta.env.DEV){
   // Drive the camera by hand in tests: one view update of dt seconds.
+  window.forestTile.hold=on=>{holdCamera=on;};
   window.forestTile.view={update:updateView,target,get trauma(){return trauma;},get zoom(){return camera.zoom;},get azimuth(){return az;}};
   window.forestTile.bench=(n=120)=>{
     const gl=renderer.getContext(),px=new Uint8Array(4),times=[];let t=performance.now();

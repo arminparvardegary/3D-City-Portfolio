@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { ART } from './config.js';
 import { box, mesh, tint, mergeStatic } from './geometry.js';
+import { buildRealCar, realWheels, physicalPaint } from './realcar.js';
 
 // A small kit of clean toy vehicles in the style of the tile: soft rounded
 // bodies with real wheel wells, a tinted glass cabin under a painted roof, dark
@@ -116,9 +117,12 @@ function truckCab(car,m,body,{z0,z1,W,y0},w){
 }
 
 // name, paint, wheels {r tyre radius, tw tyre width, track, axles [{z, steer}]}, body.
-const v=(name,color,wheels,make)=>({name,color,wheels:{tw:.24,...wheels},make});
+const v=(name,color,wheels,make,real=false)=>({name,color,wheels:{tw:.24,...wheels},make,real});
 
 export const VEHICLES=[
+  // Realistic: smooth lofted bodies, clearcoat paint, alloy wheels (realcar.js).
+  v('Sport','#b5121b',{r:.33,tw:.27,track:.68,axles:[{z:1.22,steer:1},{z:-1.2}],style:'real'},(c,m,p,w,prep)=>buildRealCar(c,m,p,w,{},prep),true),
+  v('Sport Taxi','#f5bf0a',{r:.33,tw:.27,track:.68,axles:[{z:1.22,steer:1},{z:-1.2}],style:'real'},(c,m,p,w,prep)=>buildRealCar(c,m,p,w,{taxi:true},prep),true),
   v('Hatchback','#e8574a',{r:.3,track:.68,axles:[{z:1.05,steer:1},{z:-1.05}]},(c,m,p,w)=>{
     lowerBody(c,m,p,{L:3.4,W:1.56,y0:.24,H:.52,mirrorZ:.62},w);
     cabin(c,m,p,{pts:[[.72,.76],[.22,1.24],[-1.22,1.26],[-1.6,.84]],width:1.38,pillars:[-.35]});
@@ -217,9 +221,9 @@ export function buildVehicle(i,parent,m,prep,{merge=true}={}){
   const veh=VEHICLES[i],rig=new THREE.Group();rig.name='vehicle';
   rig.position.set(...ART.car.position);rig.rotation.y=ART.car.rotation;parent.add(rig);
   const body=new THREE.Group();rig.add(body);
-  const paintMat=paint(veh.color,prep),w=veh.wheels;
+  const paintMat=veh.real?physicalPaint(veh.color,prep):paint(veh.color,prep),w=veh.wheels;
   const spec=veh.make(body,m,paintMat,w,prep);
-  const spins=wheels(rig,m,w);
+  const spins=w.style==='real'?realWheels(rig,m,w):wheels(rig,m,w);
   if(merge)mergeStatic(body);
   const zs=w.axles.map(a=>a.z),front=Math.max(...zs),rears=zs.filter(z=>z<0);
   return {rig,car:body,wheels:spins,paint:paintMat,color:veh.color,name:veh.name,

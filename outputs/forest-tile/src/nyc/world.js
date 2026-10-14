@@ -51,7 +51,7 @@ export function buildNYCWorld({prep}){
     bounds:{x0:-S*k+.6,x1:S*k-.6,z0:-S*k+.6,z1:S*k-.6},
     // Start on the avenue at the Experience Parking entrance, facing in (nothing tall stands between it and the camera).
     start:{x:COLS.A[1]*k+4.2,z:district.lot.bayZ[0]+4,h:-Math.PI/2},
-    carColor:'#ff6b5e',zoom:.62,fixedZoom:true,
+    vehicle:'Sport',carColor:'#b5121b',zoom:.62,fixedZoom:true,
     placeAt(x,z){for(const b of district.row)if(Math.abs(x-b.x)<b.w/2&&z>district.lot.z0-16&&z<district.lot.z0)return b.id;return null;},
     update(t,dt){city.update(dt);people.update(dt);return 2;},   // taxis and clouds move: redraw and refresh shadows
   };
