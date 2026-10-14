@@ -35,3 +35,11 @@ Stack: Three.js r180 (vanilla, no React), Vite 7, `postprocessing` 6.39.5 (pmndr
 - World kit: `src/world/units.js` (1 unit = 10 design pixels, tile = 10 units = 100 design pixels, tile origin at its centre, edge connectors), `src/world/vegetation.js` (faceted round and pine trees, instanced meadow scatter with GPU wind and density control).
 - Developer tools (dev builds only, stripped from production): a Developer section inside the Workbench (quality, render scale, sun, sky, environment, exposure, tone mapping, shadow softness, AO, fog, decor density, animation speed, colours, saved and exported presets), a stats overlay, and `forestTile.bench(n)` for timed frames.
 - Production chunks: app ~46 kB, three ~520 kB, effects ~212 kB (gzip 18 / 132 / 96 kB).
+
+## The map
+
+150 tiles of 100 x 100 design pixels (15 across, 10 down), numbered 1 to 150 row by row from the north west corner (`src/world/grid.js`). The house is tile 68; every other tile is a plain grey block showing its number, waiting for its own content. Drag to pan, scroll or pinch to zoom; the camera angle never changes and the view follows the car while it drives.
+
+## Driving
+
+W / Up gas, S / Down brake then reverse, A D / Left Right steer, Space handbrake, R back to the parking space. Top speed 6.4 units/s (0 to 6 in about 3 s), brakes stop from full speed in about 0.6 s, steering eases in and centres quickly with less lock at speed, turning is limited by tyre grip, and the handbrake lets the rear slide.
