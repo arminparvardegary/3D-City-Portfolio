@@ -6,6 +6,10 @@ A single minimal isometric 3D tile based on the supplied neighborhood reference:
 
 A single low poly block on its own page (`/block.html`, `src/block/`): a two storey corner restaurant with striped awnings, glowing shop windows, a sign, café tables, a rooftop terrace with umbrellas and a flat roof with AC units; a road with three vintage cars and four figures in coats and hats; a utility pole, hydrant, lantern, faceted tree, hedge, scooter and manhole. The base shows a dark asphalt layer over pale stone with a wavy line between them. Flat shaded, pastel, ambient occlusion, a soft shadow on a teal backdrop. Drag turns it a little (it eases back), the wheel zooms.
 
+## New York (nyc.html)
+
+New York as one low poly diorama in the corner block's style (`/nyc.html`, `src/nyc/`): the Empire State, Chrysler and One World Trade Center, a dark glass tower, a copper domed tower, the Statue of Liberty on her star fort and the Brooklyn Bridge over the river, brick towers with water tanks, faceted trees, taxis driving the streets and the bridge (one instanced draw call), clouds and the sun. The title shows today's date and the live New York weather (Open-Meteo); the temperature hides if the request fails. Both diorama pages share `src/diorama/stage.js` (view, light, backdrop, shadow) and `src/diorama/kit.js` (low poly modelling and window textures).
+
 ## Run
 
 Use Node.js 20.19+ or 22.12+. Run `npm install`, then `npm run dev -- --port 5173`. Open http://127.0.0.1:5173/ . For production, run `npm run build` and `npm run preview`.

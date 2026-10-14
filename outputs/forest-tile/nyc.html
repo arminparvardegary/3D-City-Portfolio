@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="theme-color" content="#8fd0dc"/>
+<meta name="description" content="New York as a low poly diorama: the Empire State, Chrysler and One World Trade Center, the Statue of Liberty and the Brooklyn Bridge, with live weather."/>
+<title>New York</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:linear-gradient(180deg,#9ad7e2,#7fc4d4)}
+  #view{position:fixed;inset:0}canvas{display:block;touch-action:none}
+  .city{position:fixed;left:0;right:0;top:clamp(16px,4vh,40px);text-align:center;color:#fff;pointer-events:none;font-family:-apple-system,"SF Pro Display",system-ui,sans-serif;text-shadow:0 2px 14px #2a6f8040}
+  .city h1{margin:0;font-size:clamp(36px,6vw,64px);font-weight:700;letter-spacing:.02em;line-height:1}
+  .city svg{display:block;margin:10px auto 2px;width:clamp(40px,5vw,56px);height:auto;filter:drop-shadow(0 2px 6px #2a6f8033)}
+  .city .date{margin:0;font-size:clamp(15px,1.6vw,19px);font-weight:400;opacity:.95}
+  .city .temp{margin:2px 0 0;font-size:clamp(24px,2.6vw,32px);font-weight:700}
+  .city .temp:empty{display:none}
+</style>
+</head>
+<body>
+<div id="view" role="img" aria-label="New York as a low poly diorama with its landmarks, taxis and the Brooklyn Bridge."></div>
+<header class="city"><h1>NEW YORK</h1><span class="icon"></span><p class="date"></p><p class="temp"></p></header>
+<script type="module" src="/src/nyc/main.js"></script>
+</body></html>
