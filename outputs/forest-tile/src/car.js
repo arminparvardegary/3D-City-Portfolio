@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { contactShadow } from './nyc/drive/carfamily.js';
 import { ART } from './config.js';
 import { VEHICLES, MAX_STEER, buildVehicle, disposeVehicle } from './vehicles.js';
 import { FEEL, STEP, damp, lerp, lerpAngle, fixedClock } from './motion.js';
@@ -16,6 +17,12 @@ const BOXES=[];
 const CIRCLES=[];
 let BOUNDS={x0:-4.95,x1:4.95,z0:-4.95,z1:4.95};
 let dynamicObstacles=()=>[];
+// The tyres sit 2.5 cm into the road (a loaded tyre flattens), so the car never floats.
+const SEAT=.028;
+// A soft contact shadow under the car, riding with it.
+function addContact(parts){const m=new THREE.Mesh(new THREE.PlaneGeometry(parts.width*1.25,parts.length*1.1).rotateX(-Math.PI/2),
+  new THREE.MeshBasicMaterial({map:contactShadow(),transparent:true,depthWrite:false,color:'#000000',polygonOffset:true,polygonOffsetFactor:-2}));
+  m.position.y=SEAT+.035;m.renderOrder=1;parts.rig.add(m);}
 // Road height under a point (null where there is no road), for bridges and ramps.
 let surface=null;
 const AMBULANCE=VEHICLES.findIndex(q=>q.name==='Ambulance');
@@ -26,7 +33,7 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
   let cy=0,x=home.x,z=home.z,h=home.h,v=0,vy=0,yaw=0,steer=0,a=0,lat=0,brakeRamp=0,head=.55,tail=.45,slide=0,rollAngle=0;
   // Sprung body: angles (rad) and heave (units), each with its own velocity.
   let pitch=0,pitchV=0,roll=0,rollV=0,heave=0,heaveV=0;
-  let parts=buildVehicle(index,parent,m,prep),current=index,bodyY=parts.car.position.y,rigY=parts.rig.position.y;parts.rig.rotation.order='YXZ';
+  let parts=buildVehicle(index,parent,m,prep);addContact(parts);let current=index,bodyY=parts.car.position.y,rigY=parts.rig.position.y-SEAT;parts.rig.rotation.order='YXZ';
   const skid=createSkid(parent);
   // The footprint as a row of circles along the car.
   let probes=[],r=1;
@@ -125,7 +132,7 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
     count:VEHICLES.length,
     select(i){
       if(i===current)return;
-      disposeVehicle(parts,m);parts=buildVehicle(i,parent,m,prep);current=i;bodyY=parts.car.position.y;rigY=parts.rig.position.y;parts.rig.rotation.order='YXZ';footprint();
+      disposeVehicle(parts,m);parts=buildVehicle(i,parent,m,prep);addContact(parts);current=i;bodyY=parts.car.position.y;rigY=parts.rig.position.y-SEAT;parts.rig.rotation.order='YXZ';footprint();
       v=0;if(blocked(x,z,h)){x=home.x;z=home.z;h=home.h;}rollAngle=0;snapshot();place();
     },
   };

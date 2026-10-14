@@ -35,11 +35,11 @@ export const TYPES={
   beetle:{L:3.6,W:1.64,r:.31,wb:2.35,hs:.98,lift:0,nose:.5,tail:.5,sq:2.6,cab:[-1.1,-.6,-.05,.45],roof:1.5,speed:5.4,colors:['#7fb7d6','#e8c547','#c9473b','#9fbf8f']},
   muscle:{L:4.7,W:1.84,r:.37,wb:2.85,hs:.98,lift:0,nose:.62,tail:.72,sq:6.5,cab:[-1.5,-1.05,-.3,.2],roof:1.27,speed:8.4,colors:['#15161a','#e09b00','#1b4d8f','#8f1320']},
 };
-const PARTS=['paint','glass','dark','metal','lampW','lampR','lampB','sign','white'];
+const PARTS=['paint','glass','dark','metal','lampW','lampR','lampB','sign','white','contact'];
 
 // Geometries of one type, grouped by part, in car space (ground at y = 0).
 function typeGeometry(T){
-  const out=Object.fromEntries(PARTS.map(p=>[p,[]])),add=(p,g,[x=0,y=0,z=0]=[],[rx=0,ry=0,rz=0]=[])=>{g=g.index?g.toNonIndexed():g;if(p!=='sign')g.deleteAttribute('uv');
+  const out=Object.fromEntries(PARTS.map(p=>[p,[]])),add=(p,g,[x=0,y=0,z=0]=[],[rx=0,ry=0,rz=0]=[])=>{g=g.index?g.toNonIndexed():g;if(p!=='sign'&&p!=='contact')g.deleteAttribute('uv');
     g.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(x,y,z),new THREE.Quaternion().setFromEuler(new THREE.Euler(rx,ry,rz)),new THREE.Vector3(1,1,1)));out[p].push(g);};
   const {L,W,r,wb,hs,lift}=T,zr=-L/2,zf=L/2,az=[wb/2,-wb/2],R=r+.07,k=L/3.7;
   const nose=T.nose??.56,tail=T.tail??.66,box=(T.sq??4.2)>7;   // boxy bodies keep their height to the ends
@@ -79,8 +79,18 @@ function typeGeometry(T){
   if(T.taxi){add('sign',new THREE.BoxGeometry(.56,.17,.24),[0,T.roof+.08,-.15]);for(const s of [-1,1])for(let i=0;i<14;i++){const z=-1+i*.1;if(i%2)add('dark',new THREE.BoxGeometry(.006,.05,.1),[s*(half(z)+.004),.64,z]);}}
   if(T.police){add('dark',new THREE.BoxGeometry(.9,.09,.24),[0,T.roof+.04,-.15]);add('lampR',new THREE.BoxGeometry(.38,.08,.2),[-.22,T.roof+.12,-.15]);add('lampB',new THREE.BoxGeometry(.38,.08,.2),[.22,T.roof+.12,-.15]);
     for(const s of [-1,1])add('dark',new THREE.BoxGeometry(.01,.36,1.6),[s*(half(-.3)+.005),.6,-.3]);}
+  // A soft contact shadow under the car, so it sits on the road.
+  add('contact',new THREE.PlaneGeometry(W*1.25,L*1.12).rotateX(-Math.PI/2),[0,.035,0]);
   const merged={};for(const p of PARTS)if(out[p].length)merged[p]=mergeVertices(mergeGeometries(out[p],false));
   return merged;
+}
+
+// A soft dark oval, darkest at the middle.
+let shadowTex=null;
+export function contactShadow(){
+  if(shadowTex)return shadowTex;const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');
+  const grd=g.createRadialGradient(64,64,10,64,64,64);grd.addColorStop(0,'rgba(0,0,0,.75)');grd.addColorStop(.55,'rgba(0,0,0,.45)');grd.addColorStop(1,'rgba(0,0,0,0)');
+  g.fillStyle=grd;g.fillRect(0,0,128,128);shadowTex=new THREE.CanvasTexture(c);return shadowTex;
 }
 
 // Materials shared by every car (paint is white: each car gets its own colour).
@@ -90,6 +100,7 @@ export function familyMaterials(prep){
   return {
     paint:P(new THREE.MeshPhysicalMaterial({color:'#ffffff',metalness:.45,roughness:.32,clearcoat:1,clearcoatRoughness:.08,envMapIntensity:1.2})),   // metallic paint under clear coat
     white:P(new THREE.MeshStandardMaterial({color:'#e9e8e3',roughness:.55})),
+    contact:new THREE.MeshBasicMaterial({map:contactShadow(),transparent:true,depthWrite:false,color:'#000000',polygonOffset:true,polygonOffsetFactor:-2}),
     glass:P(new THREE.MeshPhysicalMaterial({color:'#0c1218',metalness:.2,roughness:.05,clearcoat:1,envMapIntensity:1.6})),
     dark:P(new THREE.MeshStandardMaterial({color:'#15171a',roughness:.6})),metal:P(new THREE.MeshStandardMaterial({color:'#c4c8ce',metalness:.9,roughness:.25,envMapIntensity:1.4})),
     lampW:new THREE.MeshBasicMaterial({color:'#f2f6ff'}),lampR:new THREE.MeshBasicMaterial({color:'#e8261c'}),lampB:new THREE.MeshBasicMaterial({color:'#2a6cff'}),
@@ -104,7 +115,7 @@ export function createFleet({cars,prep}){
   for(const p of PARTS){
     const used=cars.filter(c=>geos[c.type][p]);if(!used.length)continue;
     let verts=0,idx=0;const types=[...new Set(used.map(c=>c.type))];for(const t of types){const g=geos[t][p];verts+=g.attributes.position.count;idx+=g.index.count;}
-    const bm=new THREE.BatchedMesh(used.length,verts,idx,mats[p]);bm.castShadow=bm.receiveShadow=p!=='lampW'&&p!=='lampR'&&p!=='lampB';
+    const bm=new THREE.BatchedMesh(used.length,verts,idx,mats[p]);bm.castShadow=bm.receiveShadow=p!=='lampW'&&p!=='lampR'&&p!=='lampB'&&p!=='contact';
     const gid={};for(const t of types)gid[t]=bm.addGeometry(geos[t][p]);
     ids[p]=cars.map(c=>geos[c.type][p]?bm.addInstance(gid[c.type]):null);
     if(p==='paint')cars.forEach((c,i)=>bm.setColorAt(ids[p][i],new THREE.Color(c.color)));

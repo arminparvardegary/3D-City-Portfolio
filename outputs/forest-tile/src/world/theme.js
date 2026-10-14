@@ -41,7 +41,7 @@ export const THEME=Object.freeze({
   nyc:{sky:{top:'#4f9be0',horizon:'#cfe6f4'},light:{
     // Film render light: a warm sun with soft shadows, a sky fill, stronger sky
     // reflections, AgX for photographic highlights, a light haze and bloom.
-    sun:{color:'#ffe6c4',intensity:3.6,azimuth:-58,elevation:38,softness:18},
+    sun:{color:'#ffe6c4',intensity:3.6,azimuth:-58,elevation:38,softness:5},
     sky:{color:'#b8d4f4',ground:'#d8c0a0',intensity:.95},
     fill:{color:'#ffdcc0',intensity:.3},
     env:.6,exposure:1.05,toneMapping:'agx',
