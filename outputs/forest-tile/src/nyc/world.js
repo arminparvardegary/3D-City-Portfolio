@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { THEME } from '../world/theme.js';
 import { buildDistrict } from './district.js';
+import { buildKeel } from './keel.js';
 import { createPeople } from './people.js';
 import { buildCity } from './drive/build.js';
 import { buildBridge } from './drive/bridge.js';
@@ -18,7 +19,7 @@ export function buildNYCWorld({prep,materials,player}){
   const bl=blocks(),find=(i,j)=>bl.find(b=>b.i===i&&b.j===j);
   // Armin's blocks: Experience Row (0, 4); Skills Street shops in front of (0, 5) and (1, 5).
   const exp=find(0,4),sk1=find(0,5),sk2=find(1,5),top=G+CURB;
-  const city=buildCity({reserved:new Set(['0,4','0,5','1,5']),pave:new Set(['0,5','1,5']),fills:[
+  const city=buildCity({reserved:new Set(['0,4','0,5','1,5','1,4']),pave:new Set(['0,5','1,5','1,4']),fills:[
     {x0:sk1.x0+2.6,x1:sk1.x1-2.6,z0:sk1.z0+12.5,z1:sk1.z1-2.6,zone:'low'},{x0:sk2.x0+2.6,x1:sk2.x1-2.6,z0:sk2.z0+12.5,z1:sk2.z1-2.6,zone:'low'}]});
   group.add(city.root);
   const district=buildDistrict({top,row:{x0:exp.x0,x1:exp.x1,z0:exp.z0,z1:exp.z1},shops:[
@@ -26,8 +27,11 @@ export function buildNYCWorld({prep,materials,player}){
     {x0:sk2.x0,x1:sk2.x1,z0:sk2.z0,z1:sk2.z1,front:sk2.z0,yaw:Math.PI,count:6,slab:false},
   ]});
   group.add(district.root);
+  // Keel HQ next to Experience Row.
+  const keel=buildKeel({block:find(1,4),top});group.add(keel.root);
   const bridge=buildBridge({prep});group.add(bridge.root);
   for(const o of [city.root,district.root])o.traverse(m=>{if(m.isMesh)[].concat(m.material).forEach(x=>prep?.(x));});
+  keel.root.traverse(m=>{if(m.isMesh)[].concat(m.material).forEach(x=>prep?.(x));});
   // Traffic: about twenty cars of every type, each with its own speed.
   const traffic=createTraffic({phase:city.phase,player,prep,parked:city.parking});group.add(traffic.root);
   // People on every sidewalk loop, including Armin's blocks.
@@ -54,9 +58,10 @@ export function buildNYCWorld({prep,materials,player}){
       const w=120+rnd()*160;sp.scale.set(w,w*.55,1);sp.position.set(-480+rnd()*960,120+rnd()*80,-480+rnd()*960);sp.renderOrder=-1;group.add(sp);clouds.push(sp);}}
   const steamMat=new THREE.SpriteMaterial({map:puffTex,transparent:true,depthWrite:false,opacity:.5,color:'#f2f3f5'});
   const steam=city.steam.flatMap(p=>Array.from({length:7},(_,i)=>{const sp=new THREE.Sprite(steamMat.clone());sp.userData={x:p.x,z:p.z,age:i/7*3};group.add(sp);return sp;}));
-  const solids=[...city.solids,...district.solids];
-  const occluders=[...city.occluders,...district.occluders,...bridge.occluders];
+  const solids=[...city.solids,...district.solids,...keel.solids];
+  const occluders=[...city.occluders,...district.occluders,...bridge.occluders,...keel.occluders];
   const places={};for(const b of district.row)places[b.id]={x:b.x,z:b.z,y:b.top*.45};
+  places.keel=keel.place;places.skills={x:(sk1.x0+sk2.x1)/2,z:sk1.z0,y:3};
   // Where the car can drive and how high: the streets on land (not under the
   // low parts of the bridge ramps, which stand on a solid viaduct), and the bridge.
   const viaduct=(x,z)=>onBridgeBand(x,z)&&((x>BRIDGE.landM+.5&&x<39.6)||(x>96.4&&x<BRIDGE.landB-.5));
@@ -69,8 +74,9 @@ export function buildNYCWorld({prep,materials,player}){
     group,solids,places,labels:[],row:district.row,lot:district.lot,occluders,surface,trafficCars:traffic.cars,
     obstacles:()=>traffic.obstacles(),circles:bridge.circles,
     bounds:{x0:MAN.x0-1,x1:BKN.x1+1,z0:NS.z0-1,z1:NS.z1+1},
-    // Start on Skills Street, Experience Row on the right, the shops on the left.
-    start:{x:-58,z:ST[5]-LANE,h:-Math.PI/2},
+    // Start on the avenue between Skills Street's two blocks, heading north:
+    // Keel HQ on the right, Experience Row on the left.
+    start:{x:AV[1]+LANE,z:ST[5]+20,h:Math.PI},
     vehicle:'Sport',carColor:'#b5121b',zoom:.62,fixedZoom:true,
     placeAt(x,z){for(const b of district.row)if(Math.abs(x-b.x)<b.w/2&&z>district.lot.z0-16&&z<district.lot.z0)return b.id;return null;},
     update(t,dt,camera){city.update(dt);traffic.update(dt);people.update(dt);

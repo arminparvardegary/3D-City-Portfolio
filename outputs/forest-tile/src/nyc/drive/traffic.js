@@ -114,6 +114,8 @@ export function createTraffic({phase,player,prep,count=MIX.length,parked=[],seed
   update(0);
   // Circles your car bumps into (world units), with the height of each car.
   // Parked cars are two circles each (front and back), at street level.
-  const circles=[...state.map(()=>[0,0,1,0]),...still.flatMap(p=>[-1,1].map(k=>[p.x+Math.sin(p.h)*k*1.1,p.z+Math.cos(p.h)*k*1.1,.9,0]))];
-  return {root:fleet.root,update,cars:state,obstacles(){state.forEach((t,i)=>{const c=circles[i];c[0]=t.x;c[1]=t.z;c[3]=t.y-G;});return circles;}};
+  // Each moving car is three circles as wide as the car, nose to tail, so a
+  // near miss is a miss and a bumper hit is a hit.
+  const half=t=>(TYPES[t.type]?.W??1.66)/2,circles=[...state.flatMap(()=>[[0,0,1,0],[0,0,1,0],[0,0,1,0]]),...still.flatMap(p=>[-1,1].map(k=>[p.x+Math.sin(p.h)*k*1.1,p.z+Math.cos(p.h)*k*1.1,.9,0]))];
+  return {root:fleet.root,update,cars:state,obstacles(){state.forEach((t,i)=>{const r=half(t),k=Math.max(0,(t.len??4)/2-r),fx=Math.sin(t.h),fz=Math.cos(t.h);for(let j=0;j<3;j++){const c=circles[i*3+j],o=(j-1)*k;c[0]=t.x+fx*o;c[1]=t.z+fz*o;c[2]=r;c[3]=t.y-G;}});return circles;}};
 }

@@ -14,6 +14,7 @@ import { THEME } from './world/theme.js';
 import { createPlayground } from './world/playground.js';
 import { buildCampus } from './world/campus.js';
 import { createExperience } from './ui/experience.js';
+import { createIntro } from './ui/intro.js';
 import { buildNYCWorld } from './nyc/world.js';
 import { createStory } from './world/story.js';
 import { JOBS, PROFILE } from './data/profile.js';
@@ -232,10 +233,11 @@ function pick(e){
   return ray.ray.intersectPlane(floorPlane,hitPoint)?world.placeAt(hitPoint.x,hitPoint.z):null;
 }
 function hover(e){if(e.pointerType==='mouse')canvasEl.style.cursor=pick(e)?'pointer':'';}
-function focusOn(id){const q=world.places[id];if(!q)return;focus={x:q.x,z:q.z,y:q.y??BASE_Y,zoom:FIXED?zoom:THREE.MathUtils.clamp(zoom,.5,.75)};followHold=0;needsRender=true;}
+function focusOn(id){const q=world.places[id];if(!q)return;focus={x:q.x,z:q.z,y:q.y??BASE_Y,dist:q.dist,zoom:FIXED?zoom:THREE.MathUtils.clamp(zoom,.5,.75)};followHold=0;needsRender=true;}
 const experience=createExperience({onSelect:focusOn});
 // The Work tower opens the timeline at the newest job.
 function openPlace(id){experience.open(id==='work'?experience.first:id);}
+if(WORLD==='nyc')createIntro({onExperience:()=>experience.open(experience.first),onPlace:focusOn});
 
 // --- Experience story: park in a bay at Experience Row and press Enter ------------
 const story=world.lot?createStory({scene,row:world.row,lot:world.lot,jobs:JOBS,profile:PROFILE,
@@ -316,7 +318,7 @@ function chaseView(dt){
   const C=FEEL.chase,p=car.shown,py=p.y??.12;
   if(focus&&p.speed>.6)focus=null;
   if(chaseYaw===null)chaseYaw=p.h;
-  if(focus){look.set(focus.x,focus.y??4,focus.z-3);eye.set(focus.x+2.5,(focus.y??4)+4.5,focus.z+16);}
+  if(focus){const fd=focus.dist??16;look.set(focus.x,focus.y??4,focus.z-3);eye.set(focus.x+2.5*fd/16,(focus.y??4)+4.5*fd/16,focus.z+fd);}
   else{
     chaseYaw=dampAngle(chaseYaw,p.h,C.turnLag*(1+p.speed*.05),dt);
     if(!looking){lookYaw=damp(lookYaw,0,2.4,dt);lookPitch=damp(lookPitch,0,2.4,dt);}
