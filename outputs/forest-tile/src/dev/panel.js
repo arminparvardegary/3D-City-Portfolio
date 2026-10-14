@@ -1,10 +1,49 @@
+import { FEEL } from '../motion.js';
+
 // Developer controls, added to the existing Workbench panel in development
 // builds only (main.js imports this behind import.meta.env.DEV, so production
 // bundles never contain it). Edits the shared `art` state live and can save,
 // restore, export and import art direction presets.
-const STORE='forest-art-presets';
+const STORE='forest-art-presets',FEEL_STORE='forest-feel';
+
+// Feel: every driving, suspension, drift, camera and prop constant as a live
+// slider (changes apply on the next step). Saved per browser; Reset restores
+// the defaults from motion.js.
+const FEEL_RANGES={
+  car:{maxSpeed:[3,20,.1],maxReverse:[1,6,.1],engine:[2,20,.1],brake:[4,30,.5],coast:[0,4,.1],drag:[0,.1,.005],grip:[4,24,.5],steerIn:[1,15,.5],steerOut:[1,20,.5],handGrip:[.1,1,.05],handSwing:[1,3,.05]},
+  suspension:{stiffness:[20,200,1],damping:[2,30,.5],pitch:[0,.02,.0005],roll:[0,.02,.0005],maxPitch:[0,.15,.005],maxRoll:[0,.15,.005],bump:[0,.2,.005]},
+  drift:{slip:[.1,2,.05],markLife:[1,20,.5],markWidth:[.05,.5,.01],dust:[0,2,.05]},
+  camera:{follow:[.05,1.5,.01],lookAhead:[0,1.2,.01],speedZoomOut:[0,.5,.01],panGlide:[.5,12,.1],zoomGlide:[1,15,.1],shake:[0,1.5,.01],shakeDecay:[.5,8,.1]},
+  props:{restDelay:[.5,15,.5],resetTime:[.3,5,.1]},
+};
+function mountFeelPanel(){
+  const defaults=structuredClone(FEEL);
+  try{const saved=JSON.parse(localStorage.getItem(FEEL_STORE)||'null');if(saved)for(const g in saved)Object.assign(FEEL[g]??{},saved[g]);}catch{}
+  const save=()=>{try{localStorage.setItem(FEEL_STORE,JSON.stringify(FEEL));}catch{}};
+  const el=document.createElement('details');el.className='feel-panel';
+  el.innerHTML='<summary>Feel</summary><div class="feel-body"></div><div class="feel-actions"><button data-a="reset">Reset</button><button data-a="copy">Copy JSON</button></div>';
+  const style=document.createElement('style');
+  style.textContent='.feel-panel{position:fixed;left:12px;bottom:12px;z-index:30;max-height:70vh;overflow:auto;width:260px;font:12px/1.3 ui-monospace,monospace;background:rgba(255,255,255,.92);color:#1d1d1f;border-radius:14px;padding:8px 12px;box-shadow:0 4px 18px rgba(0,0,0,.12)}.feel-panel summary{cursor:pointer;font-weight:600}.feel-panel h4{margin:10px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#6e6e73}.feel-panel label{display:grid;grid-template-columns:1fr 52px;gap:2px 6px;margin:3px 0}.feel-panel input{grid-column:1/3;width:100%}.feel-panel output{text-align:right}.feel-actions{display:flex;gap:6px;margin-top:8px}.feel-actions button{flex:1;border:0;border-radius:999px;padding:6px;background:#e8e8ed;cursor:pointer}@media (prefers-color-scheme:dark){.feel-panel{background:rgba(28,28,30,.92);color:#f5f5f7}.feel-actions button{background:#3a3a3c;color:#f5f5f7}}';
+  document.head.append(style);document.body.append(el);
+  const body=el.querySelector('.feel-body'),shows=[];
+  for(const [group,keys] of Object.entries(FEEL_RANGES)){
+    const h=document.createElement('h4');h.textContent=group;body.append(h);
+    for(const [key,[min,max,step]] of Object.entries(keys)){
+      const l=document.createElement('label');l.innerHTML=`<span>${key}</span><output></output><input type="range" min="${min}" max="${max}" step="${step}"/>`;
+      const i=l.querySelector('input'),o=l.querySelector('output'),dec=Math.max(0,-Math.floor(Math.log10(step)));
+      const show=()=>{i.value=FEEL[group][key];o.value=(+FEEL[group][key]).toFixed(dec);};
+      i.oninput=()=>{FEEL[group][key]=+i.value;show();save();};show();shows.push(show);body.append(l);
+    }
+  }
+  el.querySelector('.feel-actions').onclick=async e=>{
+    const a=e.target.dataset.a;
+    if(a==='reset'){for(const g in defaults)Object.assign(FEEL[g],defaults[g]);try{localStorage.removeItem(FEEL_STORE);}catch{}shows.forEach(f=>f());}
+    if(a==='copy')await navigator.clipboard?.writeText(JSON.stringify(FEEL,null,2));
+  };
+}
 
 export function mountDevPanel(api){
+  mountFeelPanel();
   const {art,applyArt,materials,meadow,canopies}=api;
   const panel=document.getElementById('settings');
   // Without the Workbench on the page, only the stats overlay is shown.

@@ -223,7 +223,7 @@ export function buildVehicle(i,parent,m,prep,{merge=true}={}){
   if(merge)mergeStatic(body);
   const zs=w.axles.map(a=>a.z),front=Math.max(...zs),rears=zs.filter(z=>z<0);
   return {rig,car:body,wheels:spins,paint:paintMat,color:veh.color,name:veh.name,
-    wheelR:w.r,wheelbase:front-rears.reduce((a,b)=>a+b,0)/rears.length,length:spec.L,width:spec.W};
+    wheelR:w.r,wheelbase:front-rears.reduce((a,b)=>a+b,0)/rears.length,rearZ:rears.reduce((a,b)=>a+b,0)/rears.length,track:w.track,length:spec.L,width:spec.W};
 }
 
 // Frees a vehicle: its geometry and every material it made (shared ones stay).

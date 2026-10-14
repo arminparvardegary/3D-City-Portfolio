@@ -13,6 +13,7 @@ import { buildGrid, GRID, HOME_NUMBER, tileNumber, tileCenter } from './world/gr
 import { THEME } from './world/theme.js';
 import { createPlayground } from './world/playground.js';
 import { VEHICLES } from './vehicles.js';
+import { FEEL, damp, spring } from './motion.js';
 
 const viewport=document.querySelector('#viewport');
 const $=id=>document.getElementById(id);
@@ -58,9 +59,9 @@ const grid150=buildGrid(softenShadows);if(new URLSearchParams(location.search).h
 const bounds=grid150.bounds;
 document.documentElement.style.setProperty('--sky-top',THEME.sky.top);document.documentElement.style.setProperty('--sky-horizon',THEME.sky.horizon);
 // Your car starts in the middle of the map.
-const car=createCarControls(scene,materials,{prep:softenShadows,index:VEHICLES.findIndex(v=>v.name==='City'),home:{x:0,z:0,h:Math.PI/2},y:.12});
+const car=createCarControls(scene,materials,{prep:softenShadows,index:VEHICLES.findIndex(v=>v.name==='City'),home:{x:0,z:0,h:Math.PI/2}});
 car.setBounds({x0:bounds.x0+.4,x1:bounds.x1-.4,z0:bounds.z0+.4,z1:bounds.z1-.4});
-const playground=createPlayground({scene,prep:softenShadows,car,player:()=>car.pose(),bounds});
+const playground=createPlayground({scene,prep:softenShadows,car,bounds});
 const canopies=[],animateTile=null,meadow={layers:[],grassMaterial:null};
 const grid=new THREE.Group();grid.visible=false;scene.add(grid);
 const gridMat=new THREE.LineBasicMaterial({color:'#738662',transparent:true,opacity:.32,depthTest:false});
@@ -123,7 +124,7 @@ function resize(){
   // Keep the entire tile visible on portrait devices while retaining a large
   // inspection view on desktop. Zoom never changes camera orientation.
   const frustum=Math.max(ART.camera.viewHeight,16.8/aspect);
-  camera.left=-frustum*aspect/2;camera.right=frustum*aspect/2;camera.top=frustum/2;camera.bottom=-frustum/2;camera.zoom=zoom;
+  camera.left=-frustum*aspect/2;camera.right=frustum*aspect/2;camera.top=frustum/2;camera.bottom=-frustum/2;camera.zoom=zoom*speedZoom;
   camera.updateProjectionMatrix();fitShadow();
   // Sharp on high density screens, capped by the preset, scaled down only by the monitor.
   renderer.setPixelRatio(Math.min(window.devicePixelRatio,quality.maxDpr)*renderScale);
@@ -132,35 +133,78 @@ function resize(){
 }
 new ResizeObserver(resize).observe(viewport);
 
-// --- View: drag to pan, wheel or pinch to zoom, and a smooth follow of the car.
-// The angle never changes. While the car is driven the view eases toward it
-// (with a little look-ahead); a pan holds the view for a moment before follow resumes.
-let zoomGoal=1,followHold=0;const ZOOM_MIN=.08,ZOOM_MAX=2.2;
+// --- View: drag to pan, wheel or pinch to zoom, and a spring follow of the car.
+// The angle never changes. The view springs toward the car plus a look-ahead
+// along its motion and pulls back a little at speed; a hard hit gives a tiny
+// shake that dies away. Pans and zooms glide to a stop after release, and a pan
+// holds the view for a moment before follow resumes. Constants: FEEL.camera.
+const F=FEEL.camera,ZOOM_MIN=.08,ZOOM_MAX=2.2;
+let followHold=0,zoomVel=0,speedZoom=1,trauma=0,shakeClock=0;
+const panVel=new THREE.Vector3(),camX={x:target.x,v:0},camZ={x:target.z,v:0};
 const groundRight=new THREE.Vector3(Math.cos(az),0,-Math.sin(az)),groundUp=new THREE.Vector3(-Math.sin(az),0,-Math.cos(az)).multiplyScalar(1/Math.sin(el));
-const pointers=new Map();let pinch=0,downAt=null;
+const screenUp=new THREE.Vector3().crossVectors(groundRight,viewDir).normalize();
+const pointers=new Map();let lastMove=0;
 const canvasEl=renderer.domElement;canvasEl.style.touchAction='none';
-canvasEl.addEventListener('pointerdown',e=>{try{canvasEl.setPointerCapture(e.pointerId);}catch{}pointers.set(e.pointerId,[e.clientX,e.clientY]);downAt=[e.clientX,e.clientY];});
+const syncFollow=()=>{camX.x=target.x;camZ.x=target.z;camX.v=panVel.x;camZ.v=panVel.z;};
+canvasEl.addEventListener('pointerdown',e=>{try{canvasEl.setPointerCapture(e.pointerId);}catch{}pointers.set(e.pointerId,[e.clientX,e.clientY,e.timeStamp]);panVel.set(0,0,0);zoomVel=0;});
 canvasEl.addEventListener('pointermove',e=>{
   const p=pointers.get(e.pointerId);if(!p)return;
-  if(pointers.size===2){const [a,b]=[...pointers.values()];const d0=Math.hypot(a[0]-b[0],a[1]-b[1]);pointers.set(e.pointerId,[e.clientX,e.clientY]);const [c,d]=[...pointers.values()];const d1=Math.hypot(c[0]-d[0],c[1]-d[1]);if(d0>0)zoomGoal=THREE.MathUtils.clamp(zoomGoal*d1/d0,ZOOM_MIN,ZOOM_MAX);return;}
-  const dx=e.clientX-p[0],dy=e.clientY-p[1];pointers.set(e.pointerId,[e.clientX,e.clientY]);
+  const dt=Math.max(.004,(e.timeStamp-p[2])/1000);
+  if(pointers.size===2){
+    const [a,b]=[...pointers.values()],d0=Math.hypot(a[0]-b[0],a[1]-b[1]);pointers.set(e.pointerId,[e.clientX,e.clientY,e.timeStamp]);
+    const [c,d]=[...pointers.values()],d1=Math.hypot(c[0]-d[0],c[1]-d[1]);
+    if(d0>0){const k=Math.log(d1/d0);zoom=THREE.MathUtils.clamp(zoom*Math.exp(k),ZOOM_MIN,ZOOM_MAX);zoomVel=damp(zoomVel,k/dt,20,dt);}
+    return;
+  }
+  const dx=e.clientX-p[0],dy=e.clientY-p[1];pointers.set(e.pointerId,[e.clientX,e.clientY,e.timeStamp]);
   const unitsPerPx=(camera.top-camera.bottom)/camera.zoom/canvasEl.clientHeight;
-  target.addScaledVector(groundRight,-dx*unitsPerPx).addScaledVector(groundUp,-dy*unitsPerPx);
-  followHold=2.5;placeCamera();placeSun();needsRender=true;
+  const wx=(-dx*groundRight.x-dy*groundUp.x)*unitsPerPx,wz=(-dx*groundRight.z-dy*groundUp.z)*unitsPerPx;
+  target.x+=wx;target.z+=wz;
+  // Pan speed, smoothed, so a flick glides on after release.
+  panVel.x=damp(panVel.x,wx/dt,20,dt);panVel.z=damp(panVel.z,wz/dt,20,dt);lastMove=e.timeStamp;
+  syncFollow();followHold=2.5;needsRender=true;
 });
-for(const ev of ['pointerup','pointercancel'])canvasEl.addEventListener(ev,e=>pointers.delete(e.pointerId));
+for(const ev of ['pointerup','pointercancel'])canvasEl.addEventListener(ev,e=>{
+  pointers.delete(e.pointerId);
+  if(e.timeStamp-lastMove>80)panVel.set(0,0,0);   // held still before letting go: no glide
+  if(pointers.size)panVel.set(0,0,0);
+});
+canvasEl.addEventListener('wheel',e=>{e.preventDefault();zoomVel+=-e.deltaY*.0015*F.zoomGlide;},{passive:false});
+car.onHit=s=>{if(!reducedMotion.matches&&s>.2)trauma=Math.min(1,trauma+s*.8);};
 
-canvasEl.addEventListener('wheel',e=>{e.preventDefault();zoomGoal=THREE.MathUtils.clamp(zoomGoal*Math.exp(-e.deltaY*.0015),ZOOM_MIN,ZOOM_MAX);},{passive:false});
-const followTo=new THREE.Vector3();
 function updateView(dt){
   let moved=false;
-  if(Math.abs(zoomGoal-zoom)>1e-4){zoom+=(zoomGoal-zoom)*(1-Math.exp(-dt*10));camera.zoom=zoom;camera.updateProjectionMatrix();fitShadow();moved=true;}
+  // Zoom glides in log space, so it feels the same zoomed in or out.
+  if(Math.abs(zoomVel)>1e-3&&!(pointers.size===2)){
+    const z=THREE.MathUtils.clamp(zoom*Math.exp(zoomVel*dt),ZOOM_MIN,ZOOM_MAX);if(z===zoom)zoomVel=0;zoom=z;zoomVel=damp(zoomVel,0,F.zoomGlide,dt);moved=true;
+  }else if(!pointers.size)zoomVel=0;
+  // A released pan glides to a stop.
+  if(!pointers.size&&panVel.lengthSq()>1e-6){
+    target.addScaledVector(panVel,dt);panVel.x=damp(panVel.x,0,F.panGlide,dt);panVel.z=damp(panVel.z,0,F.panGlide,dt);
+    syncFollow();followHold=Math.max(followHold,1.2);moved=true;
+  }
   followHold=Math.max(0,followHold-dt);
-  const p=car.pose();
-  if(followHold===0&&(Math.abs(p.v)>.05||target.distanceToSquared(followTo.set(p.x,target.y,p.z))>.02)){
-    // Ease toward the car plus a short look-ahead along its motion.
-    followTo.set(p.x+Math.sin(p.h)*p.v*.3,target.y,p.z+Math.cos(p.h)*p.v*.3);
-    target.lerp(followTo,1-Math.exp(-dt*(3.2+Math.abs(p.v)*.3)));placeCamera();placeSun();moved=true;   // keeps up at high speed
+  const p=car.shown;
+  // Pull back a little at speed.
+  const zGoal=1-F.speedZoomOut*Math.min(1,p.speed/FEEL.car.maxSpeed);
+  if(Math.abs(zGoal-speedZoom)>1e-4)speedZoom=damp(speedZoom,zGoal,2.2,dt);
+  // Spring follow toward the car plus a look-ahead along its velocity.
+  if(followHold===0){
+    const gx=p.x+p.vx*F.lookAhead,gz=p.z+p.vz*F.lookAhead;
+    if(Math.abs(gx-camX.x)+Math.abs(gz-camZ.x)>1e-4||Math.abs(camX.v)+Math.abs(camZ.v)>1e-4){
+      target.x=spring(camX,gx,F.follow,dt);target.z=spring(camZ,gz,F.follow,dt);moved=true;
+    }
+  }
+  const zoomNow=zoom*speedZoom;
+  if(Math.abs(camera.zoom-zoomNow)>1e-5){camera.zoom=zoomNow;camera.updateProjectionMatrix();fitShadow();moved=true;}
+  if(moved){placeCamera();placeSun();}
+  // Shake: a little noise, scaled by trauma squared, fading fast.
+  if(trauma>0){
+    trauma=Math.max(0,trauma-F.shakeDecay*dt);shakeClock+=dt;
+    if(!moved)placeCamera();
+    const k=trauma*trauma*F.shake/camera.zoom,t=shakeClock;
+    camera.position.addScaledVector(groundRight,k*(Math.sin(t*47.3)*.6+Math.sin(t*83.1+1.3)*.4)).addScaledVector(screenUp,k*(Math.sin(t*53.9+2.1)*.6+Math.sin(t*97.7)*.4));
+    moved=true;
   }
   return moved;
 }
@@ -178,11 +222,11 @@ function placeSun(){
   sun.target.position.copy(sunAt);sun.position.copy(sunAt).addScaledVector(sunDir,25);sun.target.updateMatrixWorld();
   renderer.shadowMap.needsUpdate=true;
 }
-let timeScale=1,animClock=0,lastFrame=0,worldClock=0;
+let timeScale=1,animClock=0,lastFrame=null,worldClock=0;
 function render(time=0){
   requestAnimationFrame(render);
-  if(hidden){lastFrame=time;return;}
-  const frameDt=Math.min(100,time-lastFrame);lastFrame=time;
+  if(hidden){lastFrame=null;return;}
+  const frameDt=lastFrame===null?0:Math.min(100,Math.max(0,time-lastFrame));lastFrame=time;
   let animating=false;
   if(breeze&&canopies.length){
     animClock+=frameDt*timeScale;wind.time.value=animClock/1000;
@@ -205,7 +249,8 @@ const detected=detectQuality(renderer);
 setQuality(detected.preset,detected.reason==='url'?'manual':'auto');monitor.auto=detected.reason!=='url';
 applyArt();renderer.shadowMap.needsUpdate=true;
 renderer.compile(scene,camera);$('loading').remove();requestAnimationFrame(render);
-document.addEventListener('visibilitychange',()=>{hidden=document.hidden;needsRender=true;});
+// Back from a hidden tab: drop the missed time so nothing jumps.
+document.addEventListener('visibilitychange',()=>{hidden=document.hidden;lastFrame=null;playground.resync();panVel.set(0,0,0);zoomVel=0;needsRender=true;});
 
 // The page shows only the scene and the vehicle concepts: no toolbar, Workbench
 // or captions. The breeze stays on (unless reduced motion is requested).
@@ -224,12 +269,14 @@ window.forestTile={car,playground,grid:{GRID,HOME_NUMBER,tileNumber,tileCenter},
 // Development benchmark: runs n full animated frames (breeze, car, shadows,
 // composer) back to back, each synced with a 1 px read so GPU time is included.
 if(import.meta.env.DEV){
+  // Drive the camera by hand in tests: one view update of dt seconds.
+  window.forestTile.view={update:updateView,target,get trauma(){return trauma;},get zoom(){return camera.zoom;}};
   window.forestTile.bench=(n=120)=>{
     const gl=renderer.getContext(),px=new Uint8Array(4),times=[];let t=performance.now();
     for(let i=0;i<n;i++){
       const t0=performance.now();t+=1000/60;
       animateTile?.(t);for(const c of canopies){const ph=c.userData.phase;c.rotation.z=Math.sin(t*.00065+ph)*ART.vegetation.sway;}
-      car.update(t);renderer.shadowMap.needsUpdate=true;renderer.info.reset();composer.render();
+      car.update(t);playground.update(1/60);updateView(1/60);renderer.shadowMap.needsUpdate=true;renderer.info.reset();composer.render();
       gl.readPixels(0,0,1,1,gl.RGBA,gl.UNSIGNED_BYTE,px);times.push(performance.now()-t0);
     }
     times.sort((a,b)=>a-b);const mean=times.reduce((a,b)=>a+b,0)/n;

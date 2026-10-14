@@ -66,4 +66,14 @@ A driving sandbox in the spirit of Bruno Simon's portfolio, built from scratch i
 - Bumping something takes a little speed off the car, more for heavier things. Anything pushed off the edge comes back to where it started.
 - Bodies sleep until touched, so a still scene costs nothing; shadows refresh only while something moves.
 
+- Street furniture (lamps, benches, bins) topples when hit, rests a few seconds, then floats slowly back to its spot.
+- Physics is Rapier (`@dimforge/rapier3d-compat`), loaded in the background after the scene shows (about 1 MB gzipped, WASM inlined).
+
+## Feel
+
+All motion shares `src/motion.js`: one smoothing helper, `damp(a, b, lambda, dt) = lerp(a, b, 1 - exp(-lambda*dt))`, and a fixed 1/120 s clock (car, physics, traffic) drawn interpolated between the last two steps. Frame time is clamped to 0.1 s and the clocks reset when the tab is hidden, so nothing ever jumps.
+- Car body on spring-dampers: it squats under gas, dives under braking, leans in turns and bounces on hits. The handbrake drift leaves tyre marks that fade out and kicks up dust.
+- Camera: a critically damped spring follow with look-ahead along the car's velocity, a slight zoom out at speed and a tiny shake on hard hits (off with reduced motion). Drag pans and wheel or pinch zooms glide to a stop after release.
+- Every constant is in `FEEL` (motion.js) and live in the dev build's Feel panel (bottom left), saved per browser.
+
 The earlier harbour district is kept in git history (commit 3bc1d28); its modules are still in `src/world/` for reuse. Tile numbers show only with `?tiles` in the URL.

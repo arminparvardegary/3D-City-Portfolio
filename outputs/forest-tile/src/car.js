@@ -1,18 +1,16 @@
 import * as THREE from 'three';
 import { ART } from './config.js';
 import { VEHICLES, MAX_STEER, buildVehicle, disposeVehicle } from './vehicles.js';
+import { FEEL, STEP, damp, lerp, lerpAngle, fixedClock } from './motion.js';
+import { createSkid } from './fx/skid.js';
 
 // You drive it. W / Up = gas, S / Down = brake then reverse, A D / Left Right =
-// steer, Space = handbrake, R = back to the parking space. Simple bicycle
-// model: the nose follows the front wheels, which really steer. Wheels roll
-// with ground speed, the body pitches and rolls, and the lights follow what
-// you do. select(i) swaps the vehicle in place.
+// steer, Space = handbrake, R = back to the start. Simple bicycle model: the
+// nose follows the front wheels, which really steer. The body sits on springs
+// (it squats, dives and leans, and bounces on hits), the lights follow what you
+// do, and a handbrake drift leaves fading tyre marks and dust. All feel
+// constants live in FEEL (motion.js). select(i) swaps the vehicle in place.
 const KEYS={KeyW:'gas',ArrowUp:'gas',KeyS:'brake',ArrowDown:'brake',KeyA:'left',ArrowLeft:'left',KeyD:'right',ArrowRight:'right',Space:'hand'};
-// Driving feel. Units are tile units per second (1 unit = 10 design pixels).
-const MAX_SPEED=9.6,MAX_REVERSE=3;            // three times the original top speed
-const ENGINE=8.4,BRAKE=12,COAST=1.4,DRAG=.03;  // accelerations (units/s²)
-const GRIP=12;                                 // lateral acceleration the tyres hold; beyond it the car runs wide
-const STEER_IN=6,STEER_OUT=9;                  // how fast the wheel turns in and returns (1/s)
 // Static solids the car cannot pass ([x,z,halfW,halfD] boxes, [x,z,r] circles); the world adds them.
 const BOXES=[];
 const CIRCLES=[];
@@ -20,10 +18,14 @@ let BOUNDS={x0:-4.95,x1:4.95,z0:-4.95,z1:4.95};
 let dynamicObstacles=()=>[];
 const AMBULANCE=VEHICLES.findIndex(q=>q.name==='Ambulance');
 
-export function createCarControls(parent,m,{prep,index=0,home:start=null,y=ART.car.position[1]}={}){
+export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
   const home=start??{x:ART.car.position[0],z:ART.car.position[2],h:ART.car.rotation};
-  let x=home.x,z=home.z,h=home.h,v=0,steer=0,a=0,lat=0,pitch=0,head=.55,tail=.45;
-  let parts=buildVehicle(index,parent,m,prep),current=index;
+  const C=FEEL.car,S=FEEL.suspension;
+  let x=home.x,z=home.z,h=home.h,v=0,vy=0,yaw=0,steer=0,a=0,lat=0,brakeRamp=0,head=.55,tail=.45,slide=0,rollAngle=0;
+  // Sprung body: angles (rad) and heave (units), each with its own velocity.
+  let pitch=0,pitchV=0,roll=0,rollV=0,heave=0,heaveV=0;
+  let parts=buildVehicle(index,parent,m,prep),current=index,bodyY=parts.car.position.y;
+  const skid=createSkid(parent);
   // The footprint as a row of circles along the car.
   let probes=[],r=1;
   const footprint=()=>{r=parts.width/2+.05;const k=Math.max(0,parts.length/2-r*.9),n=Math.max(1,Math.ceil(k/r));probes=[];for(let i=-n;i<=n;i++)probes.push(k*i/n);};
@@ -49,18 +51,44 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null,y=ART.c
   });
   addEventListener('keyup',e=>{const k=KEYS[e.code];if(k)down.delete(k);});
   addEventListener('blur',()=>down.clear());
+
+  // Fixed timestep: the simulation always advances in 1/120 s steps, whatever the
+  // display rate. The drawn car sits between the last two steps (interpolated).
+  const clock=fixedClock(STEP);
+  const prev={x,z,h,steer,roll:0,pitch:0,bodyRoll:0,heave:0};
+  const snapshot=()=>{prev.x=x;prev.z=z;prev.h=h;prev.steer=steer;prev.roll=rollAngle;prev.pitch=pitch;prev.bodyRoll=roll;prev.heave=heave;};
+  // Coming back to the tab (or any long stall) never replays the missed time.
+  let last=null;
+  const resync=()=>{last=null;clock.reset();snapshot();};
+  document.addEventListener('visibilitychange',resync);
   const place=()=>{parts.rig.position.x=x;parts.rig.position.z=z;parts.rig.rotation.y=h;};
   place();   // at its start position from the very first frame
+
+  // The shown pose (interpolated), for the camera: one object, reused.
+  const shown={x,z,h,vx:0,vz:0,speed:0};
+  const rear=[{x:0,z:0},{x:0,z:0}];
+  let onHit=null;
+  // A knock: the body bounces and the camera may shake (strength 0..1).
+  const hit=s=>{s=Math.min(1,Math.max(0,s));if(s<.02)return;heaveV-=S.bump*30*s;pitchV+=(Math.random()-.5)*s*1.2;rollV+=(Math.random()-.5)*s*1.2;onHit?.(s);};
+
   const api={
     press(k,on){on?down.add(k):down.delete(k);},
-    reset(){x=home.x;z=home.z;h=home.h;v=0;vy=0;yaw=0;steer=0;snapshot();place();},
+    reset(){x=home.x;z=home.z;h=home.h;v=0;vy=0;yaw=0;steer=0;pitch=pitchV=roll=rollV=heave=heaveV=0;snapshot();place();},
+    resync,
+    // Put the car somewhere, at rest (for tests and future spawn points).
+    teleport(nx,nz,nh=h){x=nx;z=nz;h=nh;v=vy=yaw=0;snapshot();place();},
     get speed(){return v;},
     get index(){return current;},
     get paint(){return parts.paint;},
     get color(){return parts.color;},
-    pose(){return {x,z,h,steer,v,length:parts.length,width:parts.width};},
+    // The simulated state (for physics and traffic).
+    pose(){return {x,z,h,steer,v,vy,length:parts.length,width:parts.width};},
+    // Where the car is drawn this frame (for the camera).
+    get shown(){return shown;},
     // Bumping into something heavy takes some speed off (f is the share kept).
     slow(f){v*=f;},
+    hit,
+    set onHit(fn){onHit=fn;},
     setObstacles(fn){dynamicObstacles=fn;},
     addStatic(circles,boxes=[]){CIRCLES.push(...circles);BOXES.push(...boxes);},
     get length(){return parts.length;},
@@ -68,83 +96,85 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null,y=ART.c
     count:VEHICLES.length,
     select(i){
       if(i===current)return;
-      disposeVehicle(parts,m);parts=buildVehicle(i,parent,m,prep);current=i;footprint();
-      v=0;if(blocked(x,z,h)){x=home.x;z=home.z;h=home.h;}snapshot();rollAngle=prevRoll=0;place();
+      disposeVehicle(parts,m);parts=buildVehicle(i,parent,m,prep);current=i;bodyY=parts.car.position.y;footprint();
+      v=0;if(blocked(x,z,h)){x=home.x;z=home.z;h=home.h;}rollAngle=0;snapshot();place();
     },
   };
-  // Fixed timestep: the simulation always advances in 1/120 s steps, whatever the
-  // display rate, so speed, steering and braking feel the same at 60 or 144 Hz.
-  // The drawn car is interpolated between the last two steps, so it never stutters.
-  const STEP=1/120;
-  let last=null,acc=0,roll=0,prev={x,z,h,steer,roll:0},rollAngle=0,prevRoll=0;
-  const snapshot=()=>{prev.x=x;prev.z=z;prev.h=h;prev.steer=steer;prevRoll=rollAngle;};
-  // One physics step. Arcade but honest: the engine pulls hard at low speed and
-  // fades toward top speed; brakes bite strongly but ramp in over ~60 ms so
-  // they never jolt. Steering eases in and centres quickly, with less lock at
-  // speed. Turning follows the front wheels, but no faster than the tyres'
-  // grip allows, so the car can never pivot on the spot or flick. The
-  // handbrake (Space) locks the rear: grip drops, the tail steps out and the
-  // car slides until you let go.
-  let vy=0,brakeRamp=0,yaw=0;
+
+  // One simulation step. Arcade but honest: the engine pulls hard at low speed and
+  // fades toward top speed; brakes ramp in over ~60 ms so they never jolt.
+  // Steering eases in and centres quickly, with less lock at speed. Turning
+  // follows the front wheels, no faster than the tyres' grip allows. The
+  // handbrake (Space) locks the rear: grip drops, the tail steps out and the car
+  // slides until you let go.
   function step(dt){
     const gas=down.has('gas'),brake=down.has('brake'),hand=down.has('hand');
-    // Longitudinal: engine, brakes (S brakes first, then reverses), drag.
-    brakeRamp+=((brake&&v>.15||gas&&v<-.15?1:0)-brakeRamp)*(1-Math.exp(-dt*16));
-    // Under power the engine eases straight onto top speed (strong pull at low speed);
-    // off the pedals the car rolls down with rolling resistance and air drag.
-    let acc=0;
-    if(gas&&v>=-.15)acc=ENGINE*(1-Math.max(v,0)/MAX_SPEED);
-    else if(brake&&v<=.15)acc=-ENGINE*.7*(1-Math.max(-v,0)/MAX_REVERSE);
-    else acc=-Math.sign(v)*(COAST+DRAG*v*v);
-    acc-=Math.sign(v)*BRAKE*brakeRamp;
+    brakeRamp=damp(brakeRamp,brake&&v>.15||gas&&v<-.15?1:0,16,dt);
+    let acc;
+    if(gas&&v>=-.15)acc=C.engine*(1-Math.max(v,0)/C.maxSpeed);
+    else if(brake&&v<=.15)acc=-C.engine*.7*(1-Math.max(-v,0)/C.maxReverse);
+    else acc=-Math.sign(v)*(C.coast+C.drag*v*v);
+    acc-=Math.sign(v)*C.brake*brakeRamp;
     if(hand)acc-=Math.sign(v)*6.5;
     const prevV=v;v+=acc*dt;
     if(prevV!==0&&Math.sign(v)!==Math.sign(prevV)&&!(gas&&prevV<0)&&!(brake&&prevV>0))v=0;   // brakes stop, they do not reverse
-    v=THREE.MathUtils.clamp(v,-MAX_REVERSE,MAX_SPEED);
+    v=THREE.MathUtils.clamp(v,-C.maxReverse,C.maxSpeed);
     a=(v-prevV)/dt;
     // Steering: lock shrinks with speed; the wheel turns in smoothly and returns faster.
-    const speed=Math.abs(v),lock=THREE.MathUtils.lerp(MAX_STEER,.24,Math.min(1,(speed/MAX_SPEED)**.7));
+    const speed=Math.abs(v),lock=lerp(MAX_STEER,.24,Math.min(1,(speed/C.maxSpeed)**.7));
     const want=((down.has('left')?1:0)-(down.has('right')?1:0))*lock;
-    steer+=(want-steer)*(1-Math.exp(-dt*(Math.abs(want)>Math.abs(steer)?STEER_IN:STEER_OUT)));
+    steer=damp(steer,want,Math.abs(want)>Math.abs(steer)?C.steerIn:C.steerOut,dt);
     // Yaw: what the wheels ask for, capped by grip, reached over a short response time.
-    const grip=hand?GRIP*.35:GRIP;
-    // The car follows its front wheels exactly, so the path always matches the steering you see.
+    const grip=hand?C.grip*C.handGrip:C.grip;
     let yawWant=v/parts.wheelbase*Math.tan(steer);
     const cap=grip/Math.max(speed,.6);yawWant=THREE.MathUtils.clamp(yawWant,-cap,cap);
-    if(hand&&speed>1.2)yawWant*=1.6;                       // the tail swings round when the rear locks
-    yaw+=(yawWant-yaw)*(1-Math.exp(-dt*(hand?5:12)));
+    if(hand&&speed>1.2)yawWant*=C.handSwing;                // the tail swings round when the rear locks
+    yaw=damp(yaw,yawWant,hand?5:12,dt);
     // Sideways slip: decays fast with grip, lingers while the handbrake is on.
-    vy+=-yaw*v*dt*(hand?.55:.08);vy*=Math.exp(-dt*(hand?1.6:14));
+    vy+=-yaw*v*dt*(hand?.55:.08);vy=damp(vy,0,hand?1.6:14,dt);
     const nh=h+yaw*dt,fx=Math.sin(nh),fz=Math.cos(nh);
     const nx=x+(fx*v+fz*vy)*dt,nz=z+(fz*v-fx*vy)*dt;
     if(!blocked(nx,nz,nh)){h=nh;x=nx;z=nz;lat=yaw*v;}
-    else{v*=-.15;vy=0;yaw=0;a=0;lat=0;}                    // a soft bump, not a dead stop
+    else{hit(Math.abs(v)/C.maxSpeed*1.4);v*=-.15;vy=0;yaw=0;a=0;lat=0;}   // a soft bump, not a dead stop
     rollAngle+=v*dt/parts.wheelR;
-    // Body: pitches with acceleration and braking, rolls with cornering, like a soft suspension.
-    const k=1-Math.exp(-dt*7);
-    pitch+=(-THREE.MathUtils.clamp(a*.006,-.04,.04)-pitch)*k;
-    roll+=(-THREE.MathUtils.clamp(lat*.0045,-.05,.05)-roll)*k;
+
+    // Suspension: each axis is a spring-damper pulled toward where the load puts it.
+    // Gas squats the tail (nose up), braking dives the nose, corners lean out.
+    const pitchGoal=THREE.MathUtils.clamp(-a*S.pitch,-S.maxPitch,S.maxPitch),rollGoal=THREE.MathUtils.clamp(-lat*S.roll,-S.maxRoll,S.maxRoll);
+    pitchV+=(S.stiffness*(pitchGoal-pitch)-S.damping*pitchV)*dt;pitch+=pitchV*dt;
+    rollV+=(S.stiffness*(rollGoal-roll)-S.damping*rollV)*dt;roll+=rollV*dt;
+    heaveV+=(S.stiffness*1.4*(0-heave)-S.damping*1.2*heaveV)*dt;heave+=heaveV*dt;
+
+    // Drift: how hard the rear is sliding; marks and dust come from the rear wheels.
+    slide=damp(slide,Math.abs(vy)*1.2+(hand&&speed>2?speed/C.maxSpeed:0),20,dt);
+    const tr=parts.track,rz=parts.rearZ,cs=Math.cos(h),sn=Math.sin(h);
+    rear[0].x=x+sn*rz+cs*tr;rear[0].z=z+cs*rz-sn*tr;rear[1].x=x+sn*rz-cs*tr;rear[1].z=z+cs*rz+sn*tr;
+    skid.step(dt,rear,slide,fx*v+fz*vy,fz*v-fx*vy);
+
     const moving=speed>.03,braking=brakeRamp>.2||hand&&moving;
-    tail+=((braking?1.9:(v<-.03?1.1:.45))-tail)*(1-Math.exp(-dt*14));
-    head+=((moving?1.35:.55)-head)*(1-Math.exp(-dt*6));
+    tail=damp(tail,braking?1.9:(v<-.03?1.1:.45),14,dt);
+    head=damp(head,moving?1.35:.55,6,dt);
   }
+
   // time in ms (rAF clock). Returns true while anything is moving, so the caller
   // keeps rendering and refreshes the moving shadow.
   api.update=function(time){
-    const frame=last===null?0:THREE.MathUtils.clamp((time-last)/1000,0,.1);last=time;
-    acc+=frame;let n=0;
-    while(acc>=STEP&&n<16){snapshot();step(STEP);acc-=STEP;n++;}
-    if(n===16)acc=0;                                     // after a long stall, do not spiral
-    const t=acc/STEP,lerpAngle=(p,q)=>p+Math.atan2(Math.sin(q-p),Math.cos(q-p))*t;
-    parts.rig.position.x=prev.x+(x-prev.x)*t;parts.rig.position.z=prev.z+(z-prev.z)*t;parts.rig.rotation.y=lerpAngle(prev.h,h);
-    const s=prev.steer+(steer-prev.steer)*t,r=prevRoll+(rollAngle-prevRoll)*t;
-    for(const w of parts.wheels){w.rotation.x=r;if(w.userData.front)w.userData.steer.rotation.y=s;}
-    parts.car.rotation.x=pitch;parts.car.rotation.z=roll;
+    const frame=last===null?0:Math.min((time-last)/1000,.1);last=time;
+    clock.advance(frame,dt=>{snapshot();step(dt);});
+    const t=clock.alpha;
+    shown.x=lerp(prev.x,x,t);shown.z=lerp(prev.z,z,t);shown.h=lerpAngle(prev.h,h,t);
+    shown.vx=Math.sin(h)*v+Math.cos(h)*vy;shown.vz=Math.cos(h)*v-Math.sin(h)*vy;shown.speed=Math.abs(v);
+    parts.rig.position.x=shown.x;parts.rig.position.z=shown.z;parts.rig.rotation.y=shown.h;
+    const s=lerp(prev.steer,steer,t),wr=lerp(prev.roll,rollAngle,t);
+    for(const w of parts.wheels){w.rotation.x=wr;if(w.userData.front)w.userData.steer.rotation.y=s;}
+    parts.car.rotation.x=lerp(prev.pitch,pitch,t);parts.car.rotation.z=lerp(prev.bodyRoll,roll,t);parts.car.position.y=bodyY+lerp(prev.heave,heave,t);
     m.tailLight.emissiveIntensity=tail;m.headlight.emissiveIntensity=head;
     // The ambulance light bar pulses.
     const flashing=current===AMBULANCE;
     if(flashing)m.siren.emissiveIntensity=.4+1.2*Math.max(0,Math.sin(time*.012));
-    return Math.abs(v)>.02||Math.abs(vy)>.01||Math.abs(steer)>.001||Math.abs(pitch)>1e-4||Math.abs(roll)>1e-4||Math.abs(x-prev.x)+Math.abs(z-prev.z)>1e-6||flashing;
+    const fx=skid.update(frame);
+    const springs=Math.abs(pitchV)+Math.abs(rollV)+Math.abs(heaveV)>1e-4||Math.abs(pitch)+Math.abs(roll)+Math.abs(heave)>1e-4;
+    return Math.abs(v)>.02||Math.abs(vy)>.01||Math.abs(steer)>.001||springs||Math.abs(x-prev.x)+Math.abs(z-prev.z)>1e-6||flashing||fx;
   };
   return api;
 }
