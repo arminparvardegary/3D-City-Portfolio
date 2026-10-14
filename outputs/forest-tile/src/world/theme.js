@@ -38,14 +38,14 @@ export const THEME=Object.freeze({
   people:{skin:['#f3d2b8','#e2b48f','#c58c63','#9a6440','#6b4430','#4a2e22'],
     clothes:['#ff6b5e','#4f9fd8','#ffc93a','#5fcf87','#a77be0','#f2f2f2','#2f3650','#ff9f6b','#3fb8a8','#e86fa0']},
   // New York (low poly): teal sky, warm sun from the left, cool sky light, warm bounce.
-  nyc:{sky:{top:'#9ad7e2',horizon:'#7fc4d4'},light:{
-    sun:{color:'#fff3e6',intensity:2.5,azimuth:-58,elevation:49,softness:14},
-    sky:{color:'#dff5ff',ground:'#ffd9e0',intensity:1.6},
-    fill:{color:'#a6e6f2',intensity:.7},
-    env:.15,exposure:1,toneMapping:'neutral',
-    fog:{enabled:true,color:'#a3d9e3',near:70,far:230},
-    ao:{intensity:2.2,radius:1.2,falloff:.6,color:'#3a3348'},
-    grade:{saturation:.08},
+  nyc:{sky:{top:'#5f9bd3',horizon:'#d3e3ec'},light:{
+    sun:{color:'#fff1df',intensity:3.2,azimuth:-58,elevation:42,softness:10},
+    sky:{color:'#cfe3f5',ground:'#8f8a80',intensity:1.1},
+    fill:{color:'#bcd4ec',intensity:.45},
+    env:.55,exposure:1,toneMapping:'aces',
+    fog:{enabled:true,color:'#cfdfe8',near:110,far:360},
+    ao:{intensity:2.4,radius:1.4,falloff:.6,color:'#1d2026'},
+    grade:{saturation:.06},
   }},
   light:{
     sun:{color:'#ffffff',intensity:2.3,azimuth:-38,elevation:52,softness:22},

@@ -138,16 +138,17 @@ export function buildDistrict({row:R,shops:SH,top}){
   const walls=['#f6d6c8','#cfe6d8','#d9e4f6','#f7e7b8','#e9d5f0','#f3d0d6'],accents=['#ff6b5e','#5ab4f0','#3fb8a8','#f2b705','#a77be0','#ff8a4c'];
   // A shop with its front facing +z (yaw 0) or +x (yaw π/2), sitting on y.
   function shop(cx,cz,yaw,y,w,d,[name,kind],i){
+    const side=Math.abs(Math.sin(yaw))>.5;   // front faces along x
     const h=4.4,acc=accents[i%6],wall=walls[i%6],fx=Math.sin(yaw),fz=Math.cos(yaw),rx=Math.cos(yaw),rz=-Math.sin(yaw);
     const at=(a,f)=>[cx+rx*a+fx*f,cz+rz*a+fz*f];   // a: across the front, f: out from the centre
-    const [bx,bz]=at(0,0);box(yaw?d:w,h,yaw?w:d,bx,y,bz,wall);box((yaw?d:w)+.3,.3,(yaw?w:d)+.3,bx,y+h,bz,NYC.white);
-    const [gx,gz]=at(-w*.12,d/2+.05);box(yaw?.12:w*.6,1.8,yaw?w*.6:.12,gx,y+.55,gz,[NYC.flame,{emissive:'#ff9a3c',emissiveIntensity:.6}]);
-    const [dx,dz]=at(w*.33,d/2+.06);box(yaw?.14:1.1,2.4,yaw?1.1:.14,dx,y,dz,NYC.dark);
+    const [bx,bz]=at(0,0);box(side?d:w,h,side?w:d,bx,y,bz,wall);box((side?d:w)+.3,.3,(side?w:d)+.3,bx,y+h,bz,NYC.white);
+    const [gx,gz]=at(-w*.12,d/2+.05);box(side?.12:w*.6,1.8,side?w*.6:.12,gx,y+.55,gz,[NYC.flame,{emissive:'#ff9a3c',emissiveIntensity:.6}]);
+    const [dx,dz]=at(w*.33,d/2+.06);box(side?.14:1.1,2.4,side?1.1:.14,dx,y,dz,NYC.dark);
     // Striped awning.
     const n=Math.max(5,Math.round(w*.85/.5)),sw=w*.85/n,dep=1.4,drop=.55,slope=Math.atan2(drop,dep),hyp=Math.hypot(dep,drop);
     for(let k=0;k<n;k++){const a=-w*.425+sw*(k+.5),[sx,sz]=at(a,d/2+dep/2),col=k%2?acc:'#ffffff';
       add(new THREE.BoxGeometry(sw,.08,hyp).rotateX(slope).rotateY(yaw),col,[sx,y+2.95-drop/2,sz]);
-      const [vx,vz]=at(a,d/2+dep);box(yaw?.06:sw,.32,yaw?sw:.06,vx,y+2.95-drop-.3,vz,col);}
+      const [vx,vz]=at(a,d/2+dep);box(side?.06:sw,.32,side?sw:.06,vx,y+2.95-drop-.3,vz,col);}
     // Roof sign, facing the street.
     const sw2=w*.98,sh=sw2*.5,[sx,sz]=at(0,d/2-.5);sign(name,kind,acc,sw2,sh,{x:sx,y:y+h+.3+sh/2+.3,z:sz,yaw});
     // A table and two stools outside.
@@ -157,10 +158,10 @@ export function buildDistrict({row:R,shops:SH,top}){
   let si=0;
   for(const S of SH){
     if(S.slab){box(S.x1-S.x0,top-.12,S.z1-S.z0,(S.x0+S.x1)/2,.12,(S.z0+S.z1)/2,NYC.walk);solids.push([(S.x0+S.x1)/2,(S.z0+S.z1)/2,(S.x1-S.x0)/2,(S.z1-S.z0)/2]);}
-    const along=S.yaw?S.z1-S.z0:S.x1-S.x0,w=along/S.count;
+    const side=Math.abs(Math.sin(S.yaw))>.5,out=side?Math.sign(Math.sin(S.yaw)):Math.sign(Math.cos(S.yaw)),along=side?S.z1-S.z0:S.x1-S.x0,w=along/S.count;
     for(let k=0;k<S.count;k++,si++){
-      const a=(S.yaw?S.z0:S.x0)+w*(k+.5),d=6.4,c=S.front-3.8-d/2;   // S.front: the sidewalk edge the shops face
-      shop(S.yaw?c:a,S.yaw?a:c,S.yaw,top,w-1,d,SHOPS[si],si);
+      const a=(side?S.z0:S.x0)+w*(k+.5),d=6.4,c=S.front-out*(3.8+d/2);   // S.front: the sidewalk edge the shops face
+      shop(side?c:a,side?a:c,S.yaw,top,w-1,d,SHOPS[si],si);
     }
   }
   K.finish(root);

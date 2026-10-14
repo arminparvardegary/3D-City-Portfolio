@@ -45,7 +45,7 @@ export function buildRealCar(car,m,paint,w,{L=3.7,W=1.62,taxi=false}={},prep){
   const half=curve([[zr,.6],[zr+.25,.76],[zr+.8,.81],[0,W/2],[zf-.7,.79],[zf-.2,.72],[zf,.56]]);
   const floor=z=>{let y=.2;for(const a of az){const d=Math.abs(z-a);if(d<R)y=Math.max(y,w.r+Math.sqrt(R*R-d*d)-.02);}return y;};
   // Lower body.
-  const rings=[],N=72,M=40;
+  const rings=[],N=48,M=28;
   for(let i=0;i<=N;i++){
     const z=zr+(zf-zr)*i/N,yb=floor(z),yt=shoulder(z),hw=half(z),yc=(yb+yt)/2,hh=(yt-yb)/2,pts=[];
     for(let j=0;j<M;j++){const [sx,sy]=se(j/M*Math.PI*2,4.2);pts.push([sx*hw,yc+sy*hh]);}
@@ -54,7 +54,7 @@ export function buildRealCar(car,m,paint,w,{L=3.7,W=1.62,taxi=false}={},prep){
   mesh(car,loft(rings),paint);
   // Cabin: base on the shoulder, roof over the middle, steep windshield, fastback rear.
   const cz0=-1.12,cz1=.66,roof=curve([[cz0,.86],[-.72,1.18],[-.35,1.3],[.08,1.32],[.36,1.18],[cz1,.86]]);
-  const cab=[],roofRings=[],K=40,Q=36;
+  const cab=[],roofRings=[],K=26,Q=28;
   for(let i=0;i<=K;i++){
     const z=cz0+(cz1-cz0)*i/K,base=shoulder(z)-.05,top=Math.max(base+.02,roof(z)),wb=half(z)-.11,wt=wb-.2,yc=(base+top)/2,hh=(top-base)/2,pts=[],rp=[];
     for(let j=0;j<Q;j++){const [sx,sy]=se(j/Q*Math.PI*2,3.6),y=yc+sy*hh,v=Math.max(0,(y-base)/(top-base)),x=sx*(wb+(wt-wb)*v);pts.push([x,y]);
@@ -64,7 +64,7 @@ export function buildRealCar(car,m,paint,w,{L=3.7,W=1.62,taxi=false}={},prep){
   mesh(car,loft(cab),glass);
   // Painted roof: the top of the cabin, slightly proud, where the cabin is tall.
   {const keep=j=>{const a=j/Q*Math.PI*2;return a>Math.PI*.18&&a<Math.PI*.82;};
-    const top=roofRings.slice(8,K-9).map(r=>({z:r.z,pts:r.pts.filter((_,j)=>keep(j))}));
+    const top=roofRings.slice(5,K-6).map(r=>({z:r.z,pts:r.pts.filter((_,j)=>keep(j))}));
     mesh(car,loft(top,{caps:false,closed:false}),paint);
   }
   // Chrome belt line along the base of the side windows.
@@ -110,8 +110,8 @@ export function buildRealCar(car,m,paint,w,{L=3.7,W=1.62,taxi=false}={},prep){
 // calliper that steers but does not spin.
 export function realWheels(rig,m,w){
   const spins=[],{r,tw,track}=w;
-  const tyreProfile=[];for(let i=0;i<=16;i++){const a=-Math.PI/2+i/16*Math.PI;tyreProfile.push(new THREE.Vector2(r-.06+Math.cos(a)*.06,Math.sin(a)*tw/2*.98));}
-  const tyreGeo=new THREE.LatheGeometry([new THREE.Vector2(r*.66,-tw/2),...tyreProfile,new THREE.Vector2(r*.66,tw/2)],40).rotateZ(Math.PI/2);
+  const tyreProfile=[];for(let i=0;i<=8;i++){const a=-Math.PI/2+i/8*Math.PI;tyreProfile.push(new THREE.Vector2(r-.06+Math.cos(a)*.06,Math.sin(a)*tw/2*.98));}
+  const tyreGeo=new THREE.LatheGeometry([new THREE.Vector2(r*.66,-tw/2),...tyreProfile,new THREE.Vector2(r*.66,tw/2)],24).rotateZ(Math.PI/2);
   const alloy=new THREE.MeshStandardMaterial({color:'#c4c8ce',metalness:.9,roughness:.25,envMapIntensity:1.5}),disc=new THREE.MeshStandardMaterial({color:'#7d8188',metalness:.8,roughness:.4});
   const caliper=new THREE.MeshStandardMaterial({color:'#d01e24',roughness:.35,metalness:.2}),rubber=m.rubber;
   for(const {z,steer} of w.axles)for(const sx of [-1,1]){

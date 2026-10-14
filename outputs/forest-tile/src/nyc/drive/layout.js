@@ -1,0 +1,62 @@
+// The plan of the New York you drive (world units, about 1.5 m each; the car is
+// about 3.7 long). Manhattan is an island; the East River separates it from a
+// strip of Brooklyn; water all around. Every road connects at both ends, so
+// traffic never has to appear or vanish.
+//
+//   x: west -120 ... Manhattan ... 52 | East River 52..84 | Brooklyn 84..132
+//   z: north -120 ... south 120
+export const G=.12;              // street level (top of the land)
+export const CURB=.25;           // sidewalks stand this high above the street
+export const HALF=5;             // half a road width (two lanes of 5)
+export const LANE=2.5;           // lane centre, right of the road centre line
+export const WALK=2.6;           // sidewalk width inside each block
+
+export const MAN={x0:-120,x1:52},RIVER={x0:52,x1:84},BKN={x0:84,x1:132},NS={z0:-120,z1:120};
+// Avenues (run north to south) and streets (run east to west).
+export const AV=[-112,-72,-32,8,46];          // 46: FDR Drive along the river
+export const BAV=[90,116];                    // Brooklyn: riverside road and an avenue
+export const ST=[-112,-74,-36,2,40,78,112];
+// The Brooklyn Bridge runs along street z = 2: up from the avenue at x = 8, over
+// FDR Drive and the river, over the Brooklyn riverside road, down to x = 116.
+export const BRIDGE={z:2,x0:AV[3],x1:BAV[1],landM:14,landB:110,deck:6.6,river:[56,80]};
+
+// Blocks between the roads, with their place in the grid.
+export function blocks(){
+  const out=[];
+  for(let i=0;i<AV.length-1;i++)for(let j=0;j<ST.length-1;j++)
+    out.push({x0:AV[i]+HALF,x1:AV[i+1]-HALF,z0:ST[j]+HALF,z1:ST[j+1]-HALF,i,j,borough:'man'});
+  for(let j=0;j<ST.length-1;j++)out.push({x0:BAV[0]+HALF,x1:BAV[1]-HALF,z0:ST[j]+HALF,z1:ST[j+1]-HALF,i:9,j,borough:'bkn'});
+  return out;
+}
+
+// The road network: nodes at crossings, edges along roads. The bridge is one
+// edge from (8, 2) to (116, 2); the ground street under its ramps is not a road.
+export function network(){
+  const nodes=new Map(),key=(x,z)=>x+','+z,node=(x,z)=>{const k=key(x,z);if(!nodes.has(k))nodes.set(k,{x,z,k,out:[]});return nodes.get(k);};
+  const edges=[];
+  const link=(a,b,kind='road')=>{const e1={a,b,kind},e2={a:b,b:a,kind};a.out.push(e1);b.out.push(e2);edges.push(e1,e2);};
+  // Manhattan avenues and streets.
+  for(const x of AV)for(let j=0;j<ST.length-1;j++)link(node(x,ST[j]),node(x,ST[j+1]));
+  for(const z of ST)for(let i=0;i<AV.length-1;i++){if(z===BRIDGE.z&&AV[i]>=BRIDGE.x0)continue;link(node(AV[i],z),node(AV[i+1],z));}
+  // Brooklyn.
+  for(const x of BAV)for(let j=0;j<ST.length-1;j++)link(node(x,ST[j]),node(x,ST[j+1]));
+  for(const z of ST){if(z===BRIDGE.z)continue;link(node(BAV[0],z),node(BAV[1],z));}
+  // The bridge.
+  link(node(BRIDGE.x0,BRIDGE.z),node(BRIDGE.x1,BRIDGE.z),'bridge');
+  for(const n of nodes.values())n.degree=n.out.length;
+  return {nodes:[...nodes.values()],edges};
+}
+
+// Height of the bridge road above the street along x (0 off the bridge): a
+// smooth climb from the Manhattan landing, flat over the river, a smooth descent
+// to the Brooklyn landing.
+const smooth=t=>t<=0?0:t>=1?1:t*t*(3-2*t);
+export function bridgeHeight(x){
+  const {landM,landB,deck,river}=BRIDGE;
+  if(x<=landM||x>=landB)return 0;
+  if(x<river[0])return deck*smooth((x-landM)/(river[0]-landM));
+  if(x>river[1])return deck*smooth((landB-x)/(landB-river[1]));
+  return deck;
+}
+export const onBridgeBand=(x,z)=>Math.abs(z-BRIDGE.z)<=HALF&&x>BRIDGE.landM-1&&x<BRIDGE.landB+1;
+export const onLand=(x,z)=>z>=NS.z0&&z<=NS.z1&&((x>=MAN.x0&&x<=MAN.x1)||(x>=BKN.x0&&x<=BKN.x1));

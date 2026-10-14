@@ -6,10 +6,10 @@ import { worldUV } from '../world/textures.js';
 // bucketed per material and merged into one mesh each at finish(). Materials are
 // flat shaded; a material with a facade texture gets world space UVs, so
 // windows keep one size on every building.
-export function createKit(){
+export function createKit({flat=true}={}){
   const mats=new Map(),buckets=new Map();
   const mat=(color,extra={})=>{const key=color+JSON.stringify(extra,(k,v)=>v?.isTexture?v.uuid:v);
-    if(!mats.has(key))mats.set(key,new THREE.MeshStandardMaterial({color,roughness:.82,metalness:0,flatShading:true,...extra}));return mats.get(key);};
+    if(!mats.has(key))mats.set(key,new THREE.MeshStandardMaterial({color,roughness:.82,metalness:0,flatShading:flat,...extra}));return mats.get(key);};
   const resolve=m=>m?.isMaterial?m:mat(...[].concat(m));
   const put=(g,m)=>{g=g.index?g.toNonIndexed():g;
     if(m.map){worldUV(g,m.userData.uvSize??1);}else g.deleteAttribute('uv');

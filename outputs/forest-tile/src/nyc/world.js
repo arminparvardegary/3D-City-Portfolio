@@ -1,59 +1,59 @@
 import * as THREE from 'three';
-import { buildCity, LAYOUT, NYC } from './city.js';
 import { buildDistrict } from './district.js';
-import { buildBridge, bridgeSurface } from './bridge.js';
 import { createPeople } from './people.js';
-import { createKit } from '../diorama/kit.js';
+import { buildCity } from './drive/build.js';
+import { buildBridge } from './drive/bridge.js';
+import { createTraffic } from './drive/traffic.js';
+import { G,CURB,HALF,LANE,ST,AV,MAN,BKN,NS,BRIDGE,blocks,bridgeHeight,onBridgeBand,onLand } from './drive/layout.js';
+import { VEHICLES, buildVehicle } from '../vehicles.js';
 
-// New York as the world you drive: the low poly city at three times the diorama
-// size, with Armin's Experience Row and Skills Street built in at full scale.
-// Returns what main.js needs: the scene group, solids for the car, the start,
-// places for the Experience list, the parking lot and a per frame update.
-export const SCALE=3;
-export function buildNYCWorld({prep}){
+// New York as the world you drive (world units, about 1.5 m each). The plan is
+// in drive/layout.js: Manhattan, the East River, a strip of Brooklyn, water all
+// round. Armin's Experience Row and its parking lot face Skills Street across
+// street z = 78. Returns what main.js needs: the scene group, solids, the road
+// height (surface), the start, places for the Experience list, the parking lot,
+// tall buildings for the camera, and a per frame update.
+export function buildNYCWorld({prep,materials,player}){
   const group=new THREE.Group();group.name='new-york';
-  const city=buildCity({drive:true});city.root.scale.setScalar(SCALE);city.root.position.y=.12;group.add(city.root);
-  const {S,COLS,ROWS,RIVER,WALK}=LAYOUT,k=SCALE,top=.12+WALK*k;
-  // Blocks with a raised sidewalk are solid; the river is too.
-  const solids=[];
-  for(const [c,[x0,x1]] of Object.entries(COLS))for(const [r,[z0,z1]] of Object.entries(ROWS)){
-    if((c==='A'&&r==='R2')||(c==='C'&&r==='R2'))continue;
-    solids.push([(x0+x1)/2*k,(z0+z1)/2*k,(x1-x0)/2*k,(z1-z0)/2*k]);
-  }
-  // The river is not a box: the road surface below says where the car can go (only the bridge).
-  const cityBlocks=solids.slice();
-  const rect=(c,r)=>({x0:COLS[c][0]*k,x1:COLS[c][1]*k,z0:ROWS[r][0]*k,z1:ROWS[r][1]*k});
-  const A0=rect('A','R0'),C2=rect('C','R2');
-  const district=buildDistrict({top,row:rect('A','R2'),shops:[
-    {x0:A0.x0,x1:A0.x1,z0:A0.z1-8,z1:A0.z1,front:A0.z1,yaw:0,count:6,slab:false},   // along the front of a city block (its sidewalk exists)
-    {x0:C2.x0,x1:C2.x1,z0:C2.z0,z1:C2.z1,front:C2.x1,yaw:Math.PI/2,count:6,slab:true},
+  const bl=blocks(),find=(i,j)=>bl.find(b=>b.i===i&&b.j===j);
+  // Armin's blocks: Experience Row (0, 4); Skills Street shops in front of (0, 5) and (1, 5).
+  const exp=find(0,4),sk1=find(0,5),sk2=find(1,5),top=G+CURB;
+  const city=buildCity({reserved:new Set(['0,4','0,5','1,5']),fills:[
+    {x0:sk1.x0+2.6,x1:sk1.x1-2.6,z0:sk1.z0+12.5,z1:sk1.z1-2.6,zone:'low'},{x0:sk2.x0+2.6,x1:sk2.x1-2.6,z0:sk2.z0+12.5,z1:sk2.z1-2.6,zone:'low'}]});
+  group.add(city.root);
+  const district=buildDistrict({top,row:{x0:exp.x0,x1:exp.x1,z0:exp.z0,z1:exp.z1},shops:[
+    {x0:sk1.x0,x1:sk1.x1,z0:sk1.z0,z1:sk1.z1,front:sk1.z0,yaw:Math.PI,count:6,slab:true},
+    {x0:sk2.x0,x1:sk2.x1,z0:sk2.z0,z1:sk2.z1,front:sk2.z0,yaw:Math.PI,count:6,slab:true},
   ]});
-  group.add(district.root);solids.push(...district.solids);
-  // The drivable bridge, at full size, standing on the river.
-  const BK=createKit(),bridge=buildBridge(BK),bridgeRoot=BK.finish(new THREE.Group());bridgeRoot.position.y=.12;group.add(bridgeRoot);
-  // People walking round every block with a sidewalk, a little in from the curb.
-  const people=createPeople({loops:[...cityBlocks,...district.solids].map(([cx,cz,hw,hd])=>({x0:cx-hw+.45,x1:cx+hw-.45,z0:cz-hd+.45,z1:cz+hd-.45,y:top})),perLoop:4});
+  group.add(district.root);
+  const bridge=buildBridge({prep});group.add(bridge.root);
+  for(const o of [city.root,district.root])o.traverse(m=>{if(m.isMesh)[].concat(m.material).forEach(x=>prep?.(x));});
+  // Taxis: instances of the realistic taxi.
+  const holder=new THREE.Group(),taxiParts=buildVehicle(VEHICLES.findIndex(v=>v.name==='Sport Taxi'),holder,materials,prep);
+  taxiParts.rig.position.set(0,0,0);taxiParts.rig.rotation.set(0,0,0);
+  const traffic=createTraffic({template:holder,count:9,phase:city.phase,player});group.add(traffic.root);
+  // People on every sidewalk loop, including Armin's blocks.
+  const people=createPeople({loops:[...city.loops,...district.solids.map(([cx,cz,hw,hd])=>({x0:cx-hw+1,x1:cx+hw-1,z0:cz-hd+1,z1:cz+hd-1,y:top}))],perLoop:3});
   group.add(people.root);
-  // Tall things the camera should look around (world boxes).
-  const occluders=[...city.occluders.map(([x,z,w,d,y,h])=>new THREE.Box3(new THREE.Vector3((x-w/2)*k,y*k+.12,(z-d/2)*k),new THREE.Vector3((x+w/2)*k,(y+h)*k+.12,(z+d/2)*k))),...district.occluders,...bridge.occluders];
-  for(const o of [city.root,district.root,bridgeRoot,people.root])o.traverse(m=>{if(m.isMesh)[].concat(m.material).forEach(x=>prep?.(x));});
-  // Taxis, in world units, for the car to bump into.
-  const taxiCircles=[];
-  const obstacles=()=>{const c=city.obstacles();taxiCircles.length=c.length;for(let i=0;i<c.length;i++){const q=taxiCircles[i]??=[0,0,0];q[0]=c[i][0]*k;q[1]=c[i][1]*k;q[2]=c[i][2]*k;}return taxiCircles;};
+  const solids=[...city.solids,...district.solids];
+  const occluders=[...city.occluders,...district.occluders,...bridge.occluders];
   const places={};for(const b of district.row)places[b.id]={x:b.x,z:b.z,y:b.top*.45};
+  // Where the car can drive and how high: the streets on land (not under the
+  // low parts of the bridge ramps, which stand on a solid viaduct), and the bridge.
+  const viaduct=(x,z)=>onBridgeBand(x,z)&&((x>BRIDGE.landM+.5&&x<41)||(x>95&&x<BRIDGE.landB-.5));
+  function surface(x,z,y=0){
+    const ground=onLand(x,z)&&!viaduct(x,z)?0:null,deck=onBridgeBand(x,z)?bridgeHeight(x):null;
+    if(ground===null)return deck;if(deck===null)return ground;
+    return Math.abs(deck-y)<Math.abs(ground-y)?deck:ground;
+  }
   return {
-    group,solids,places,labels:[],row:district.row,lot:district.lot,obstacles,occluders,
-    // Road height under the car: the ground, or the bridge over the river (null: no road).
-    // The bridge comes first: its loop ramps reach over the edge of the avenue where they land.
-    surface(x,z){const b=bridgeSurface(x,z);return b!==null?b:x<=RIVER[0]*k?0:null;},
-    // The bridge towers' middle piers: drive through the arches either side.
-    circles:[[52.5,-24,1.15],[52.5,24,1.15]],
-    bounds:{x0:-S*k+.6,x1:S*k-.6,z0:-S*k+.6,z1:S*k-.6},
-    // Start on the avenue at the Experience Parking entrance, facing in (nothing tall stands between it and the camera).
-    start:{x:COLS.A[1]*k+4.2,z:district.lot.bayZ[0]+4,h:-Math.PI/2},
+    group,solids,places,labels:[],row:district.row,lot:district.lot,occluders,surface,
+    obstacles:()=>traffic.obstacles(),circles:bridge.circles,
+    bounds:{x0:MAN.x0-1,x1:BKN.x1+1,z0:NS.z0-1,z1:NS.z1+1},
+    // Start on Skills Street, Experience Row on the right, the shops on the left.
+    start:{x:-58,z:ST[5]-LANE,h:-Math.PI/2},
     vehicle:'Sport',carColor:'#b5121b',zoom:.62,fixedZoom:true,
     placeAt(x,z){for(const b of district.row)if(Math.abs(x-b.x)<b.w/2&&z>district.lot.z0-16&&z<district.lot.z0)return b.id;return null;},
-    update(t,dt){city.update(dt);people.update(dt);return 2;},   // taxis and clouds move: redraw and refresh shadows
+    update(t,dt){city.update(dt);traffic.update(dt);people.update(dt);return 2;},
   };
 }
-export { NYC };

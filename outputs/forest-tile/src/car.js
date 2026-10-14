@@ -37,11 +37,12 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
     for(const o of probes){
       const cx=px+fx*o,cz=pz+fz*o;
       // No road there, or a step too high to drive up or down (a deck seen from below).
-      if(surface){const sy=surface(cx,cz);if(sy===null||Math.abs(sy-cy)>.9)return true;}
+      if(surface){const sy=surface(cx,cz,cy);if(sy===null||Math.abs(sy-cy)>.9)return true;}
       if(cx<BOUNDS.x0+r||cx>BOUNDS.x1-r||cz<BOUNDS.z0+r||cz>BOUNDS.z1-r)return true;
-      for(const [bx,bz,hw,hd] of BOXES){const dx=cx-Math.max(bx-hw,Math.min(cx,bx+hw)),dz=cz-Math.max(bz-hd,Math.min(cz,bz+hd));if(dx*dx+dz*dz<r*r)return true;}
+      // A box with a height (5th value) only blocks the car on its level (a bridge passes over it).
+      for(const [bx,bz,hw,hd,bt] of BOXES){if(bt!==undefined&&cy>bt+.5)continue;const dx=cx-Math.max(bx-hw,Math.min(cx,bx+hw)),dz=cz-Math.max(bz-hd,Math.min(cz,bz+hd));if(dx*dx+dz*dz<r*r)return true;}
       for(const [qx,qz,qr] of CIRCLES)if((cx-qx)**2+(cz-qz)**2<(r+qr)**2)return true;
-      for(const [qx,qz,qr] of dynamicObstacles())if((cx-qx)**2+(cz-qz)**2<(r+qr)**2)return true;
+      for(const [qx,qz,qr,qy] of dynamicObstacles())if((qy===undefined||Math.abs(qy-cy)<2)&&(cx-qx)**2+(cz-qz)**2<(r+qr)**2)return true;
     }
     return false;
   }
@@ -82,7 +83,7 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
     reset(){x=home.x;z=home.z;h=home.h;v=0;vy=0;yaw=0;steer=0;pitch=pitchV=roll=rollV=heave=heaveV=0;snapshot();place();},
     resync,
     // Put the car somewhere, at rest (for tests and future spawn points).
-    teleport(nx,nz,nh=h){x=nx;z=nz;h=nh;v=vy=yaw=0;cy=surface?.(x,z)??0;snapshot();place();},
+    teleport(nx,nz,nh=h,ny=0){x=nx;z=nz;h=nh;v=vy=yaw=0;cy=surface?.(x,z,ny)??0;snapshot();place();},
     get speed(){return v;},
     get index(){return current;},
     get paint(){return parts.paint;},
@@ -98,7 +99,7 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
     set onHit(fn){onHit=fn;},
     setObstacles(fn){dynamicObstacles=fn;},
     // fn(x, z) -> road height there, or null where the car cannot be.
-    setSurface(fn){surface=fn;cy=fn(x,z)??0;snapshot();},
+    setSurface(fn){surface=fn;cy=fn(x,z,0)??0;snapshot();},
     addStatic(circles,boxes=[]){CIRCLES.push(...circles);BOXES.push(...boxes);},
     get length(){return parts.length;},
     setBounds(b){BOUNDS={x0:b.x0+.05,x1:b.x1-.05,z0:b.z0+.05,z1:b.z1-.05};},
@@ -145,7 +146,7 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
     const nx=x+(fx*v+fz*vy)*dt,nz=z+(fz*v-fx*vy)*dt;
     if(!blocked(nx,nz,nh)){h=nh;x=nx;z=nz;lat=yaw*v;
       // Follow the road height; tilt with the slope between the front and back of the car.
-      if(surface){cy=surface(x,z)??cy;const L=parts.length*.42,fy=surface(x+fx*L,z+fz*L),by=surface(x-fx*L,z-fz*L);slope=fy!==null&&by!==null?Math.atan2(fy-by,2*L):slope;}}
+      if(surface){cy=surface(x,z,cy)??cy;const L=parts.length*.42,fy=surface(x+fx*L,z+fz*L,cy),by=surface(x-fx*L,z-fz*L,cy);slope=fy!==null&&by!==null?Math.atan2(fy-by,2*L):slope;}}
     else{hit(Math.abs(v)/C.maxSpeed*1.4);v*=-.15;vy=0;yaw=0;a=0;lat=0;}   // a soft bump, not a dead stop
     rollAngle+=v*dt/parts.wheelR;
 

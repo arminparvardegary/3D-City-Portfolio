@@ -67,7 +67,8 @@ Object.values(materials).forEach(softenShadows);
 // --- The map: a square of 9 x 9 numbered tiles (81) ------------------------------
 // The numbered tiles show only with ?tiles; normally the playground floor is the map.
 const tileGrid=buildGrid(softenShadows);if(new URLSearchParams(location.search).has('tiles'))scene.add(tileGrid.group);
-const world=WORLD==='nyc'?buildNYCWorld({prep:softenShadows}):buildCampus({prep:softenShadows});scene.add(world.group);
+let carRef=null;   // the world's traffic watches your car (set once the car exists)
+const world=WORLD==='nyc'?buildNYCWorld({prep:softenShadows,materials,player:()=>carRef?.shown??null}):buildCampus({prep:softenShadows});scene.add(world.group);
 const tb=tileGrid.bounds,bounds=world.bounds??{x0:tb.x0+.4,x1:tb.x1-.4,z0:tb.z0+.4,z1:tb.z1-.4};
 const skyTint=WORLD==='nyc'?THEME.nyc.sky:THEME.sky;
 document.documentElement.style.setProperty('--sky-top',skyTint.top);document.documentElement.style.setProperty('--sky-horizon',skyTint.horizon);
@@ -76,7 +77,7 @@ const CAR_MODEL=world.vehicle??'City';
 const car=createCarControls(scene,materials,{prep:softenShadows,index:VEHICLES.findIndex(v=>v.name===CAR_MODEL),home:world.start??{x:0,z:0,h:Math.PI/2}});
 car.setBounds(bounds);car.addStatic([],world.solids);car.paint.color.set(world.carColor??THEME.campus.car);
 if(world.obstacles)car.setObstacles(world.obstacles);
-if(world.surface)car.setSurface(world.surface);if(world.circles)car.addStatic(world.circles);
+carRef=car;if(world.surface)car.setSurface(world.surface);if(world.circles)car.addStatic(world.circles);
 // Physics toys belong to the campus only.
 const playground=WORLD==='campus'?createPlayground({scene,prep:softenShadows,car,bounds:tb,solids:world.solids}):null;
 const canopies=[],animateTile=null,meadow={layers:[],grassMaterial:null};
