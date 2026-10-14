@@ -43,3 +43,37 @@ html,body,#app{background:linear-gradient(180deg,var(--sky-top,#bfe3ff) 0%,var(-
 .studio-card p{margin:0;font-size:12px;line-height:1.5;color:#5a6274}.studio-card .studio-meta{margin-top:6px;color:#8a90a0}
 .studio-dot{display:block;width:10px;height:10px;border-radius:50%}.studio-card button{position:absolute;right:12px;top:10px;font-size:20px;color:#8a90a0;width:28px;height:28px;border-radius:50%}
 .studio-card button:hover{background:#f1ede4}
+
+/* Experience: an always visible list (newest first) and one card. White campus look:
+   white cards, 28px corners, hairline dividers, one blue accent. */
+.exp,.exp-card{--ink:#1d1d1f;--gray:#6e6e73;--fill:#f5f5f7;--line:#e5e5ea;--blue:#2f6bff;--blue-soft:#edf2ff;--ease:cubic-bezier(.28,.11,.32,1);font-family:-apple-system,"SF Pro Text",system-ui,sans-serif;color:var(--ink)}
+.exp{position:absolute;left:24px;top:24px;z-index:5}
+.exp-panel{width:270px;padding:20px 12px 12px;border-radius:28px;background:#ffffffe6;backdrop-filter:blur(16px);box-shadow:0 12px 40px #1e284612}
+.exp-panel h2{margin:0 12px 8px;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gray)}
+.exp-panel ol{list-style:none;margin:0;padding:0}
+.exp-panel li+li{border-top:1px solid var(--line)}
+.exp-panel li button{width:100%;display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:12px;border-radius:14px;text-align:left;font:inherit;color:inherit;background:none;border:0;cursor:pointer;transition:background .25s var(--ease)}
+.exp-panel li button:hover{background:var(--fill)}
+.exp-panel li button[aria-current="true"]{background:var(--blue-soft)}
+.exp-panel li button[aria-current="true"] .exp-name{color:var(--blue)}
+.exp-name{font-size:17px;font-weight:600}.exp-years{font-size:15px;color:var(--gray);white-space:nowrap}
+.exp button:focus-visible,.exp-card button:focus-visible{outline:3px solid #2f6bff66;outline-offset:2px}
+.exp-toggle{display:none;height:44px;padding:0 20px;border-radius:22px;border:0;background:#fff;box-shadow:0 8px 28px #1e284618;font-family:inherit;font-weight:600;font-size:17px;color:var(--ink);cursor:pointer}
+.exp-card{position:absolute;left:24px;bottom:24px;z-index:6;width:min(360px,calc(100% - 48px));padding:28px 32px 24px;border-radius:28px;background:#fff;box-shadow:0 18px 56px #1e28461f;animation:exp-in .45s var(--ease)}
+.exp-card[hidden]{display:none}
+.exp-step{margin:0;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gray)}
+.exp-card h3{margin:8px 0 6px;font-size:28px;font-weight:600;letter-spacing:-.02em}
+.exp-role{margin:0;font-size:17px;line-height:1.4}.exp-meta{margin:8px 0 0;font-size:15px;color:var(--gray)}
+.exp-nav{display:flex;gap:8px;margin-top:20px}
+.exp-nav button{flex:1;height:44px;border-radius:22px;border:0;background:var(--fill);font-family:inherit;font-weight:600;font-size:15px;color:var(--ink);cursor:pointer;transition:transform .3s cubic-bezier(.34,1.56,.64,1),background .25s var(--ease)}
+.exp-nav button:hover:not(:disabled){background:#e8e8ed}.exp-nav button:active:not(:disabled){transform:scale(.96)}
+.exp-nav button:disabled{opacity:.35;cursor:default}
+.exp-close{position:absolute;right:16px;top:16px;width:32px;height:32px;border-radius:16px;border:0;background:var(--fill);font-size:20px;line-height:1;color:var(--gray);cursor:pointer}
+@keyframes exp-in{from{opacity:0;transform:translateY(12px)}}
+@media(max-width:720px){
+  .exp{left:16px;top:16px}.exp-toggle{display:block}
+  .exp-panel{display:none;margin-top:8px}.exp.open .exp-panel{display:block}
+  .exp-card{left:16px;right:16px;bottom:16px;width:auto;padding:24px}
+}
+@media(hover:none){.exp-card{bottom:150px}}
+@media(prefers-reduced-motion:reduce){.exp-card{animation:none}.exp-panel li button,.exp-nav button{transition:none}}

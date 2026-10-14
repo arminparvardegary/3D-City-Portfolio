@@ -13,6 +13,7 @@ import { buildGrid, GRID, HOME_NUMBER, tileNumber, tileCenter } from './world/gr
 import { THEME } from './world/theme.js';
 import { createPlayground } from './world/playground.js';
 import { buildCampus } from './world/campus.js';
+import { createExperience } from './ui/experience.js';
 import { VEHICLES } from './vehicles.js';
 import { FEEL, damp, spring } from './motion.js';
 
@@ -150,9 +151,10 @@ const screenUp=new THREE.Vector3().crossVectors(groundRight,viewDir).normalize()
 const pointers=new Map();let lastMove=0;
 const canvasEl=renderer.domElement;canvasEl.style.touchAction='none';
 const syncFollow=()=>{camX.x=target.x;camZ.x=target.z;camX.v=panVel.x;camZ.v=panVel.z;};
-canvasEl.addEventListener('pointerdown',e=>{try{canvasEl.setPointerCapture(e.pointerId);}catch{}pointers.set(e.pointerId,[e.clientX,e.clientY,e.timeStamp]);panVel.set(0,0,0);zoomVel=0;});
+let pressAt=null;
+canvasEl.addEventListener('pointerdown',e=>{try{canvasEl.setPointerCapture(e.pointerId);}catch{}pointers.set(e.pointerId,[e.clientX,e.clientY,e.timeStamp]);panVel.set(0,0,0);zoomVel=0;pressAt=pointers.size===1?[e.clientX,e.clientY]:null;});
 canvasEl.addEventListener('pointermove',e=>{
-  const p=pointers.get(e.pointerId);if(!p)return;
+  const p=pointers.get(e.pointerId);if(!p){hover(e);return;}
   const dt=Math.max(.004,(e.timeStamp-p[2])/1000);
   if(pointers.size===2){
     const [a,b]=[...pointers.values()],d0=Math.hypot(a[0]-b[0],a[1]-b[1]);pointers.set(e.pointerId,[e.clientX,e.clientY,e.timeStamp]);
@@ -166,14 +168,31 @@ canvasEl.addEventListener('pointermove',e=>{
   target.x+=wx;target.z+=wz;
   // Pan speed, smoothed, so a flick glides on after release.
   panVel.x=damp(panVel.x,wx/dt,20,dt);panVel.z=damp(panVel.z,wz/dt,20,dt);lastMove=e.timeStamp;
-  syncFollow();followHold=2.5;needsRender=true;
+  syncFollow();followHold=2.5;focus=null;needsRender=true;
 });
 for(const ev of ['pointerup','pointercancel'])canvasEl.addEventListener(ev,e=>{
-  pointers.delete(e.pointerId);
+  // A tap (no drag) on a building or its label opens it.
+  if(ev==='pointerup'&&pressAt&&pointers.size===1&&Math.hypot(e.clientX-pressAt[0],e.clientY-pressAt[1])<6){const id=pick(e);if(id){panVel.set(0,0,0);openPlace(id);}}
+  pressAt=null;pointers.delete(e.pointerId);
   if(e.timeStamp-lastMove>80)panVel.set(0,0,0);   // held still before letting go: no glide
   if(pointers.size)panVel.set(0,0,0);
 });
 canvasEl.addEventListener('wheel',e=>{e.preventDefault();zoomVel+=-e.deltaY*.0015*F.zoomGlide;},{passive:false});
+// --- Places: click a building or label, or pick from the Experience list ------
+// The camera glides to the place and holds there until you drive again.
+let focus=null;
+const ray=new THREE.Raycaster(),ndc=new THREE.Vector2(),floorPlane=new THREE.Plane(new THREE.Vector3(0,1,0),-.47),hitPoint=new THREE.Vector3();
+function pick(e){
+  const r=canvasEl.getBoundingClientRect();ndc.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(ndc,camera);
+  const hit=ray.intersectObjects(campus.labels,false)[0];if(hit)return hit.object.userData.id;
+  return ray.ray.intersectPlane(floorPlane,hitPoint)?campus.placeAt(hitPoint.x,hitPoint.z):null;
+}
+function hover(e){if(e.pointerType==='mouse')canvasEl.style.cursor=pick(e)?'pointer':'';}
+function focusOn(id){const q=campus.places[id];if(!q)return;focus={x:q.x,z:q.z,zoom:THREE.MathUtils.clamp(zoom,.5,.75)};followHold=0;needsRender=true;}
+const experience=createExperience({onSelect:focusOn});
+// The Work tower opens the timeline at the newest job.
+function openPlace(id){experience.open(id==='work'?experience.first:id);}
+
 car.onHit=s=>{if(!reducedMotion.matches&&s>.2)trauma=Math.min(1,trauma+s*.8);};
 
 function updateView(dt){
@@ -189,12 +208,14 @@ function updateView(dt){
   }
   followHold=Math.max(0,followHold-dt);
   const p=car.shown;
+  if(focus&&p.speed>.6)focus=null;   // driving takes the camera back
   // Pull back a little at speed.
   const zGoal=1-F.speedZoomOut*Math.min(1,p.speed/FEEL.car.maxSpeed);
   if(Math.abs(zGoal-speedZoom)>1e-4)speedZoom=damp(speedZoom,zGoal,2.2,dt);
   // Spring follow toward the car plus a look-ahead along its velocity.
-  if(followHold===0){
-    const gx=p.x+p.vx*F.lookAhead,gz=p.z+p.vz*F.lookAhead;
+  if(focus&&Math.abs(zoomVel)<1e-3&&Math.abs(zoom-focus.zoom)>1e-3){zoom=damp(zoom,focus.zoom,3,dt);moved=true;}
+  if(focus||followHold===0){
+    const gx=focus?focus.x:p.x+p.vx*F.lookAhead,gz=focus?focus.z:p.z+p.vz*F.lookAhead;
     if(Math.abs(gx-camX.x)+Math.abs(gz-camZ.x)>1e-4||Math.abs(camX.v)+Math.abs(camZ.v)>1e-4){
       target.x=spring(camX,gx,F.follow,dt);target.z=spring(camZ,gz,F.follow,dt);moved=true;
     }

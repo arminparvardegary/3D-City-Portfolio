@@ -67,6 +67,13 @@ The whole map is one architectural white model (`src/world/campus.js`), in the s
 - The plinths are solid: the car drives the roads and the plaza. Static geometry is merged per material (about 70 to 110 draw calls in view).
 - All colours and light come from `THEME.campus`, `THEME.palette` and `THEME.light` in `src/world/theme.js`.
 
+## Finding the experience
+
+Work history is never more than one click away (`src/ui/experience.js`):
+- An Experience list sits top left (a pill on phones), newest first, with years.
+- Picking a job, clicking a studio's building or label, or clicking the Work tower opens one card: role, years and place, with Newer and Older to walk the timeline. Esc or × closes it.
+- The camera glides to the studio and holds there until you drive again. Studio labels in the scene also show their years.
+
 ## The playground
 
 Toys on the campus roads and plaza, all white, that the car pushes with real physics (`src/world/playground.js`):

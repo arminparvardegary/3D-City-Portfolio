@@ -143,14 +143,17 @@ export function buildCampus({prep}){
       if(i%3!==1)miniCar(x,z,yaw);}};
 
   // --- Beacons: label card, signal icon, beam and a pulse on the roof ---------
-  const beacons=[];
-  function beacon(x,z,top,text,{size=1}={}){
+  // Clickable places: id -> where to look, plus the plinth footprint and label.
+  const beacons=[],places={},zones=[],labels=[];
+  function beacon(x,z,top,text,{size=1,sub='',id=null,zone=null}={}){
     const c=document.createElement('canvas');c.width=512;c.height=320;const g=c.getContext('2d');
-    g.font='600 54px -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif';
-    const tw=Math.min(470,g.measureText(text).width+72),cx=256;
+    const font='-apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif';g.font=`600 54px ${font}`;
+    let tw=g.measureText(text).width;if(sub){g.font=`500 36px ${font}`;tw=Math.max(tw,g.measureText(sub).width);}
+    tw=Math.min(490,tw+72);const cx=256,ch=sub?118:96,cy=sub?14:26;
     g.shadowColor='rgba(40,60,110,.16)';g.shadowBlur=22;g.shadowOffsetY=6;g.fillStyle='#ffffff';
-    g.beginPath();g.roundRect(cx-tw/2,26,tw,96,22);g.fill();g.shadowColor='transparent';
-    g.fillStyle=C.label;g.textAlign='center';g.textBaseline='middle';g.fillText(text,cx,76);
+    g.beginPath();g.roundRect(cx-tw/2,cy,tw,ch,22);g.fill();g.shadowColor='transparent';
+    g.fillStyle=C.label;g.textAlign='center';g.textBaseline='middle';g.font=`600 54px ${font}`;g.fillText(text,cx,sub?cy+44:76);
+    if(sub){g.fillStyle=C.blue;g.font=`500 36px ${font}`;g.fillText(sub,cx,cy+92);}
     // Signal icon: a dot and three arcs.
     g.strokeStyle=C.blue;g.fillStyle=C.blue;g.lineCap='round';
     for(let i=1;i<=3;i++){g.globalAlpha=1-i*.22;g.lineWidth=7;g.beginPath();g.ellipse(cx,226,24*i,9*i,0,Math.PI*1.08,Math.PI*1.92);g.stroke();g.beginPath();g.ellipse(cx,226,24*i,9*i,0,Math.PI*.08,Math.PI*.92);g.stroke();}
@@ -168,6 +171,7 @@ export function buildCampus({prep}){
     const pulse=new THREE.Mesh(new THREE.RingGeometry(.82,1,48).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:C.blue,transparent:true,depthWrite:false,opacity:0}));
     pulse.position.set(x,top+.06,z);pulse.userData.keep=true;pulse.renderOrder=8;group.add(pulse);
     beacons.push({label,pulse,phase:beacons.length*.37,size,y:label.position.y});
+    if(id){label.userData.id=id;labels.push(label);places[id]={x,z};if(zone)zones.push({id,x0:zone.x0,x1:zone.x1,z0:zone.z0,z1:zone.z1});}
   }
 
   // --- Layout ------------------------------------------------------------------------
@@ -181,7 +185,7 @@ export function buildCampus({prep}){
     const t1=finTower(p.x-3.2,p.z-3.2,5.2,4.4,11,{base:podium});B(.08,2.4,.08,p.x-1.6,podium+9,p.z+.4,M.dark);
     finTower(p.x+4.2,p.z-1.6,4.2,4.2,8.4,{base:podium,gap:.32});
     for(let i=0;i<3;i++)B(3.6,.05,.05,p.x+1.4,podium+6.5+i*.5,p.z-1.2+i*.1,M.dark);   // cables between the towers
-    beacon(p.x-3.2,p.z-3.2,t1,'Work',{size:1.15});}
+    beacon(p.x-3.2,p.z-3.2,t1,'Work',{size:1.15,sub:'Experience',id:'work',zone:p});}
   {const p=block(0,1);                                     // Skills: stepped block, gatehouse, bridge to Work
     const t=stepped(p.x-5,p.z+3,8,7.5);beacon(p.x-5.6,p.z+2.4,t,'Skills');
     gate(p.x+6,p.z-4,5.4,3.6);bridge(p.x+8.7,-9,p.z-4,FLOOR+2.2);
@@ -199,10 +203,10 @@ export function buildCampus({prep}){
     parking(p.x-7,p.z+7.5,6,0);}
 
   // Studio campuses: the places Armin worked (the slim blocks at the north and south edges, and west).
-  {const p=block(0,0),s=STUDIOS[0];const t=finTower(p.x-6,p.z,6,6,13,{gap:.36});slabBlock(p.x+4.5,p.z+.4,8,5,3);beacon(p.x-6,p.z,t,s.name);}
-  {const p=block(2,0),s=STUDIOS[1];const t=slabBlock(p.x-3,p.z,10,6,5);beacon(p.x-3,p.z,t,s.name);truck(p.x+8.5,p.z,0);}
-  {const p=block(0,2),s=STUDIOS[2];const t=stepped(p.x+2,p.z,9,8);beacon(p.x+1.4,p.z-.6,t,s.name);gate(p.x-7,p.z+5,5,3.4);parking(p.x-8,p.z-6,4,0);}
-  {const p=block(0,3),s=STUDIOS[3];const t=warehouse(p.x-3,p.z,9,6,2.6);beacon(p.x-3,p.z,t,s.name);truck(p.x+7,p.z,0);}
+  {const p=block(0,0),s=STUDIOS[0];const t=finTower(p.x-6,p.z,6,6,13,{gap:.36});slabBlock(p.x+4.5,p.z+.4,8,5,3);beacon(p.x-6,p.z,t,s.name,{sub:s.years,id:s.id,zone:p});}
+  {const p=block(2,0),s=STUDIOS[1];const t=slabBlock(p.x-3,p.z,10,6,5);beacon(p.x-3,p.z,t,s.name,{sub:s.years,id:s.id,zone:p});truck(p.x+8.5,p.z,0);}
+  {const p=block(0,2),s=STUDIOS[2];const t=stepped(p.x+2,p.z,9,8);beacon(p.x+1.4,p.z-.6,t,s.name,{sub:s.years,id:s.id,zone:p});gate(p.x-7,p.z+5,5,3.4);parking(p.x-8,p.z-6,4,0);}
+  {const p=block(0,3),s=STUDIOS[3];const t=warehouse(p.x-3,p.z,9,6,2.6);beacon(p.x-3,p.z,t,s.name,{sub:s.years,id:s.id,zone:p});truck(p.x+7,p.z,0);}
 
   // Quiet blocks: solar rows, an office with parking, sheds.
   const fill=[[1,0,'solar'],[1,3,'office'],[2,3,'shed']];
@@ -219,7 +223,9 @@ export function buildCampus({prep}){
 
   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
   return {
-    group,solids,
+    group,solids,places,labels,
+    // Which clickable place covers this ground point (null if none).
+    placeAt(x,z){for(const q of zones)if(x>=q.x0&&x<=q.x1&&z>=q.z0&&z<=q.z1)return q.id;return null;},
     // Beacons pulse gently; returns true while animating.
     update(t){
       if(reduced.matches)return false;
