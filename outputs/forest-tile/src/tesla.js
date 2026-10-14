@@ -142,6 +142,7 @@ const WHEELBASE=2.4,MAX_SPEED=3.2,MAX_REVERSE=1.4;
 const BOXES=[[-1.5,-.7,1.5,1.6],[-1.4,-2.71,1.2,.26]];
 const CIRCLES=[[-3.78,-2.75,.4],[3.63,-3.45,.4],[-.45,2.62,.14]];
 const BOUND=4.95;
+const HEADING_MIN=-.5,HEADING_MAX=1.9;
 function blocked(x,z,h){
   const fx=Math.sin(h),fz=Math.cos(h);
   for(const o of [-1.15,0,1.15]){
@@ -173,6 +174,7 @@ export function createTeslaControls({rig,car,wheels},m,{radius=.29}={}){
     press(k,on){on?down.add(k):down.delete(k);},
     reset(){x=home.x;z=home.z;h=home.h;v=0;steer=0;},
     get speed(){return v;},
+    pose(){return {x,z,h,steer,v};},
   };
   let last=null;
   // time in ms. Returns true while anything is moving so the caller can keep
@@ -193,7 +195,9 @@ export function createTeslaControls({rig,car,wheels},m,{radius=.29}={}){
     const target=((down.has('left')?1:0)-(down.has('right')?1:0))*THREE.MathUtils.lerp(.62,.28,Math.min(1,Math.abs(v)/MAX_SPEED));
     steer+=(target-steer)*Math.min(1,dt*7);
     const rate=v/WHEELBASE*Math.tan(steer);
-    const nh=h+rate*dt,nx=x+Math.sin(nh)*v*dt,nz=z+Math.cos(nh)*v*dt;
+    // The supplied render shows the car from one side only (and its mirror), so
+    // the heading stays within the arc where one of those two views is right.
+    const nh=THREE.MathUtils.clamp(h+rate*dt,HEADING_MIN,HEADING_MAX),nx=x+Math.sin(nh)*v*dt,nz=z+Math.cos(nh)*v*dt;
     if(!blocked(nx,nz,nh)){h=nh;x=nx;z=nz;lat=rate*v;}
     else{v=0;a=0;lat=0;}
     rig.position.x=x;rig.position.z=z;rig.rotation.y=h;

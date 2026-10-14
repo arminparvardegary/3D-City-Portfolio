@@ -12,7 +12,7 @@ The toolbar offers zoom, breeze on/off, and an art-direction panel. Adjust dayli
 
 Defaults are in `src/config.js`: palette, lighting, fixed camera, house dimensions, car placement, and tile footprint. `src/home.js` creates the minimal house and Turkish flag; `src/tesla.js` models the car; `src/tile.js` assembles the lawn, driveway, house, car, trees, and entrance path. `src/main.js` controls rendering and the interface.
 
-The Model Y is a stylized procedural model with a tall crossover profile, glass roof sloping to a short hatch, a full width LED bar across the nose and tail, flush handles, and turbine wheels. It is not manufacturer CAD. All assets are live 3D geometry, with a local canvas texture for the Turkish crescent and star. No remote models or images are required. Interface fonts have sans-serif fallbacks.
+The Tesla Model Y is the supplied studio render (`public/car/`, from Gray_Electric_Vehicle_Hatchback.H03.psd), shown pixel for pixel as a layer over the 3D canvas by `src/car-sprite.js`. It is one view plus its mirror, so steering is limited to the arc where one of those two views is correct. The old procedural Model Y in `src/tesla.js` is kept hidden and only drives the position. It is not manufacturer CAD. All assets are live 3D geometry, with a local canvas texture for the Turkish crescent and star. No remote models or images are required. Interface fonts have sans-serif fallbacks.
 
 ## Modular footprint
 

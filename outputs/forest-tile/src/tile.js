@@ -42,6 +42,8 @@ export function buildTile(m){
   const canopies=[referenceTree(group,m,rand,-3.78,-2.75,2.3),referenceTree(group,m,rand,3.63,-3.45,2.15)];
   const flag=buildTurkishFlag(group,m);
   // The Tesla is built outside the merged static group so it can drive.
-  const tesla=createTeslaControls(buildTeslaModelY(group,m),m);
+  const model=buildTeslaModelY(group,m);
+  model.rig.visible=false; // the visible car is the supplied render (see car-sprite.js)
+  const tesla=createTeslaControls(model,m);
   return {group,canopies,animate:flag.animate,tesla,extraMaterials:[flag.material]};
 }
