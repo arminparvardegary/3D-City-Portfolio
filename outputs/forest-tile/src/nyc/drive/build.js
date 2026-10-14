@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { createKit } from '../../diorama/kit.js';
 import { FACADE } from './facades.js';
-import { G,CURB,HALF,LANE,WALK,MAN,BKN,NS,AV,BAV,ST,BRIDGE,blocks,network } from './layout.js';
+import { G,CURB,HALF,LANE,EDGE,PARK,WALK,MAN,BKN,NS,AV,BAV,ST,BRIDGE,blocks,network } from './layout.js';
 
 // The city itself (world units): land and water, sidewalks with curbs, street
 // markings and crosswalks, traffic lights, street lamps and trees, Central Park,
@@ -42,22 +42,54 @@ export function buildCity({reserved=new Set(),fills=[]}={}){
     walkRect(BKN.x0,BAV[0]-HALF,ST[0]-HALF,ST.at(-1)+HALF,true);rail(BKN.x0+.3,NS.z0,BKN.x0+.3,NS.z1);
     walkRect(BKN.x0,BKN.x1,NS.z0,ST[0]-HALF);walkRect(BKN.x0,BKN.x1,ST.at(-1)+HALF,NS.z1);walkRect(BAV[1]+HALF,BKN.x1,ST[0]-HALF,ST.at(-1)+HALF);}
 
-  // --- Street markings, crosswalks, stop lines ------------------------------------------
+  // --- Street engineering: markings, crosswalks, stop bars, arrows, drainage, parking --
+  // Per road segment: double yellow centre line (two 10 cm lines, 10 cm apart),
+  // solid white edge lines between the travel and parking lanes. At each crossing:
+  // continental crosswalks just past the curb return, a stop bar 1.2 m before
+  // them on the lane coming in, lane arrows for the allowed moves, curb ramps with
+  // yellow tactile pads, and storm drains at the curb. Manholes in the lanes.
   const {nodes,edges}=network();
-  const yellow=mat('#e3bd3a',{roughness:.6}),white=mat('#ecebe6',{roughness:.6});
+  const yellow=mat('#e3bd3a',{roughness:.6}),white=mat('#ecebe6',{roughness:.6}),iron=mat('#2b2d31',{roughness:.5,metalness:.6}),tactile=mat('#d9a92e',{roughness:.7});
+  const XW=HALF+2.3,BAR=HALF+3.9,parking=[];
   const seen=new Set();
   for(const e of edges){
     if(e.kind!=='road')continue;const k=[e.a.k,e.b.k].sort().join('|');if(seen.has(k))continue;seen.add(k);
-    const dx=e.b.x-e.a.x,dz=e.b.z-e.a.z,len=Math.hypot(dx,dz),fx=dx/len,fz=dz/len,inner=len-2*(HALF+4);if(inner<=0)continue;
-    const cx=(e.a.x+e.b.x)/2,cz=(e.a.z+e.b.z)/2,ang=Math.atan2(fx,fz);
-    for(const o of [-.14,.14])add(new THREE.BoxGeometry(.12,.02,inner).rotateY(ang),yellow,[cx+fz*o,G+.005,cz-fx*o]);
+    const dx=e.b.x-e.a.x,dz=e.b.z-e.a.z,len=Math.hypot(dx,dz),fx=dx/len,fz=dz/len,rx=-fz,rz=fx;
+    const s0=e.a.degree>2?BAR+.6:HALF+1,s1=len-(e.b.degree>2?BAR+.6:HALF+1),inner=s1-s0;if(inner<=0)continue;
+    const cx=e.a.x+fx*(s0+s1)/2,cz=e.a.z+fz*(s0+s1)/2,ang=Math.atan2(fx,fz);
+    for(const o of [-.14,.14])add(new THREE.BoxGeometry(.12,.02,inner).rotateY(ang),yellow,[cx+rx*o,G+.005,cz+rz*o]);
+    for(const sd of [-1,1])add(new THREE.BoxGeometry(.12,.02,inner).rotateY(ang),white,[cx+rx*sd*EDGE,G+.005,cz+rz*sd*EDGE]);
+    // A manhole or two in the travel lanes.
+    for(let m=0;m<2;m++){const t=s0+inner*(.3+.4*rand()),sd=rand()<.5?-1:1;add(new THREE.CylinderGeometry(.45,.45,.03,20),iron,[e.a.x+fx*t+rx*sd*LANE*.9,G+.005,e.a.z+fz*t+rz*sd*LANE*.9]);}
+    // Parking along both curbs (not on Armin's street, FDR Drive or the edge roads).
+    const edgeRoad=Math.abs(dx)<1&&(e.a.x===AV[0]||e.a.x===AV.at(-1))||Math.abs(dz)<1&&(e.a.z===ST[0]||e.a.z===ST.at(-1));
+    if(!(Math.abs(dz)<1&&e.a.z===ST[5])&&!edgeRoad)for(const sd of [-1,1])for(let t=s0+3;t<s1-3;t+=6.2)if(rand()<.55)
+      parking.push({x:e.a.x+fx*t+rx*sd*PARK,z:e.a.z+fz*t+rz*sd*PARK,h:sd>0?ang:ang+Math.PI});
   }
-  for(const n of nodes){
+  // Arrow shapes, pointing +z in their own frame: a stem and heads for straight, left, right.
+  const tri=(w,l)=>{const sh=new THREE.Shape([new THREE.Vector2(-w/2,0),new THREE.Vector2(w/2,0),new THREE.Vector2(0,l)]);return new THREE.ShapeGeometry(sh).rotateX(-Math.PI/2).rotateY(Math.PI);};
+  const arrow=(moves)=>{const parts=[new THREE.BoxGeometry(.22,.02,1.6).translate(0,0,.8)];
+    if(moves.s)parts.push(new THREE.BoxGeometry(.22,.02,.9).translate(0,0,2),tri(.75,.75).translate(0,.01,2.45));
+    for(const [m,sd] of [['r',-1],['l',1]])if(moves[m]){parts.push(new THREE.BoxGeometry(.8,.02,.22).translate(sd*.4,0,1.5),tri(.7,.65).rotateY(sd*Math.PI/2).translate(sd*.8,.01,1.5));}
+    return parts;};
+  for(const n of nodes){if(n.degree<3)continue;
     for(const e of n.out){
       const dx=e.b.x-n.x,dz=e.b.z-n.z,len=Math.hypot(dx,dz),fx=dx/len,fz=dz/len,rx=-fz,rz=fx,ang=Math.atan2(fx,fz);
-      // Zebra crossing just outside the crossing, then a stop line on the lane coming in.
-      if(n.degree>2)for(let k=-4;k<=4;k++)add(new THREE.BoxGeometry(.55,.02,2.2).rotateY(ang),white,[n.x+fx*(HALF+2.3)+rx*k*1.05,G+.006,n.z+fz*(HALF+2.3)+rz*k*1.05]);
-      if(n.degree>2)add(new THREE.BoxGeometry(HALF-.3,.02,.4).rotateY(ang),white,[n.x+fx*(HALF+3.9)-rx*LANE,G+.006,n.z+fz*(HALF+3.9)-rz*LANE]);
+      // Continental crosswalk across this road, just past the curb return.
+      for(let k=-5;k<=5;k++)add(new THREE.BoxGeometry(.6,.02,2.4).rotateY(ang),white,[n.x+fx*XW+rx*k*1.1,G+.006,n.z+fz*XW+rz*k*1.1]);
+      // Curb ramps with tactile pads at both ends of the crosswalk.
+      for(const sd of [-1,1])add(new THREE.BoxGeometry(.9,.03,2).rotateY(ang),tactile,[n.x+fx*XW+rx*sd*(HALF+.55),G+CURB+.005,n.z+fz*XW+rz*sd*(HALF+.55)]);
+      if(e.kind!=='road')continue;
+      // Traffic coming in along this road drives toward the node (direction -f); its lane is on the -r side.
+      add(new THREE.BoxGeometry(HALF-.4,.02,.45).rotateY(ang),white,[n.x+fx*BAR-rx*(HALF/2),G+.006,n.z+fz*BAR-rz*(HALF/2)]);
+      // Lane arrows for the moves this approach allows.
+      const d=[-fx,-fz],moves={s:false,l:false,r:false};
+      for(const o of n.out){if(o===e)continue;const ox=o.b.x-n.x,oz=o.b.z-n.z,ol=Math.hypot(ox,oz),u=[ox/ol,oz/ol],dot=d[0]*u[0]+d[1]*u[1],cr=d[0]*u[1]-d[1]*u[0];
+        if(dot>.9)moves.s=true;else if(cr>.5)moves.r=true;else if(cr<-.5)moves.l=true;}
+      const head=Math.atan2(d[0],d[1]),ax=n.x+fx*(BAR+5.5)-rx*LANE,az=n.z+fz*(BAR+5.5)-rz*LANE;
+      for(const g of arrow(moves))add(g.rotateY(head),white,[ax,G+.006,az]);
+      // Storm drain at the curb, on the right of the incoming lane.
+      add(new THREE.BoxGeometry(1.1,.03,.5).rotateY(ang+Math.PI/2),iron,[n.x+fx*(BAR+1.5)-rx*(HALF-.3),G+.004,n.z+fz*(BAR+1.5)-rz*(HALF-.3)]);
     }
   }
 
@@ -81,6 +113,17 @@ export function buildCity({reserved=new Set(),fills=[]}={}){
   const phase=t=>{const k=t%20;return {z:k<8?'g':k<10?'y':'r',x:k<10?'r':k<18?'g':'y'};};
 
   // --- Blocks ------------------------------------------------------------------------
+  // Sidewalks with rounded curb returns (radius 3, about 4.5 m) and a granite curb.
+  const granite=mat('#a7a49e',{roughness:.7});
+  const rounded=(x0,x1,z0,z1,r)=>{const sh=new THREE.Shape();sh.moveTo(x0+r,-z0);sh.lineTo(x1-r,-z0);sh.quadraticCurveTo(x1,-z0,x1,-z0-r);sh.lineTo(x1,-z1+r);sh.quadraticCurveTo(x1,-z1,x1-r,-z1);
+    sh.lineTo(x0+r,-z1);sh.quadraticCurveTo(x0,-z1,x0,-z1+r);sh.lineTo(x0,-z0-r);sh.quadraticCurveTo(x0,-z0,x0+r,-z0);return sh;};
+  function sidewalk(b,R=3){
+    const top=rounded(b.x0+.32,b.x1-.32,b.z0+.32,b.z1-.32,R-.32);
+    add(new THREE.ExtrudeGeometry(top,{depth:CURB,bevelEnabled:false,curveSegments:8}).rotateX(-Math.PI/2),paving,[0,G,0]);
+    const ring=rounded(b.x0,b.x1,b.z0,b.z1,R);ring.holes.push(rounded(b.x0+.32,b.x1-.32,b.z0+.32,b.z1-.32,R-.32));
+    add(new THREE.ExtrudeGeometry(ring,{depth:CURB+.01,bevelEnabled:false,curveSegments:8}).rotateX(-Math.PI/2),granite,[0,G,0]);
+    solids.push([(b.x0+b.x1)/2,(b.z0+b.z1)/2,(b.x1-b.x0)/2,(b.z1-b.z0)/2]);
+  }
   const lampHead=mat('#fff3d6',{emissive:'#ffe2a8',emissiveIntensity:.5});
   const lamp=(x,z,ox,oz)=>{cyl(.09,.13,5.6,8,x,top,z,dark);add(new THREE.BoxGeometry(.08,.08,1.6).rotateY(Math.atan2(ox,oz)),dark,[x+ox*.8,top+5.5,z+oz*.8]);
     add(new THREE.BoxGeometry(.5,.16,.8).rotateY(Math.atan2(ox,oz)),dark,[x+ox*1.6,top+5.38,z+oz*1.6]);box(.4,.04,.6,x+ox*1.6,top+5.3,z+oz*1.6,lampHead);};
@@ -133,13 +176,13 @@ export function buildCity({reserved=new Set(),fills=[]}={}){
   // Landmarks (scaled to sit well with the car and the streets).
   const LM={};
   LM.empire=(b)=>{const x=(b.x0+b.x1)/2,z=(b.z0+b.z1)/2,m=PAL.lime[0];let y=top;
-    for(const [w,h] of [[22,10],[18,34],[14,48],[10.5,18],[7.5,8],[5.2,5]]){box(w,h,w,x,y,z,m);box(w+.4,.5,w+.4,x,y+h,z,cornice);y+=h+.5;}
-    cyl(1.6,2.6,7,12,x,y,z,metal);cyl(.3,.45,16,8,x,y+7,z,metal);occl(x,z,22,22,y-top+23);};
+    for(const [w,h] of [[20,10],[16.5,34],[13,48],[10,18],[7.2,8],[5,5]]){box(w,h,w,x,y,z,m);box(w+.4,.5,w+.4,x,y+h,z,cornice);y+=h+.5;}
+    cyl(1.6,2.6,7,12,x,y,z,metal);cyl(.3,.45,16,8,x,y+7,z,metal);occl(x,z,20,20,y-top+23);};
   LM.chrysler=(b)=>{const x=(b.x0+b.x1)/2,z=(b.z0+b.z1)/2,m=PAL.lime[1];let y=top;
-    for(const [w,h] of [[22,12],[17,16],[13,54]]){box(w,h,w,x,y,z,m);box(w+.4,.5,w+.4,x,y+h,z,cornice);y+=h+.5;}
+    for(const [w,h] of [[20,12],[16,16],[12.5,54]]){box(w,h,w,x,y,z,m);box(w+.4,.5,w+.4,x,y+h,z,cornice);y+=h+.5;}
     const crown=[[7.6,0],[7.6,3],[6.2,3],[6.2,6.5],[4.8,6.5],[4.8,9.8],[3.3,9.8],[3.3,12.4],[1.8,12.4],[1.8,14],[.6,14]].map(([r,h])=>new THREE.Vector2(r,h));
     add(new THREE.LatheGeometry(crown,4).rotateY(Math.PI/4),mat('#d8dde3',{metalness:.85,roughness:.2,envMapIntensity:1.5}),[x,y,z]);
-    add(new THREE.ConeGeometry(.9,14,8).translate(0,7,0),metal,[x,y+14,z]);occl(x,z,22,22,y-top+28);};
+    add(new THREE.ConeGeometry(.9,14,8).translate(0,7,0),metal,[x,y+14,z]);occl(x,z,20,20,y-top+28);};
   LM.wtc=(b)=>{const x=(b.x0+b.x1)/2,z=(b.z0+b.z1)/2,gm=PAL.glass[3];box(18,9,18,x,top,z,gm);
     const h=118,g=new THREE.CylinderGeometry(6.5,12.2,h,4,1).translate(0,h/2,0),p=g.attributes.position;
     for(let i=0;i<p.count;i++)if(p.getY(i)<.01){const a=Math.atan2(p.getX(i),p.getZ(i))+Math.PI/4,r=Math.hypot(p.getX(i),p.getZ(i));p.setXYZ(i,Math.sin(a)*r,p.getY(i),Math.cos(a)*r);}
@@ -161,7 +204,7 @@ export function buildCity({reserved=new Set(),fills=[]}={}){
 
   for(const b of blocks()){
     const key=b.i+','+b.j;if(reserved.has(key)){continue;}
-    walkRect(b.x0,b.x1,b.z0,b.z1);
+    sidewalk(b);
     const inner={x0:b.x0+WALK,x1:b.x1-WALK,z0:b.z0+WALK,z1:b.z1-WALK};
     loops.push({x0:b.x0+1,x1:b.x1-1,z0:b.z0+1,z1:b.z1-1,y:top});
     if(b.borough==='man'&&b.i<=1&&b.j<=1){park(b,{pond:b.i===0&&b.j===1});streetFurniture(b);continue;}
@@ -171,6 +214,28 @@ export function buildCity({reserved=new Set(),fills=[]}={}){
     fill(inner,zone);
   }
   for(const r of fills)fill(r,r.zone??'low');
+
+  // --- New York street details ------------------------------------------------------
+  // Fire hydrants and green trash bins near the corners; subway entrances with green
+  // railings and globe lamps; steam stacks (orange and white) in a few parking spots.
+  const hydrantRed=mat('#c13a2c',{roughness:.45}),cap=mat('#e6e0d2',{roughness:.5}),binGreen=mat('#2f5a3a',{roughness:.6}),
+    subwayGreen=mat('#23573a',{roughness:.45,metalness:.3}),globe=mat('#b9f0c4',{emissive:'#5be07e',emissiveIntensity:.9}),orange=mat('#f06a1d',{roughness:.6});
+  const hydrant=(x,z)=>{cyl(.15,.18,.5,12,x,top,z,hydrantRed);add(new THREE.SphereGeometry(.16,12,8,0,Math.PI*2,0,Math.PI/2),hydrantRed,[x,top+.5,z]);cyl(.05,.05,.08,8,x,top+.66,z,cap);
+    for(const sd of [-1,1])add(new THREE.CylinderGeometry(.06,.06,.14,8).rotateZ(Math.PI/2),cap,[x+sd*.18,top+.34,z]);};
+  const bin=(x,z)=>{cyl(.26,.21,.72,14,x,top,z,binGreen);cyl(.27,.27,.04,14,x,top+.72,z,dark);};
+  const subway=(x,z)=>{   // along x, stairs going down toward -x, open at the -x end
+    box(3.2,.04,1.5,x,top-.01,z,dark);for(let k=0;k<6;k++)box(.05,.02,1.4,x-1.4+k*.5,top+.02,z,iron);
+    for(const sd of [-1,1]){box(3.2,.07,.07,x,top+1.05,z+sd*.8,subwayGreen);for(let k=0;k<=4;k++)box(.07,1.05,.07,x-1.6+k*.8,top,z+sd*.8,subwayGreen);}
+    box(.07,.07,1.6,x+1.6,top+1.05,z,subwayGreen);box(.07,1.05,.07,x+1.6,top,z,subwayGreen);
+    for(const sd of [-1,1]){cyl(.05,.05,1.5,8,x-1.6,top,z+sd*.8,subwayGreen);add(new THREE.SphereGeometry(.17,14,10),globe,[x-1.6,top+1.62,z+sd*.8]);}};
+  const SUBWAY=new Set(['1,2','2,3','3,4','2,0','3,2','2,5']);
+  for(const b of blocks()){const key=b.i+','+b.j;if(reserved.has(key)||(b.borough==='man'&&b.i<=1&&b.j<=1))continue;
+    const corners=[[b.x0+1.5,b.z0+1.5],[b.x1-1.5,b.z0+1.5],[b.x1-1.5,b.z1-1.5],[b.x0+1.5,b.z1-1.5]],c=(b.i+b.j)%4;
+    hydrant(...corners[c]);bin(...corners[(c+2)%4]);
+    if(SUBWAY.has(key))subway(b.x0+WALK+4,b.z1-1.3);
+  }
+  const steam=[];for(let k=0;k<3&&parking.length;k++){const p=parking.splice(Math.floor(rand()*parking.length),1)[0];steam.push(p);
+    cyl(.32,.42,1.5,16,p.x,G,p.z,orange);for(const y of [.35,.9])cyl(.37-y*.06,.4-y*.06,.18,16,p.x,G+y,p.z,cap);}
 
   // --- Liberty Island, in the harbour south of the bridge -----------------------------
   {const x=68,z=104,grass=mat('#5f8f3f',{roughness:.95});
@@ -190,6 +255,6 @@ export function buildCity({reserved=new Set(),fills=[]}={}){
   K.finish(root);
   root.traverse(o=>{if(o.isMesh){o.castShadow=o.receiveShadow=true;}});
   let lightTime=0;
-  return {root,solids,occluders,loops,phase:()=>phase(lightTime),
+  return {root,solids,occluders,loops,parking,steam,phase:()=>phase(lightTime),
     update(dt){lightTime+=dt;const ph=phase(lightTime);for(const a of ['z','x'])for(const c of ['r','y','g'])LIGHT[a][c].emissiveIntensity=ph[a]===c?3.2:0;}};
 }

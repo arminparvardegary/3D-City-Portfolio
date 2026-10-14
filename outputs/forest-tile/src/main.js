@@ -367,7 +367,7 @@ function render(time=0){
   }
   // The car is driven by the visitor, so it keeps running even with the breeze paused.
   // The world animates (beacons, taxis, clouds); 2 means moving shadows too.
-  {const w=world.update(time,frameDt/1000);if(w){animating=true;if(w===2)renderer.shadowMap.needsUpdate=true;}}
+  {const w=world.update(time,frameDt/1000,camera);if(w){animating=true;if(w===2)renderer.shadowMap.needsUpdate=true;}}
   parkedAt=story&&!story.active?parkedBay():null;if(prompt.hidden===!!parkedAt){prompt.hidden=!parkedAt;if(parkedAt)audio.ui.prompt();}
   audio.update(frameDt/1000);
   if(story?.update(frameDt/1000))animating=true;

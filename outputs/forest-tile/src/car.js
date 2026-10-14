@@ -32,19 +32,35 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
   let probes=[],r=1;
   const footprint=()=>{r=parts.width/2+.05;const k=Math.max(0,parts.length/2-r*.9),n=Math.max(1,Math.ceil(k/r));probes=[];for(let i=-n;i<=n;i++)probes.push(k*i/n);};
   footprint();
-  function blocked(px,pz,ph){
+  // Collisions never trap the car. A pose is impossible where there is no road
+  // (water, off the edge, a step up or down); otherwise a move is refused only if
+  // it takes the car deeper into something. So when the car touches or overlaps
+  // another car, a curb or a post, backing out, steering away or sliding along
+  // always works.
+  function impossible(px,pz,ph){
     const fx=Math.sin(ph),fz=Math.cos(ph);
-    for(const o of probes){
-      const cx=px+fx*o,cz=pz+fz*o;
-      // No road there, or a step too high to drive up or down (a deck seen from below).
+    for(const o of probes){const cx=px+fx*o,cz=pz+fz*o;
       if(surface){const sy=surface(cx,cz,cy);if(sy===null||Math.abs(sy-cy)>.9)return true;}
-      if(cx<BOUNDS.x0+r||cx>BOUNDS.x1-r||cz<BOUNDS.z0+r||cz>BOUNDS.z1-r)return true;
-      // A box with a height (5th value) only blocks the car on its level (a bridge passes over it).
-      for(const [bx,bz,hw,hd,bt] of BOXES){if(bt!==undefined&&cy>bt+.5)continue;const dx=cx-Math.max(bx-hw,Math.min(cx,bx+hw)),dz=cz-Math.max(bz-hd,Math.min(cz,bz+hd));if(dx*dx+dz*dz<r*r)return true;}
-      for(const [qx,qz,qr] of CIRCLES)if((cx-qx)**2+(cz-qz)**2<(r+qr)**2)return true;
-      for(const [qx,qz,qr,qy] of dynamicObstacles())if((qy===undefined||Math.abs(qy-cy)<2)&&(cx-qx)**2+(cz-qz)**2<(r+qr)**2)return true;
-    }
+      if(cx<BOUNDS.x0+r||cx>BOUNDS.x1-r||cz<BOUNDS.z0+r||cz>BOUNDS.z1-r)return true;}
     return false;
+  }
+  // How deep the car sits inside things at a pose (0 when clear).
+  function depth(px,pz,ph){
+    const fx=Math.sin(ph),fz=Math.cos(ph);let d=0;
+    for(const o of probes){const cx=px+fx*o,cz=pz+fz*o;
+      // A box with a height (5th value) only counts on its level (a bridge passes over it).
+      for(const [bx,bz,hw,hd,bt] of BOXES){if(bt!==undefined&&cy>bt+.5)continue;
+        const qx=Math.max(bx-hw,Math.min(cx,bx+hw)),qz=Math.max(bz-hd,Math.min(cz,bz+hd)),dist=Math.hypot(cx-qx,cz-qz);
+        if(dist===0)d+=r+Math.min(cx-(bx-hw),bx+hw-cx,cz-(bz-hd),bz+hd-cz);else if(dist<r)d+=r-dist;}
+      for(const [qx,qz,qr] of CIRCLES){const dist=Math.hypot(cx-qx,cz-qz);if(dist<r+qr)d+=r+qr-dist;}
+      for(const [qx,qz,qr,qy] of dynamicObstacles()){if(qy!==undefined&&Math.abs(qy-cy)>=2)continue;const dist=Math.hypot(cx-qx,cz-qz);if(dist<r+qr)d+=r+qr-dist;}
+    }
+    return d;
+  }
+  function blocked(px,pz,ph){
+    if(impossible(px,pz,ph))return true;
+    const dn=depth(px,pz,ph);if(dn<=1e-6)return false;
+    return dn>=depth(x,z,h)-1e-5;
   }
   const down=new Set();let locked=false;
   m.headlight.emissive.set('#fff6e0');m.tailLight.emissive.set('#ff2a22');

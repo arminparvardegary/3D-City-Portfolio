@@ -3,15 +3,21 @@
 // strip of Brooklyn; water all around. Every road connects at both ends, so
 // traffic never has to appear or vanish.
 //
-//   x: west -120 ... Manhattan ... 52 | East River 52..84 | Brooklyn 84..132
+//   x: west -120 ... Manhattan ... 54 | East River 54..82 | Brooklyn 82..132
 //   z: north -120 ... south 120
 export const G=.12;              // street level (top of the land)
 export const CURB=.25;           // sidewalks stand this high above the street
-export const HALF=5;             // half a road width (two lanes of 5)
-export const LANE=2.5;           // lane centre, right of the road centre line
+// Road cross section (each side of the centre line, about 1.5 m per unit):
+// double yellow centre line, a travel lane (centre 2.5 from the middle, 3.7 m
+// wide), a solid white edge line at 3.85, a parking lane (centre 4.75), the curb
+// at 6. An 18 m carriageway between curbs, as on a Manhattan street.
+export const HALF=6;             // centre line to curb
+export const LANE=2.5;           // travel lane centre
+export const EDGE=3.85;          // white edge line between travel and parking lanes
+export const PARK=4.75;          // parking lane centre
 export const WALK=2.6;           // sidewalk width inside each block
 
-export const MAN={x0:-120,x1:52},RIVER={x0:52,x1:84},BKN={x0:84,x1:132},NS={z0:-120,z1:120};
+export const MAN={x0:-120,x1:54},RIVER={x0:54,x1:82},BKN={x0:82,x1:132},NS={z0:-120,z1:120};
 // Avenues (run north to south) and streets (run east to west).
 export const AV=[-112,-72,-32,8,46];          // 46: FDR Drive along the river
 export const BAV=[90,116];                    // Brooklyn: riverside road and an avenue
@@ -58,5 +64,6 @@ export function bridgeHeight(x){
   if(x>river[1])return deck*smooth((landB-x)/(landB-river[1]));
   return deck;
 }
-export const onBridgeBand=(x,z)=>Math.abs(z-BRIDGE.z)<=HALF&&x>BRIDGE.landM-1&&x<BRIDGE.landB+1;
+export const DECK_HALF=5.2;      // the bridge deck is narrower than a street: two lanes, no parking
+export const onBridgeBand=(x,z)=>Math.abs(z-BRIDGE.z)<=DECK_HALF&&x>BRIDGE.landM-1&&x<BRIDGE.landB+1;
 export const onLand=(x,z)=>z>=NS.z0&&z<=NS.z1&&((x>=MAN.x0&&x<=MAN.x1)||(x>=BKN.x0&&x<=BKN.x1));

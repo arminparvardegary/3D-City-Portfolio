@@ -20,14 +20,14 @@ export function buildBridge({prep}={}){
   const asphalt=mat('#46484e',{map:FACADE.asphalt(),roughness:.9});asphalt.userData.uvSize=10;
   const steel=mat('#5c6168',{metalness:.6,roughness:.45}),cable=mat('#4c4f55',{metalness:.5,roughness:.5}),yellow=mat('#e3bd3a'),white=mat('#ecebe6');
   const y=x=>G+bridgeHeight(x);
-  const {landM,landB}=BRIDGE,fdr=[41,51],brr=[85,95];
+  const {landM,landB}=BRIDGE,fdr=[39.6,52.4],brr=[83.6,96.4];   // FDR Drive and the Brooklyn riverside road, under the bridge
   // Deck: short tilted slabs following the height, with markings and parapets.
   for(let x=landM-1;x<landB+1;x+=1.5){
     const x1=Math.min(x+1.5,landB+1),y0=y(x),y1=y(x1),len=Math.hypot(x1-x,y1-y0),ang=Math.atan2(y1-y0,x1-x),mx=(x+x1)/2,my=(y0+y1)/2;
     const r=[0,0,ang];add(new THREE.BoxGeometry(len+.05,.6,W),asphalt,[mx,my-.3,Z],r);
     if(Math.floor(x/1.5)%2===0)for(const o of [-.14,.14])add(new THREE.BoxGeometry(len,.02,.12),yellow,[mx,my+.01,Z+o],r);
     for(const s of [-1,1]){
-      const over=x>fdr[0]-1&&x<fdr[1]+1||x>brr[0]-1&&x<brr[1]+1||x>52&&x<84;
+      const over=x>fdr[0]-1&&x<fdr[1]+1||x>brr[0]-1&&x<brr[1]+1||x>54&&x<82;
       if(over){add(new THREE.BoxGeometry(len,.12,.12),steel,[mx,my+1.1,Z+s*(W/2-.1)],r);add(new THREE.BoxGeometry(len,.6,.16),steel,[mx,my-.1,Z+s*(W/2+.05)],r);
         if(Math.floor(x/1.5)%2===0)box(.1,1.1,.1,mx,my,Z+s*(W/2-.1),steel);}
       else add(new THREE.BoxGeometry(len,1,.5),stoneM,[mx,my+.5,Z+s*(W/2-.25)],r);
@@ -38,7 +38,7 @@ export function buildBridge({prep}={}){
     if(H<3.6){box(x1-x+.02,H,W,(x+x1)/2,G,Z,stoneM);continue;}
     const r=(x1-x-1.2)/2,sy=H-1.4-r,s=new THREE.Shape();s.moveTo(x,H);s.lineTo(x1,H);s.lineTo(x1,0);s.lineTo(x1-.6,0);s.lineTo(x1-.6,sy);s.absarc((x+x1)/2,sy,r,0,Math.PI,false);s.lineTo(x+.6,0);s.lineTo(x,0);s.closePath();
     add(new THREE.ExtrudeGeometry(s,{depth:W,bevelEnabled:false,curveSegments:16}).translate(0,0,-W/2),stoneM,[0,G,Z]);}};
-  viaduct(landM+1,fdr[0]-.5);viaduct(fdr[1]+.5,52);viaduct(84,brr[0]-.5);viaduct(brr[1]+.5,landB-1);
+  viaduct(landM+1,fdr[0]-.5);viaduct(fdr[1]+.5,54);viaduct(82,brr[0]-.5);viaduct(brr[1]+.5,landB-1);
   // Steel spans over FDR Drive and the Brooklyn riverside road: girders on stone piers.
   for(const [a,b] of [fdr,brr]){for(const x of [a-.4,b+.4])box(1.2,y(x)-G-.6,W,x,G,Z,stoneM);}
   // Anchorages: big stone blocks where the cables come down.

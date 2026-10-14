@@ -38,32 +38,31 @@ function typeGeometry(T){
   const half=curve([[zr,W*.37],[zr+.25*k,W*.47],[zr+.8*k,W*.5],[0,W/2],[zf-.7*k,W*.49],[zf-.2*k,W*.44],[zf,W*.35]]);
   const floor=z=>{let y=.2+lift;for(const a of az){const d=Math.abs(z-a);if(d<R)y=Math.max(y,r+Math.sqrt(R*R-d*d)-.02);}return y;};
   // Body.
-  const rings=[];for(let i=0;i<=36;i++){const z=zr+(zf-zr)*i/36,yb=floor(z),yt=Math.max(yb+.1,shoulder(z)),hw=half(z),yc=(yb+yt)/2,hh=(yt-yb)/2,pts=[];
-    for(let j=0;j<24;j++){const [sx,sy]=se(j/24*Math.PI*2,4.2);pts.push([sx*hw,yc+sy*hh]);}rings.push({z,pts});}
+  const rings=[];for(let i=0;i<=22;i++){const z=zr+(zf-zr)*i/22,yb=floor(z),yt=Math.max(yb+.1,shoulder(z)),hw=half(z),yc=(yb+yt)/2,hh=(yt-yb)/2,pts=[];
+    for(let j=0;j<16;j++){const [sx,sy]=se(j/16*Math.PI*2,4.2);pts.push([sx*hw,yc+sy*hh]);}rings.push({z,pts});}
   add('paint',loft(rings));
   // Cabin glass and painted roof.
   const [c0,rr,rf,c1]=T.cab,base0=shoulder(c0)-.05,base1=shoulder(c1)-.05;
   const roofY=curve([[c0,base0],[rr,T.roof+lift*.5],[(rr+rf)/2,T.roof+lift*.5+.02],[rf,T.roof+lift*.5],[c1,base1]]);
-  const cab=[],roofRings=[];for(let i=0;i<=20;i++){const z=c0+(c1-c0)*i/20,base=shoulder(z)-.05,top=Math.max(base+.02,roofY(z)),wb2=half(z)-.11,wt=wb2-.17,yc=(base+top)/2,hh=(top-base)/2,pts=[],rp=[];
-    for(let j=0;j<20;j++){const [sx,sy]=se(j/20*Math.PI*2,3.6),y=yc+sy*hh,v=Math.max(0,(y-base)/(top-base)),x=sx*(wb2+(wt-wb2)*v);pts.push([x,y]);rp.push([x*1.012,y+.008]);}
+  const cab=[],roofRings=[];for(let i=0;i<=12;i++){const z=c0+(c1-c0)*i/12,base=shoulder(z)-.05,top=Math.max(base+.02,roofY(z)),wb2=half(z)-.11,wt=wb2-.17,yc=(base+top)/2,hh=(top-base)/2,pts=[],rp=[];
+    for(let j=0;j<14;j++){const [sx,sy]=se(j/14*Math.PI*2,3.6),y=yc+sy*hh,v=Math.max(0,(y-base)/(top-base)),x=sx*(wb2+(wt-wb2)*v);pts.push([x,y]);rp.push([x*1.012,y+.008]);}
     cab.push({z,pts});roofRings.push({z,pts:rp});}
   add('glass',loft(cab));
-  {const keep=j=>{const a=j/20*Math.PI*2;return a>Math.PI*.2&&a<Math.PI*.8;};add('paint',loft(roofRings.slice(4,17).map(rg=>({z:rg.z,pts:rg.pts.filter((_,j)=>keep(j))})),{caps:false,closed:false}));}
+  {const keep=j=>{const a=j/14*Math.PI*2;return a>Math.PI*.2&&a<Math.PI*.8;};add('paint',loft(roofRings.slice(2,11).map(rg=>({z:rg.z,pts:rg.pts.filter((_,j)=>keep(j))})),{caps:false,closed:false}));}
   // Lamps, grille, bumpers.
   const fy=shoulder(zf-.2)-.12,ry=shoulder(zr+.15)-.08;
-  for(const s of [-1,1]){add('lampW',new RoundedBoxGeometry(.36,.09,.12,2,.03),[s*W*.3,fy,zf-.14],[-.2,s*.3,0]);add('lampR',new RoundedBoxGeometry(.32,.1,.1,2,.03),[s*W*.3,ry,zr+.1]);}
+  for(const s of [-1,1]){add('lampW',new THREE.BoxGeometry(.36,.09,.12),[s*W*.3,fy,zf-.14],[-.2,s*.3,0]);add('lampR',new THREE.BoxGeometry(.32,.1,.1),[s*W*.3,ry,zr+.1]);}
   add('lampR',new THREE.BoxGeometry(W*.55,.04,.04),[0,ry+.02,zr+.1]);
-  add('dark',new RoundedBoxGeometry(W*.38,.16+lift*.5,.1,2,.04),[0,.48+lift,zf-.02]);
+  add('dark',new THREE.BoxGeometry(W*.38,.16+lift*.5,.1),[0,.48+lift,zf-.02]);
   add('dark',new THREE.BoxGeometry(W*.75,.14,.14),[0,.28+lift,zr+.06]);add('dark',new THREE.BoxGeometry(W*.75,.05,.14),[0,.24+lift,zf-.02]);
   // Mirrors and sills.
-  for(const s of [-1,1]){add('paint',new RoundedBoxGeometry(.18,.1,.12,2,.04),[s*(half(c1-.15)+.1),shoulder(c1-.15)+.1,c1-.18]);add('dark',new THREE.BoxGeometry(.04,.08,wb-.9),[s*(half(0)-.02),.24+lift,0]);}
+  for(const s of [-1,1]){add('paint',new THREE.BoxGeometry(.18,.1,.12),[s*(half(c1-.15)+.1),shoulder(c1-.15)+.1,c1-.18]);add('dark',new THREE.BoxGeometry(.04,.08,wb-.9),[s*(half(0)-.02),.24+lift,0]);}
   // Wheels: rounded tyres and a bright rim face.
-  const tyre=new THREE.CylinderGeometry(r,r,.26,18).rotateZ(Math.PI/2),rim=new THREE.CylinderGeometry(r*.64,r*.6,.03,16).rotateZ(Math.PI/2),hub=new THREE.CylinderGeometry(r*.14,r*.14,.04,10).rotateZ(Math.PI/2);
-  const track=W/2-.17;for(const z of az)for(const s of [-1,1]){add('dark',tyre.clone(),[s*track,r,z]);add('metal',rim.clone(),[s*(track+.12),r,z]);add('dark',hub.clone(),[s*(track+.135),r,z]);
-    for(let i=0;i<6;i++){const a=i/6*Math.PI*2;add('dark',new THREE.BoxGeometry(.02,r*.42,.05),[s*(track+.14),r+Math.sin(a)*r*.32,z+Math.cos(a)*r*.32],[Math.PI/2-a,0,0]);}}
+  const tyre=new THREE.CylinderGeometry(r,r,.26,12).rotateZ(Math.PI/2),rim=new THREE.CylinderGeometry(r*.64,r*.6,.03,12).rotateZ(Math.PI/2),hub=new THREE.CylinderGeometry(r*.14,r*.14,.04,6).rotateZ(Math.PI/2);
+  const track=W/2-.17;for(const z of az)for(const s of [-1,1]){add('dark',tyre.clone(),[s*track,r,z]);add('metal',rim.clone(),[s*(track+.12),r,z]);add('dark',hub.clone(),[s*(track+.135),r,z]);}
   // Extras.
   if(T.bed){const bz0=zr+.1,bz1=c0-.06,by=shoulder(-1)+.02;for(const s of [-1,1])add('paint',new THREE.BoxGeometry(.08,.42,bz1-bz0),[s*(W/2-.06),by+.1,(bz0+bz1)/2]);add('paint',new THREE.BoxGeometry(W-.1,.42,.08),[0,by+.1,bz0]);add('dark',new THREE.BoxGeometry(W-.16,.04,bz1-bz0),[0,by-.08,(bz0+bz1)/2]);}
-  if(T.taxi){add('sign',new RoundedBoxGeometry(.56,.17,.24,2,.05),[0,T.roof+.08,-.15]);for(const s of [-1,1])for(let i=0;i<14;i++){const z=-1+i*.1;if(i%2)add('dark',new THREE.BoxGeometry(.006,.05,.1),[s*(half(z)+.004),.64,z]);}}
+  if(T.taxi){add('sign',new THREE.BoxGeometry(.56,.17,.24),[0,T.roof+.08,-.15]);for(const s of [-1,1])for(let i=0;i<14;i++){const z=-1+i*.1;if(i%2)add('dark',new THREE.BoxGeometry(.006,.05,.1),[s*(half(z)+.004),.64,z]);}}
   if(T.police){add('dark',new THREE.BoxGeometry(.9,.09,.24),[0,T.roof+.04,-.15]);add('lampR',new THREE.BoxGeometry(.38,.08,.2),[-.22,T.roof+.12,-.15]);add('lampB',new THREE.BoxGeometry(.38,.08,.2),[.22,T.roof+.12,-.15]);
     for(const s of [-1,1])add('dark',new THREE.BoxGeometry(.01,.36,1.6),[s*(half(-.3)+.005),.6,-.3]);}
   const merged={};for(const p of PARTS)if(out[p].length)merged[p]=mergeVertices(mergeGeometries(out[p],false));
