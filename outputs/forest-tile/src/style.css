@@ -5,3 +5,8 @@
 
 /* Neutral presentation and restrained color controls for the house study. */
 .color-row{display:grid;grid-template-columns:1fr 1fr;gap:14px 20px}.color-row label{justify-content:space-between}.tile-note{max-width:160px}.scene-intro h1{font-weight:600}.masthead .wordmark-dot{color:#f06b60}
+
+.drive-hint{position:absolute;right:4.7%;bottom:33px;display:flex;align-items:center;gap:10px;font-size:10px;color:#7d896f}.keys{display:flex;gap:3px}kbd{min-width:21px;height:21px;display:grid;place-items:center;font:600 9px 'DM Sans',sans-serif;color:#667e4b;background:#fffff6b8;border:1px solid #dfe4d3;border-radius:6px}.drive-hint button{font-size:10px;font-weight:600;color:#6c8058;padding:4px 10px;border-radius:14px;background:#e9eddf}
+.drive-pad{display:none;position:absolute;right:5%;bottom:84px;gap:8px;grid-template-columns:repeat(2,52px);touch-action:none}.drive-pad button{height:52px;border-radius:50%;background:#fffff6d9;border:1px solid #e0e5d6;color:#667e4b;font-size:15px;touch-action:none;user-select:none;-webkit-user-select:none}.drive-pad button:active{background:#e9eddf}
+@media(hover:none){.drive-pad{display:grid}.drive-hint .keys{display:none}}
+@media(max-width:1000px){.drive-hint{right:6%}}@media(max-width:600px){.drive-hint{bottom:128px;right:50%;transform:translateX(50%)}.drive-pad{bottom:170px}}

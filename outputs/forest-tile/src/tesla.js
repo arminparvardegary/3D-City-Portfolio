@@ -86,14 +86,13 @@ export function buildTeslaModelS(parent,m){
 
   for(const side of [-1,1]){
     // Slim swept headlights with a bright daytime light strip, set into the nose.
-    box(car,[.3,.045,.1],[side*.43,.655,1.83],m.truckDark,.018,[-.1,side*.42,side*.05]);
-    box(car,[.26,.016,.108],[side*.435,.675,1.838],m.headlight,.006,[-.1,side*.42,side*.05]);
+    box(car,[.3,.03,.09],[side*.43,.6,1.775],m.headlight,.012,[0,side*.42,0]);
     // Tail lamps wrap around the rear corners.
-    box(car,[.36,.05,.07],[side*.5,.8,-1.915],m.tailLight,.02,[0,-side*.5,0]);
+    box(car,[.34,.045,.06],[side*.5,.735,-1.885],m.tailLight,.016,[0,-side*.5,0]);
     // Frameless door handles, quiet panel seams, and a body colored sill.
     for(const z of [.3,-.62])box(car,[.016,.022,.14],[side*.775,.745,z],m.carBody,.007);
-    for(const z of [.92,-.17,-1.04])curve(car,[[side*.78,.82,z],[side*.79,.55,z],[side*.77,.3,z]],.0035,m.truckDark);
-    box(car,[.06,.045,2.05],[side*.78,.27,-.05],m.truckDark,.015);
+    for(const z of [-.17,-1.04])curve(car,[[side*.775,.77,z],[side*.785,.55,z],[side*.765,.3,z]],.0035,m.truckDark);
+    box(car,[.06,.045,1.7],[side*.775,.27,0],m.truckDark,.015);
     // Mirror on a short stalk.
     box(car,[.1,.03,.05],[side*.76,.835,.86],m.truckDark,.01);
     mesh(car,new THREE.SphereGeometry(1,16,10),m.carBody,[side*.83,.86,.84],[0,0,0],[.08,.055,.085]);
@@ -102,10 +101,10 @@ export function buildTeslaModelS(parent,m){
   box(car,[.8,.05,.03],[0,.43,1.955],m.truckDark,.015);
   mesh(car,new THREE.PlaneGeometry(.095,.12),teslaBadge(),[0,.69,1.73],[-1.28,0,0]);
   const plate=label('MODEL S',.34,.075);mesh(car,plate.geometry,plate.material,[0,.5,1.965]);
-  const rear=label('T E S L A',.46,.07,'#8a969c','#c9cfcd');mesh(car,rear.geometry,rear.material,[0,.82,-1.935],[0,Math.PI,0.0]);
-  const tbadge=mesh(car,new THREE.PlaneGeometry(.09,.11),teslaBadge(),[0,.775,-1.945],[0,Math.PI,0]);tbadge.castShadow=false;
+  const rear=label('T E S L A',.46,.07,'#8a969c','#c9cfcd');mesh(car,rear.geometry,rear.material,[0,.6,-1.955],[0,Math.PI,0]);
+  const tbadge=mesh(car,new THREE.PlaneGeometry(.09,.11),teslaBadge(),[0,.7,-1.925],[0,Math.PI,0]);tbadge.castShadow=false;
   // Thin red light bar joining the tail lamps.
-  box(car,[.62,.016,.03],[0,.835,-1.925],m.tailLight,.006);
+  box(car,[.6,.014,.03],[0,.775,-1.9],m.tailLight,.005,[-.25,0,0]);
 
   mergeStatic(car);
 
@@ -116,7 +115,7 @@ export function buildTeslaModelS(parent,m){
   const wheels=[];
   for(const side of [-1,1])for(const z of [-WHEEL_Z,WHEEL_Z]){
     const w=new THREE.Group();w.position.set(side*.675,WHEEL_Y,z);rig.add(w);
-    const spin=new THREE.Group();w.add(spin);
+    const spin=new THREE.Group();w.add(spin);spin.userData.steer=w;spin.userData.front=z>0;
     mesh(spin,new THREE.CylinderGeometry(WHEEL_R,WHEEL_R,.2,32),m.rubber,[0,0,0],[0,0,Math.PI/2]);
     mesh(spin,new THREE.CylinderGeometry(.215,.215,.02,28),m.rim,[side*.103,0,0],[0,0,Math.PI/2]);
     mesh(spin,new THREE.TorusGeometry(.215,.012,6,28),m.truckDark,[side*.11,0,0],[0,Math.PI/2,0]);
@@ -130,42 +129,81 @@ export function buildTeslaModelS(parent,m){
   return {rig,car,wheels};
 }
 
-// A slow, believable drive cycle: sit parked, pull out of the bay, stop,
-// reverse back in and park again. Wheels roll exactly with the ground speed,
-// the body pitches on throttle and brake, and the lights follow what the car
-// is doing (brake lights on stopping, bright daytime lights while moving).
-const CYCLE=[ // [duration s, from, to] along the driveway, 0 = parked, 1 = pulled out
-  [2.5,0,0],[4.6,0,1],[2.2,1,1],[4.6,1,0],[2.1,0,0],
-];
-const TOTAL=CYCLE.reduce((a,c)=>a+c[0],0);
-const ease=x=>x*x*x*(x*(x*6-15)+10);
-function progress(t){
-  t%=TOTAL;
-  for(const [d,a,b] of CYCLE){if(t<d)return a+(b-a)*ease(t/d);t-=d;}
-  return 0;
+// You drive it. W / Up = gas, S / Down = brake then reverse, A D / Left Right =
+// steer, Space = handbrake, R = back to the parking space. Simple bicycle
+// model: the nose follows the front wheels, which really steer. Wheels roll
+// with ground speed, the body pitches and rolls, and the lights follow what
+// you do.
+const KEYS={KeyW:'gas',ArrowUp:'gas',KeyS:'brake',ArrowDown:'brake',KeyA:'left',ArrowLeft:'left',KeyD:'right',ArrowRight:'right',Space:'hand'};
+const WHEELBASE=2.4,MAX_SPEED=3.2,MAX_REVERSE=1.4;
+// Things the car can bump into: [x, z, halfW, halfD] boxes and [x, z, r] circles.
+const BOXES=[[-1.5,-.7,1.5,1.6],[-1.4,-2.71,1.2,.26]];
+const CIRCLES=[[-3.78,-2.75,.4],[3.63,-3.45,.4],[-.45,2.62,.14]];
+const BOUND=4.95;
+function blocked(x,z,h){
+  const fx=Math.sin(h),fz=Math.cos(h);
+  for(const o of [-1.15,0,1.15]){
+    const cx=x+fx*o,cz=z+fz*o,r=.76;
+    if(Math.abs(cx)>BOUND-r||Math.abs(cz)>BOUND-r)return true;
+    for(const [bx,bz,hw,hd] of BOXES){
+      const dx=cx-Math.max(bx-hw,Math.min(cx,bx+hw)),dz=cz-Math.max(bz-hd,Math.min(cz,bz+hd));
+      if(dx*dx+dz*dz<r*r)return true;
+    }
+    for(const [qx,qz,qr] of CIRCLES)if((cx-qx)**2+(cz-qz)**2<(r+qr)**2)return true;
+  }
+  return false;
 }
 
-export function createTeslaDrive({rig,car,wheels},m,{travel=1.95,radius=.29}={}){
-  const home=rig.position.z;
+export function createTeslaControls({rig,car,wheels},m,{radius=.29}={}){
+  const home={x:rig.position.x,z:rig.position.z,h:ART.car.rotation};
+  let x=home.x,z=home.z,h=home.h,v=0,steer=0,a=0,lat=0;
+  const down=new Set();
   m.headlight.emissive.set('#fff2ce');m.tailLight.emissive.set('#ff2a22');
-  let last=null,distance=0;
-  // time is in ms. Returns true while the car is moving, so the caller knows
-  // the cast shadow has to be refreshed every frame.
-  return function update(time){
-    const t=time/1000,dt=.04;
-    const p=progress(t),v=(progress(t+dt)-progress(t-dt))/(2*dt)*travel,a=(progress(t+dt)-2*p+progress(t-dt))/(dt*dt)*travel;
-    const z=home+p*travel;
-    distance=p*travel;
-    rig.position.z=z;
-    for(const w of wheels)w.rotation.x=distance/radius;
-    const moving=Math.abs(v)>.01;
-    car.rotation.x=-THREE.MathUtils.clamp(a*.035,-.03,.03);
-    car.position.y=moving?Math.sin(t*38)*.0012*Math.min(1,Math.abs(v)*3):0;
-    // Decelerating against the direction of travel, or parked in gear: brake lights.
-    const braking=(v>.01&&a<-.02)||(v<-.01&&a>.02)||!moving;
-    m.tailLight.emissiveIntensity=braking?(moving?1.9:.9):.45;
-    m.headlight.emissiveIntensity=moving?1.35:.55;
-    const was=last;last=moving;
-    return moving||was;
+  const typing=t=>t&&(t.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
+  addEventListener('keydown',e=>{
+    if(typing(e.target)||e.metaKey||e.ctrlKey||e.altKey)return;
+    if(e.code==='KeyR'){x=home.x;z=home.z;h=home.h;v=0;steer=0;return;}
+    const k=KEYS[e.code];if(!k)return;down.add(k);e.preventDefault();
+  });
+  addEventListener('keyup',e=>{const k=KEYS[e.code];if(k)down.delete(k);});
+  addEventListener('blur',()=>down.clear());
+  const api={
+    press(k,on){on?down.add(k):down.delete(k);},
+    reset(){x=home.x;z=home.z;h=home.h;v=0;steer=0;},
+    get speed(){return v;},
   };
+  let last=null;
+  // time in ms. Returns true while anything is moving so the caller can keep
+  // rendering and refresh the moving shadow.
+  api.update=function(time){
+    const dt=Math.min(.05,last===null?0:(time-last)/1000);last=time;
+    const gas=down.has('gas'),brake=down.has('brake'),hand=down.has('hand');
+    // Throttle and brake. S brakes while rolling forward, then goes into reverse.
+    let acc=0;
+    if(gas)acc=v<0?5:2.6;
+    else if(brake)acc=v>.05?-5.2:-2.2;
+    else acc=dt>0?-Math.sign(v)*Math.min(Math.abs(v)/dt,.9):0;
+    if(hand)acc=-Math.sign(v)*Math.min(Math.abs(v)/Math.max(dt,.001),7);
+    const prev=v;v=THREE.MathUtils.clamp(v+acc*dt,-MAX_REVERSE,MAX_SPEED);
+    if(!gas&&!brake&&!hand&&Math.abs(v)<.03)v=0;
+    a=dt?(v-prev)/dt:0;
+    // Steering eases toward the key, tighter at low speed.
+    const target=((down.has('left')?1:0)-(down.has('right')?1:0))*THREE.MathUtils.lerp(.62,.28,Math.min(1,Math.abs(v)/MAX_SPEED));
+    steer+=(target-steer)*Math.min(1,dt*7);
+    const rate=v/WHEELBASE*Math.tan(steer);
+    const nh=h+rate*dt,nx=x+Math.sin(nh)*v*dt,nz=z+Math.cos(nh)*v*dt;
+    if(!blocked(nx,nz,nh)){h=nh;x=nx;z=nz;lat=rate*v;}
+    else{v=0;a=0;lat=0;}
+    rig.position.x=x;rig.position.z=z;rig.rotation.y=h;
+    for(const w of wheels){w.rotation.x+=v*dt/radius;if(w.userData.front)w.userData.steer.rotation.y=steer;}
+    const moving=Math.abs(v)>.02;
+    car.rotation.x=-THREE.MathUtils.clamp(a*.012,-.035,.035);
+    car.rotation.z=-THREE.MathUtils.clamp(lat*.006,-.04,.04);
+    car.position.y=moving?Math.sin(time*.04)*.0012*Math.min(1,Math.abs(v)):0;
+    const braking=brake&&v>.05||hand&&moving||(down.has('gas')&&v<-.02);
+    m.tailLight.emissiveIntensity=braking?1.9:(v<-.02?1.1:.45);
+    m.headlight.emissiveIntensity=moving?1.35:.55;
+    return moving||Math.abs(steer)>.01;
+  };
+  return api;
 }
