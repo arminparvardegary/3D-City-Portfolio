@@ -10,6 +10,8 @@ import { PRESETS, ORDER, detectQuality, FrameMonitor } from './quality.js';
 import { LIGHTING, createLights, createEnvironment, applyLighting } from './world/lighting.js';
 import { wind, setDensity } from './world/vegetation.js';
 import { buildGrid, GRID, HOME_NUMBER, tileNumber, tileCenter } from './world/grid.js';
+import { buildRoad } from './world/roads.js';
+import { createTraffic } from './world/traffic.js';
 import { VEHICLES } from './vehicles.js';
 
 const viewport=document.querySelector('#viewport');
@@ -52,8 +54,14 @@ const materials=createMaterials();
 Object.values(materials).forEach(softenShadows);
 const {group:tile,canopies,animate:animateTile,car,meadow,extraMaterials=[]}=buildTile(materials);scene.add(tile);
 extraMaterials.forEach(softenShadows);
-const grid150=buildGrid(softenShadows);scene.add(grid150.group);
-car.setBounds(grid150.bounds);
+// Tiles with content: the road with its junction in front of the house (79 to 87).
+const ROAD_TILES=[79,80,81,82,83,84,85,86,87];
+const road=buildRoad({numbers:ROAD_TILES,junction:83,prep:softenShadows,m:materials});scene.add(road.group);
+const grid150=buildGrid(softenShadows,{occupied:ROAD_TILES});scene.add(grid150.group);
+car.setBounds(grid150.bounds);car.addStatic(road.poles);
+const traffic=createTraffic({parent:scene,m:materials,prep:softenShadows,lanes:road.lanes,setLights:road.setLights,
+  player:()=>{const p=car.pose();return {x:p.x,z:p.z,len:car.length};}});
+car.setObstacles(()=>traffic.obstacles());
 const floor=new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.ShadowMaterial({color:'#76806a',opacity:.21}));
 floor.rotation.x=-Math.PI/2;floor.position.y=-.012;floor.receiveShadow=true;scene.add(floor);
 softenShadows(floor.material);
@@ -188,6 +196,7 @@ function render(time=0){
   }
   // The car is driven by the visitor, so it keeps running even with the breeze paused.
   if(car.update(time)){animating=true;renderer.shadowMap.needsUpdate=true;}
+  if(traffic.update(frameDt/1000)){animating=true;renderer.shadowMap.needsUpdate=true;}
   if(updateView(frameDt/1000))animating=true;
   if(!animating&&!needsRender)return;
   renderer.info.reset();composer.render();needsRender=false;
@@ -214,7 +223,7 @@ for(const b of document.querySelectorAll('[data-drive]')){
 car.select(VEHICLES.findIndex(v=>v.name==='City'));
 
 // Deliberately small inspection API for performance checks and future tiles.
-window.forestTile={car,grid:{GRID,HOME_NUMBER,tileNumber,tileCenter},composer,ao,art,applyArt,setQuality,get quality(){return {name:qualityName,mode:qualityMode,scale:renderScale,pixelRatio:renderer.getPixelRatio()};},spec:TILE_SPEC,art:ART,scene,camera,renderer,materials,tile,canopies,refresh:()=>{needsRender=true;renderer.shadowMap.needsUpdate=true;},stats:()=>({drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,footprint:TILE_SPEC.footprint})};
+window.forestTile={car,traffic,road,grid:{GRID,HOME_NUMBER,tileNumber,tileCenter},composer,ao,art,applyArt,setQuality,get quality(){return {name:qualityName,mode:qualityMode,scale:renderScale,pixelRatio:renderer.getPixelRatio()};},spec:TILE_SPEC,art:ART,scene,camera,renderer,materials,tile,canopies,refresh:()=>{needsRender=true;renderer.shadowMap.needsUpdate=true;},stats:()=>({drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,footprint:TILE_SPEC.footprint})};
 
 // Development benchmark: runs n full animated frames (breeze, car, shadows,
 // composer) back to back, each synced with a 1 px read so GPU time is included.

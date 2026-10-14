@@ -17,6 +17,7 @@ const STEER_IN=6,STEER_OUT=9;                  // how fast the wheel turns in an
 const BOXES=[[-1.5,-.7,1.5,1.6],[-1.4,-2.71,1.2,.26]];
 const CIRCLES=[[-3.78,-2.75,.4],[3.63,-3.45,.4],[-.45,2.62,.14]];
 let BOUNDS={x0:-4.95,x1:4.95,z0:-4.95,z1:4.95};
+let dynamicObstacles=()=>[];
 const AMBULANCE=VEHICLES.findIndex(q=>q.name==='Ambulance');
 
 export function createCarControls(parent,m,{prep,index=0}={}){
@@ -34,6 +35,7 @@ export function createCarControls(parent,m,{prep,index=0}={}){
       if(cx<BOUNDS.x0+r||cx>BOUNDS.x1-r||cz<BOUNDS.z0+r||cz>BOUNDS.z1-r)return true;
       for(const [bx,bz,hw,hd] of BOXES){const dx=cx-Math.max(bx-hw,Math.min(cx,bx+hw)),dz=cz-Math.max(bz-hd,Math.min(cz,bz+hd));if(dx*dx+dz*dz<r*r)return true;}
       for(const [qx,qz,qr] of CIRCLES)if((cx-qx)**2+(cz-qz)**2<(r+qr)**2)return true;
+      for(const [qx,qz,qr] of dynamicObstacles())if((cx-qx)**2+(cz-qz)**2<(r+qr)**2)return true;
     }
     return false;
   }
@@ -56,6 +58,9 @@ export function createCarControls(parent,m,{prep,index=0}={}){
     get paint(){return parts.paint;},
     get color(){return parts.color;},
     pose(){return {x,z,h,steer,v};},
+    setObstacles(fn){dynamicObstacles=fn;},
+    addStatic(circles){CIRCLES.push(...circles);},
+    get length(){return parts.length;},
     setBounds(b){BOUNDS={x0:b.x0+.05,x1:b.x1-.05,z0:b.z0+.05,z1:b.z1-.05};},
     count:VEHICLES.length,
     select(i){

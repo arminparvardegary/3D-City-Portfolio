@@ -91,6 +91,7 @@ function wheels(rig,m,w){
     mesh(spin,new THREE.CylinderGeometry(r*.58,r*.58,.02,24),m.rim,[sx*(tw/2+.004),0,0],[0,0,Math.PI/2]);
     mesh(spin,new THREE.CylinderGeometry(r*.17,r*.17,.024,14),m.carTrim,[sx*(tw/2+.012),0,0],[0,0,Math.PI/2]);
     for(let i=0;i<5;i++){const a=i*Math.PI*2/5;box(spin,[.012,r*.18,r*.1],[sx*(tw/2+.012),Math.sin(a)*r*.36,Math.cos(a)*r*.36],m.carTrim,.005,[Math.PI/2-a,0,0]);}
+    mergeStatic(spin);   // tyre, rim, hub and spokes: three draw calls per wheel, not eight
     spins.push(spin);
   }
   return spins;

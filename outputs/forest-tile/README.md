@@ -43,3 +43,9 @@ Stack: Three.js r180 (vanilla, no React), Vite 7, `postprocessing` 6.39.5 (pmndr
 ## Driving
 
 W / Up gas, S / Down brake then reverse, A D / Left Right steer, Space handbrake, R back to the parking space. Top speed 6.4 units/s (0 to 6 in about 3 s), brakes stop from full speed in about 0.6 s, steering eases in and centres quickly with less lock at speed, turning is limited by tyre grip, and the handbrake lets the rear slide.
+
+## Road and traffic (tiles 79 to 87)
+
+An east-west road runs across tiles 79 to 87, directly in front of the house; the house driveway joins it at tile 83 (`src/world/roads.js`). Two lanes (right-hand traffic), dashed centre line, sidewalks, zebra crossings either side of the driveway, stop lines and three traffic lights: one for each road direction and one facing the driveway. The road lights cycle green 25 s, yellow 3 s, red 25 s (no timer is shown); the driveway light is green only while the road is red.
+
+Bot cars (`src/world/traffic.js`) use the Intelligent Driver Model: they keep a safe gap to the car ahead (including yours), stop behind the line on red, stop on yellow only when they comfortably can, and pull away on green. Cars leaving the road re-enter at the other end. Your car collides with them and with the light poles. In a 160 s simulated run: no red light violations, minimum gap 1.0 units, peak braking 1.2 units/s².
