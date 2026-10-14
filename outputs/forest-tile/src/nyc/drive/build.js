@@ -36,8 +36,31 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
   const asphaltTex=FACADE.asphalt(),asphalt=mat('#4b4d53',{map:asphaltTex,bumpMap:asphaltTex,bumpScale:.8,roughness:.92});asphalt.userData.uvSize=14;
   const land=(x0,x1)=>{box(x1-x0,1.4,NS.z1-NS.z0,(x0+x1)/2,G-1.4,0,asphalt);box(x1-x0+.02,1.2,NS.z1-NS.z0+.02,(x0+x1)/2,G-2.6,0,stone);};
   land(MAN.x0,MAN.x1);land(BKN.x0,BKN.x1);
-  {const water=new THREE.Mesh(new THREE.PlaneGeometry(3000,3000).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({color:'#36677f',roughness:.12,metalness:.15,envMapIntensity:1.4}));
-    water.position.y=-.9;water.receiveShadow=true;root.add(water);}
+  // The sea: wave trains of different lengths and directions move the surface and
+  // its normals, so the sky and the sun break into moving highlights. A fine
+  // grid round the city, a flat plane out to the horizon.
+  const seaTime={value:0};
+  {const mat=new THREE.MeshStandardMaterial({color:'#1f5a74',roughness:.04,metalness:.2,envMapIntensity:1.2});
+    mat.customProgramCacheKey=()=>'sea';   // its own program (the shadow softener wraps this hook)
+    mat.onBeforeCompile=sh=>{sh.uniforms.uTime=seaTime;
+      sh.vertexShader='uniform float uTime;\nvarying float vWave;\n'+sh.vertexShader
+        .replace('#include <beginnormal_vertex>',`
+          vec2 P=position.xz;float h=0.,hx=0.,hz=0.;
+          vec4 W[5];W[0]=vec4(1.,.3,.11,.16);W[1]=vec4(-.4,1.,.07,.22);W[2]=vec4(.7,-.6,.045,.37);W[3]=vec4(-.9,-.2,.03,.61);W[4]=vec4(.2,.95,.018,.93);
+          for(int i=0;i<5;i++){vec2 d=normalize(W[i].xy);float k=W[i].w,a=W[i].z*mix(1.,.4,smoothstep(300.,700.,length(P)));
+            float ph=dot(d,P)*k+uTime*sqrt(9.8*k);h+=a*sin(ph);hx+=a*k*d.x*cos(ph);hz+=a*k*d.y*cos(ph);}
+          vec3 objectNormal=normalize(vec3(-hx*3.,1.,-hz*3.));
+          #ifdef USE_TANGENT
+          vec3 objectTangent=vec3(1.,0.,0.);
+          #endif`)
+        .replace('#include <begin_vertex>','vec3 transformed=vec3(position);transformed.y+=h*2.2;vWave=h/.3;');
+      // Colour from the waves: deep blue troughs, lighter green blue crests, a little foam on the tops.
+      sh.fragmentShader='varying float vWave;\n'+sh.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+        float w=clamp(vWave*.5+.5,0.,1.);diffuseColor.rgb=mix(vec3(.015,.075,.12),vec3(.05,.2,.26),w);
+        diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.85,.92,.95),smoothstep(.9,1.,w)*.3);`);};
+    const near=new THREE.Mesh(new THREE.PlaneGeometry(900,900,200,200).rotateX(-Math.PI/2),mat);
+    near.position.set(6,-.9,0);near.receiveShadow=true;root.add(near);
+    const far=new THREE.Mesh(new THREE.RingGeometry(440,3000,64,1).rotateX(-Math.PI/2),mat);far.position.set(6,-.96,0);root.add(far);}
   const paving=mat('#bcb8b1',{map:FACADE.paving(),roughness:.85});paving.userData.uvSize=4;
   // Sidewalks are solid for the car; a waterfront strip (low=true) only at street level, so the bridge passes over it.
   const walkRect=(x0,x1,z0,z1,low=false)=>{box(x1-x0,CURB,z1-z0,(x0+x1)/2,G,(z0+z1)/2,paving);solids.push(low?[(x0+x1)/2,(z0+z1)/2,(x1-x0)/2,(z1-z0)/2,1.5]:[(x0+x1)/2,(z0+z1)/2,(x1-x0)/2,(z1-z0)/2]);};
@@ -339,6 +362,6 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
   K.finish(root);
   root.traverse(o=>{if(o.isMesh){o.castShadow=o.receiveShadow=true;}});
   let lightTime=0;
-  return {root,solids,occluders,loops,parking,steam,phase:()=>phase(lightTime),
+  return {root,solids,occluders,loops,parking,steam,sea:seaTime,phase:()=>phase(lightTime),
     update(dt){lightTime+=dt;const ph=phase(lightTime);for(const a of ['z','x'])for(const c of ['r','y','g'])LIGHT[a][c].emissiveIntensity=ph[a]===c?3.2:0;}};
 }

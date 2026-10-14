@@ -79,7 +79,7 @@ export function buildNYCWorld({prep,materials,player}){
     start:{x:AV[1]+LANE,z:ST[5]+20,h:Math.PI},
     vehicle:'Sport',carColor:'#b5121b',zoom:.62,fixedZoom:true,
     placeAt(x,z){for(const b of district.row)if(Math.abs(x-b.x)<b.w/2&&z>district.lot.z0-16&&z<district.lot.z0)return b.id;return null;},
-    update(t,dt,camera){city.update(dt);traffic.update(dt);people.update(dt);
+    update(t,dt,camera){city.update(dt);city.sea.value+=dt;traffic.update(dt);people.update(dt);
       if(camera)sky.position.copy(camera.position);
       for(const c of clouds){c.position.x+=dt*1.6;if(c.position.x>500)c.position.x-=1000;}
       for(const sp of steam){const u=sp.userData;u.age=(u.age+dt)%3;const k=u.age/3;sp.position.set(u.x+k*1.2,G+1.6+k*6,u.z);sp.scale.setScalar(.8+k*4);sp.material.opacity=.45*(1-k)*Math.min(1,k*6);}
