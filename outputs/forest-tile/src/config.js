@@ -1,0 +1,36 @@
+// All spatial dimensions are in world units. 1 unit = 10 design pixels.
+// Camera is deliberately fixed: no orbit, drag, or perspective controls.
+export const ART = {
+  seed: 38271,
+  tile: { designPixels: 100, worldSize: 10, top: 0.12, depth: 0.12, edgeHeight: 0.12 },
+  camera: { azimuth: 45, elevation: 35.264, viewHeight: 13.9, target: [0, 1.05, 0] },
+  palette: {
+    background: '#f1f2f1', grass: '#a7ca6e', grassLight: '#b6d782',
+    leaves: '#84b254', leafLight: '#a4c870', bark: '#8d8270',
+    soil: '#a1b77e', plaster: '#f2eddc', timber: '#f5f6ef',
+    roof: '#f06b60', roofLight: '#fb8274', glass: '#6bb9c5', path: '#d8dbd7',
+    car: '#f2f3ef', parking: '#c7ceca', trim: '#f8faf6',
+  },
+  light: { sun: 3.0, fill: 1.8, exposure: 1.05, position: [-3.5, 9, 6], shadowSize: 2048, shadowSoftness: 21 },
+  material: { roughness: 0.9, bump: 0.002 },
+  vegetation: { canopyScale: 1, grassClumps: 0, breeze: true, sway: 0.004 },
+  house: { position: [-1.5, 0.12, -0.7], width: 2.9, depth: 3.1, wallHeight: 2.12, roofRise: 1.17 },
+  car: { position: [2.2, 0.15, 0.95], rotation: 0, scale: 1 },
+  rendering: { maxPixelRatio: 1.75, targetFPS: 30, ao: true },
+};
+
+// Neighbor tiles snap by exactly worldSize along X or Z. Edges stay at a
+// common elevation. The south driveway connects to a future street tile.
+export const TILE_SPEC = Object.freeze({
+  id: 'my-house-01', footprint: { width: 100, height: 100, unit: 'design-px' },
+  unitsPerDesignPixel: 0.1, edgeElevation: 0.12,
+  connectors: { north: 'lawn', east: 'lawn', west: 'lawn', south: { type: 'driveway', offset: 22, width: 28, elevation: 0.145 } },
+});
+
+export function seededRandom(seed) {
+  return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let n = Math.imul(seed ^ seed >>> 15, 1 | seed); n = n + Math.imul(n ^ n >>> 7, 61 | n) ^ n; return ((n ^ n >>> 14) >>> 0) / 4294967296; };
+}
+
+export function groundHeight(x, z) {
+  return ART.tile.top;
+}
