@@ -1,16 +1,16 @@
 // The design system: every colour, light and surface in the world comes from
 // these tokens, so the whole map reads as one place with one visual language.
 //
-// Harbour district: a modern creative village between mountains and the sea,
-// rendered close to real: rich natural greens, true grey-brown rock with snow,
-// deep blue sea turning turquoise in the shallows, timber, pale concrete and
-// reflective glass, bright sun with crisp natural shadows and a real sky for
-// reflections. Calm, spacious, premium.
+// White campus: an architectural white model. Matte white blocks on raised
+// plinths over a pale grid floor, soft high-key daylight with cool grey
+// shadows and deep contact shading, and one accent, a clear blue, for the
+// signal beacons, labels and the glass entrance. Calm, precise, premium.
+// (Older keys below serve modules kept from earlier concepts.)
 export const THEME=Object.freeze({
-  name:'harbour',
-  sky:{top:'#a9d8f5',horizon:'#f6f1e7'},
+  name:'white campus',
+  sky:{top:'#f5f6f8',horizon:'#eef0f3'},
   palette:{
-    floor:'#e8a26c',tyreMark:'#5a3522',dust:'#f6dcb8',bench:'#b8794c',metal:'#3d4450',lamp:'#ffe7b0',bin:'#3e7a5c',
+    floor:'#f0f1f3',floorLine:'#e0e3e8',road:'#e7e9ed',tyreMark:'#9aa3b2',dust:'#ffffff',bench:'#f7f8fa',metal:'#c7ceda',lamp:'#eef4ff',bin:'#eef1f5',letters:'#ffffff',prop:'#f3f5f8',
     grass:'#5f9c3b',grassLight:'#78b04e',
     leaves:'#3f8c30',leafLight:'#6eae48',pine:'#1d5a3a',bark:'#6e4a32',
     soil:'#a8c97a',plaster:'#f7f2e8',timber:'#fffaf0',
@@ -33,15 +33,17 @@ export const THEME=Object.freeze({
   },
   wood:{deck:'#c99a6b',deckDark:'#a77a52',post:'#8a6242'},
   clouds:{color:'#ffffff',shade:.86},
+  campus:{white:'#fdfdfd',soft:'#f2f3f5',groove:'#dfe2e7',window:'#adb3bd',dark:'#5f6672',plinth:'#fafafb',
+    blue:'#2f6bff',blueLight:'#9dbbff',glass:'#5d8cff',label:'#3a404c',car:'#f6f7f9'},
   people:{skin:['#f3d2b8','#e2b48f','#c58c63','#9a6440','#6b4430','#4a2e22'],
     clothes:['#ff6b5e','#4f9fd8','#ffc93a','#5fcf87','#a77be0','#f2f2f2','#2f3650','#ff9f6b','#3fb8a8','#e86fa0']},
   light:{
-    sun:{color:'#fff1dc',intensity:3.5,azimuth:-34,elevation:46,softness:13},
-    sky:{color:'#bfe0ff',ground:'#9fb57a',intensity:.9},
-    fill:{color:'#a9cdff',intensity:.3},
-    env:.6,exposure:.96,toneMapping:'aces',
-    fog:{enabled:false,color:'#f6f1e7',near:150,far:320},
-    ao:{intensity:2.8,radius:.6,falloff:.4,color:'#1f2430'},
-    grade:{saturation:.16},
+    sun:{color:'#ffffff',intensity:2.3,azimuth:-38,elevation:52,softness:22},
+    sky:{color:'#ffffff',ground:'#e9eaed',intensity:1.65},
+    fill:{color:'#f3f5f9',intensity:.4},
+    env:.14,exposure:1.08,toneMapping:'neutral',
+    fog:{enabled:false,color:'#eef1f5',near:150,far:320},
+    ao:{intensity:2.6,radius:.8,falloff:.5,color:'#5c616c'},
+    grade:{saturation:0},
   },
 });

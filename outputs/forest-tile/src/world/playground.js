@@ -6,10 +6,11 @@ import fontData from 'three/examples/fonts/helvetiker_bold.typeface.json';
 import { TILE } from './units.js';
 import { THEME } from './theme.js';
 import { FEEL, STEP, fixedClock } from '../motion.js';
+import { gridMap } from './textures.js';
 
-// A driving playground: the car pushes real physics objects (Rapier). Big 3D
-// letters spell the name and the section titles; a brick wall, bowling pins
-// with a ball, cones and crates are there to knock over, and street furniture
+// A driving playground on the white campus: the car pushes real physics objects
+// (Rapier). Big white 3D letters spell the name on the start plaza; a row of
+// blocks, bowling pins with a ball, cones and crates are there to knock over, and street furniture
 // (benches, lamps, bins) topples when hit and then floats slowly back into
 // place. The meshes are drawn at once; the physics engine (WASM) loads in the
 // background and takes over a moment later. Bodies sleep until touched, so a
@@ -22,12 +23,13 @@ const font=new FontLoader().parse(fontData);
 const VIEW_YAW=Math.PI/4,RIGHT=new THREE.Vector3(Math.cos(VIEW_YAW),0,-Math.sin(VIEW_YAW));
 const yawQ=y=>new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),y);
 
-export function createPlayground({scene,prep,car,bounds}){
+export function createPlayground({scene,prep,car,bounds,solids=[],solidTop=.47}){
   const fw=bounds.x1-bounds.x0,fd=bounds.z1-bounds.z0,fx=(bounds.x0+bounds.x1)/2,fz=(bounds.z0+bounds.z1)/2;
   const mat=(color,extra={})=>{const m=new THREE.MeshStandardMaterial({color,roughness:.55,...extra});prep?.(m);return m;};
   // The floor: one warm slab the size of the map. Things pushed over its edge
   // fall, then come back to where they started.
-  const floor=new THREE.Mesh(new THREE.BoxGeometry(fw,G+2,fd).translate(fx,G/2-1,fz),mat(THEME.palette.floor,{roughness:.95}));floor.receiveShadow=true;scene.add(floor);
+  const grid=gridMap().clone();grid.needsUpdate=true;grid.repeat.set(fw/10,fd/10);grid.offset.set(.5,.5);
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(fw,fd).rotateX(-Math.PI/2),mat(THEME.palette.floor,{roughness:.95,map:grid}));floor.position.set(fx,G,fz);floor.receiveShadow=true;scene.add(floor);
 
   // Every movable thing: where it is drawn, its colliders, mass and home pose.
   // views: meshes, or [instancedMesh, index] pairs, all drawn with one transform.
@@ -47,7 +49,7 @@ export function createPlayground({scene,prep,car,bounds}){
     g.computeBoundingBox();const c=new THREE.Vector3();g.boundingBox.getCenter(c);g.translate(-c.x,-c.y,-c.z);g.computeBoundingBox();
     const out={g,half:g.boundingBox.max.clone()};glyphs.set(key,out);return out;
   }
-  function word(text,[x,z],{size=2.2,depth=.7,color='#fff4e6',mass=1.4,gap=.18}={}){
+  function word(text,[x,z],{size=2.2,depth=.7,color=THEME.palette.letters,mass=1.4,gap=.18}={}){
     const m=mat(color),chars=[...text],letters=chars.map(ch=>ch===' '?null:glyph(ch,size,depth));
     const widths=chars.map((ch,i)=>ch===' '?size*.45:letters[i].half.x*2);
     let offset=-(widths.reduce((a,b)=>a+b,0)+gap*(chars.length-1))/2;
@@ -77,21 +79,21 @@ export function createPlayground({scene,prep,car,bounds}){
   function wall([cx,cz],yaw,cols=8,rows=6){
     const along=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw)),list=[];
     for(let r=0;r<rows;r++)for(let c=0;c<cols-(r%2);c++){const t=(c-(cols-1)/2+(r%2)*.5)*(brickW+.02);list.push([cx+along.x*t,G+brickH/2+r*(brickH+.005),cz+along.z*t,yaw]);}
-    props([[new THREE.BoxGeometry(brickW,brickH,brickD),mat('#d9774e',{roughness:.85})]],list,[{shape:'cuboid',args:[brickW/2,brickH/2,brickD/2]}],.35);
+    props([[new THREE.BoxGeometry(brickW,brickH,brickD),mat(THEME.palette.prop,{roughness:.85})]],list,[{shape:'cuboid',args:[brickW/2,brickH/2,brickD/2]}],.35);
   }
   function bowling([cx,cz]){
     const pts=[[0,0],[.16,.02],[.2,.25],[.13,.55],[.1,.75],[.14,.92],[.1,1.08],[0,1.12]].map(([r,y])=>new THREE.Vector2(r,y));
     const list=[];for(let row=0;row<4;row++)for(let k=0;k<=row;k++)list.push([cx-row*.62,G+.57,cz+(k-row/2)*.62]);
     props([[new THREE.LatheGeometry(pts,16).translate(0,-.56,0),mat('#fffaf2',{roughness:.35})]],list,[{shape:'cylinder',args:[.56,.17]}],.18);
     // The ball: push it into the pins.
-    const ball=new THREE.Mesh(new THREE.SphereGeometry(.55,28,20),mat('#2f3650',{roughness:.25,metalness:.2}));ball.castShadow=true;scene.add(ball);
+    const ball=new THREE.Mesh(new THREE.SphereGeometry(.55,28,20),mat(THEME.campus.blue,{roughness:.25,metalness:.1}));ball.castShadow=true;scene.add(ball);
     const p=new THREE.Vector3(cx+7,G+.55,cz);ball.position.copy(p);add([ball],[{shape:'ball',args:[.55]}],2.5,p,new THREE.Quaternion());
   }
   function cones(points){
-    props([[new THREE.ConeGeometry(.28,.75,16),mat('#ff7a3d',{roughness:.6})]],points.map(([x,z])=>[x,G+.375,z]),[{shape:'cone',args:[.375,.28]}],.12);
+    props([[new THREE.ConeGeometry(.28,.75,16),mat(THEME.palette.prop,{roughness:.6})]],points.map(([x,z])=>[x,G+.375,z]),[{shape:'cone',args:[.375,.28]}],.12);
   }
   function crates(points){
-    props([[new THREE.BoxGeometry(.8,.8,.8),mat('#c99466',{roughness:.8})]],points.map(([x,z,y=0])=>[x,G+.4+y*.81,z,.2*x]),[{shape:'cuboid',args:[.4,.4,.4]}],.6);
+    props([[new THREE.BoxGeometry(.8,.8,.8),mat(THEME.palette.prop,{roughness:.8})]],points.map(([x,z,y=0])=>[x,G+.4+y*.81,z,.2*x]),[{shape:'cuboid',args:[.4,.4,.4]}],.6);
   }
   // Street furniture: heavier, topples when hit, then floats back to its place.
   const box=(w,h,d,x,y,z)=>new THREE.BoxGeometry(w,h,d).translate(x,y,z);
@@ -105,7 +107,7 @@ export function createPlayground({scene,prep,car,bounds}){
   function lamps(list){
     const pole=mergeGeometries([new THREE.CylinderGeometry(.18,.22,.2,16).translate(0,.1,0),new THREE.CylinderGeometry(.05,.07,2.7,12).translate(0,1.45,0),new THREE.CylinderGeometry(.22,.12,.12,16).translate(0,2.82,0)]);
     const glow=new THREE.SphereGeometry(.2,16,12).translate(0,2.98,0);
-    props([[pole,metal],[glow,mat(THEME.palette.lamp,{emissive:THEME.palette.lamp,emissiveIntensity:.6,roughness:.3})]],list.map(([x,z])=>[x,G,z]),
+    props([[pole,metal],[glow,mat(THEME.palette.lamp,{emissive:THEME.campus.blueLight,emissiveIntensity:.35,roughness:.3})]],list.map(([x,z])=>[x,G,z]),
       [{shape:'cylinder',args:[.1,.2],at:[0,.1,0]},{shape:'cylinder',args:[1.35,.07],at:[0,1.45,0]},{shape:'ball',args:[.22],at:[0,2.95,0]}],3,{furniture:true});
   }
   function bins(list){
@@ -114,19 +116,16 @@ export function createPlayground({scene,prep,car,bounds}){
       [{shape:'cylinder',args:[.42,.31],at:[0,.42,0]}],1.2,{furniture:true});
   }
 
-  // --- Layout: the name at the start, sections around it ---------------------
-  word('ARMIN',[-2,-9],{size:3,depth:1,mass:2.2});
-  word('WORK',[30,4],{color:'#ff8a6b'});
-  word('PROJECTS',[-32,6],{color:'#5fc8d6'});
-  word('CONTACT',[2,30],{color:'#ffcf5a'});
-  wall([18,-16],VIEW_YAW);
-  bowling([-18,-18]);
-  cones([[6,6],[10,9],[14,6],[18,9],[22,6],[26,9],[-8,14],[-11,17],[-14,14]]);
-  crates([[36,12],[37,12],[36.5,12,1],[40,10],[34,-4],[35,-4],[34.5,-4,1],[34.5,-4,2]]);
-  // A little promenade beside the start: lamps, benches, bins.
-  lamps([[-14,5],[-8,5],[-2,5],[4,-4],[10,-4]]);
-  benches([[-11,5.3,Math.PI],[-5,5.3,Math.PI],[7,-4.3,0]]);
-  bins([[-12.6,5],[-6.6,5],[8.4,-4]]);
+  // --- Layout: the name on the plaza, toys along the roads ---------------------
+  word('ARMIN',[-4.5,-4.2],{size:2.4,depth:.9,mass:2});
+  wall([0,-27.8],0,10,4);                                   // white blocks across the Work road
+  bowling([8,4.5]);
+  cones([[-30,-1.6],[-26,1.6],[-22,-1.6],[-18,1.6],[22,-1.6],[26,1.6],[30,-1.6],[34,1.6]]);
+  crates([[16,-8],[16,-7],[16.5,-7.5,1],[13.6,10],[14.6,10],[14.1,10,1],[14.1,10,2]]);
+  // Street furniture along the plaza and the main road.
+  lamps([[-10.5,-7.5],[10.5,-7.5],[-10.5,7.5],[10.5,7.5],[-26,-3.9],[26,3.9],[-38,3.9],[38,-3.9]]);
+  benches([[-6,7.6,Math.PI],[5,-7.6,0]]);
+  bins([[-8,7.6],[3,-7.6]]);
 
   // --- Physics (loaded in the background) -----------------------------------
   let R=null,world=null,events=null,carBody=null,carCol=null;
@@ -135,6 +134,8 @@ export function createPlayground({scene,prep,car,bounds}){
     R=mod.default??mod;await R.init();
     const w=new R.World({x:0,y:-24,z:0});w.timestep=STEP;events=new R.EventQueue(true);
     w.createCollider(R.ColliderDesc.cuboid(fw/2,1,fd/2).setTranslation(fx,G-1,fz).setFriction(.8),w.createRigidBody(R.RigidBodyDesc.fixed()));
+    // Plinths: solid blocks the props bounce off.
+    for(const [x,z,hw,hd] of solids)w.createCollider(R.ColliderDesc.cuboid(hw,(solidTop+1)/2,hd).setTranslation(x,(solidTop-1)/2,z),w.createRigidBody(R.RigidBodyDesc.fixed()));
     for(const t of things){
       const {p,q}=t.home;
       t.body=w.createRigidBody(R.RigidBodyDesc.dynamic().setTranslation(p.x,p.y,p.z).setRotation(q).setLinearDamping(t.furniture?.4:.15).setAngularDamping(t.spin).setCanSleep(true));

@@ -58,15 +58,25 @@ Across the road from the house (`src/world/park.js`): a stone fountain on a circ
 
 All colours, light and surfaces come from one set of tokens in `src/world/theme.js`, so every tile shares the look. Storybook is an original style in the spirit of classic animated films: lush, saturated but soft greens; warm golden sunlight with sky-blue fill light in the shadows; cream walls and coral roofs; a soft sky gradient behind the world with faceted clouds drifting slowly over the map; contact shading tinted violet, never black.
 
-## The playground (current world)
+## The white campus (current world)
 
-A driving sandbox in the spirit of Bruno Simon's portfolio, built from scratch in our own style (`src/world/playground.js`). The map is one warm flat floor; the car pushes real physics objects (cannon-es):
-- Big 3D letters spelling ARMIN at the start, and the section titles WORK, PROJECTS and CONTACT, all knockable.
-- A brick wall, ten bowling pins with a ball, a slalom of cones and stacks of crates.
+The whole map is one architectural white model (`src/world/campus.js`), in the spirit of a white smart factory maquette: matte white blocks on raised plinths, floor level roads on a pale grid, soft high-key light with cool grey contact shading, and one accent, blue.
+- Five hero buildings around the start plaza carry the sections: Work (two finned towers on a podium), Skills (stepped block with a gatehouse and a glass bridge), Contact (ribbed warehouse with trucks and pallets), About (the factory with a blue glass entrance and the ARMIN name plate) and Projects (banded block with an annex).
+- Four outer campuses carry the studios Armin worked at (Rush Graphics, Hindra Studio, AAQ Real Estate, Big Uppetite); the quiet blocks hold sheds, solar rows, offices and parking.
+- Each labelled building has a floating label card with a signal icon, a blue beam and a slow pulse on its roof (still with reduced motion).
+- The plinths are solid: the car drives the roads and the plaza. Static geometry is merged per material (about 70 to 110 draw calls in view).
+- All colours and light come from `THEME.campus`, `THEME.palette` and `THEME.light` in `src/world/theme.js`.
+
+## The playground
+
+Toys on the campus roads and plaza, all white, that the car pushes with real physics (`src/world/playground.js`):
+- Big white 3D letters spelling ARMIN on the start plaza.
+- A row of blocks across the Work road, ten bowling pins with a blue ball, cones along the main road and stacks of crates.
 - Bumping something takes a little speed off the car, more for heavier things. Anything pushed off the edge comes back to where it started.
 - Bodies sleep until touched, so a still scene costs nothing; shadows refresh only while something moves.
 
 - Street furniture (lamps, benches, bins) topples when hit, rests a few seconds, then floats slowly back to its spot.
+- The plinths are solid for the props too.
 - Physics is Rapier (`@dimforge/rapier3d-compat`), loaded in the background after the scene shows (about 1 MB gzipped, WASM inlined).
 
 ## Feel

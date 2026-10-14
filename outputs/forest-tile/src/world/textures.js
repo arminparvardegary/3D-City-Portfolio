@@ -43,6 +43,13 @@ export const pavingMap=()=>canvasTexture('paving',256,(x,s,rand)=>{
   const n=8,c=s/n;for(let i=0;i<n;i++)for(let j=0;j<n;j++){const v=225+Math.floor(rand()*25);x.fillStyle=`rgb(${v},${v-3},${v-8})`;x.fillRect(i*c,j*c,c,c);}
   x.strokeStyle='rgba(120,110,100,.35)';x.lineWidth=1.5;for(let i=0;i<=n;i++){x.beginPath();x.moveTo(i*c,0);x.lineTo(i*c,s);x.stroke();x.beginPath();x.moveTo(0,i*c);x.lineTo(s,i*c);x.stroke();}
 });
+// A model base grid: fine lines every quarter, a stronger line on the tile edge.
+// Drawn white on transparent-grey so the floor colour sets the tone.
+export const gridMap=()=>canvasTexture('grid',512,(x,s)=>{
+  x.fillStyle='#ffffff';x.fillRect(0,0,s,s);
+  x.strokeStyle='rgba(120,135,160,.10)';x.lineWidth=2;for(let i=0;i<4;i++){const p=i*s/4;x.beginPath();x.moveTo(p,0);x.lineTo(p,s);x.stroke();x.beginPath();x.moveTo(0,p);x.lineTo(s,p);x.stroke();}
+  x.strokeStyle='rgba(120,135,160,.2)';x.lineWidth=3;x.strokeRect(0,0,s,s);
+});
 // Ripples for water: a tileable normal map from overlapping sine waves.
 export const waterNormal=()=>canvasTexture('waterNormal',256,(x,s)=>{
   const img=x.createImageData(s,s),h=(u,v)=>Math.sin(u*6.283*3+Math.sin(v*6.283*2)*1.2)*.5+Math.sin(v*6.283*5+u*6.283*2)*.3+Math.sin((u+v)*6.283*7)*.2;

@@ -12,6 +12,7 @@ import { wind, setDensity } from './world/vegetation.js';
 import { buildGrid, GRID, HOME_NUMBER, tileNumber, tileCenter } from './world/grid.js';
 import { THEME } from './world/theme.js';
 import { createPlayground } from './world/playground.js';
+import { buildCampus } from './world/campus.js';
 import { VEHICLES } from './vehicles.js';
 import { FEEL, damp, spring } from './motion.js';
 
@@ -32,7 +33,7 @@ renderer.info.autoReset=false;
 // Tone mapping happens once, in the final effect pass (renderer stays linear).
 renderer.toneMapping=THREE.NoToneMapping;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.domElement.setAttribute('aria-label','A map of 150 numbered tiles, each 100 by 100 design pixels, and your car. Fixed isometric camera.');
+renderer.domElement.setAttribute('aria-label','A white architectural model of a campus with Armin\'s sections (About, Work, Skills, Projects, Contact) and the studios he worked at. Drive the car with the arrow keys or WASD.');
 renderer.domElement.setAttribute('role','img');
 viewport.appendChild(renderer.domElement);
 
@@ -61,7 +62,10 @@ document.documentElement.style.setProperty('--sky-top',THEME.sky.top);document.d
 // Your car starts in the middle of the map.
 const car=createCarControls(scene,materials,{prep:softenShadows,index:VEHICLES.findIndex(v=>v.name==='City'),home:{x:0,z:0,h:Math.PI/2}});
 car.setBounds({x0:bounds.x0+.4,x1:bounds.x1-.4,z0:bounds.z0+.4,z1:bounds.z1-.4});
-const playground=createPlayground({scene,prep:softenShadows,car,bounds});
+// The white campus: plinths, buildings, beacons. The car cannot drive onto the plinths.
+const campus=buildCampus({prep:softenShadows});scene.add(campus.group);
+car.addStatic([],campus.solids);car.paint.color.set(THEME.campus.car);
+const playground=createPlayground({scene,prep:softenShadows,car,bounds,solids:campus.solids});
 const canopies=[],animateTile=null,meadow={layers:[],grassMaterial:null};
 const grid=new THREE.Group();grid.visible=false;scene.add(grid);
 const gridMat=new THREE.LineBasicMaterial({color:'#738662',transparent:true,opacity:.32,depthTest:false});
@@ -114,7 +118,7 @@ const monitor=new FrameMonitor({
   onScale:s=>{renderScale=s;resize();},
   onPreset:()=>{const i=ORDER.indexOf(qualityName);if(i<ORDER.length-1)setQuality(ORDER[i+1],'auto');},
 });
-let zoom=1,breeze=ART.vegetation.breeze,needsRender=true,hidden=document.hidden;
+let zoom=.55,breeze=ART.vegetation.breeze,needsRender=true,hidden=document.hidden;
 const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
 if(reducedMotion.matches)breeze=false;
 
@@ -235,6 +239,7 @@ function render(time=0){
     animating=true;renderer.shadowMap.needsUpdate=true;
   }
   // The car is driven by the visitor, so it keeps running even with the breeze paused.
+  if(campus.update(time))animating=true;   // beacons pulse; no shadow change
   if(car.update(time)){animating=true;renderer.shadowMap.needsUpdate=true;}
   if(playground.update(frameDt/1000)){animating=true;renderer.shadowMap.needsUpdate=true;}
   if(updateView(frameDt/1000))animating=true;
@@ -264,7 +269,7 @@ for(const b of document.querySelectorAll('[data-drive]')){
 car.select(VEHICLES.findIndex(v=>v.name==='City'));
 
 // Deliberately small inspection API for performance checks and future tiles.
-window.forestTile={car,playground,grid:{GRID,HOME_NUMBER,tileNumber,tileCenter},composer,ao,art,applyArt,setQuality,get quality(){return {name:qualityName,mode:qualityMode,scale:renderScale,pixelRatio:renderer.getPixelRatio()};},spec:TILE_SPEC,art:ART,scene,camera,renderer,materials,canopies,refresh:()=>{needsRender=true;renderer.shadowMap.needsUpdate=true;},stats:()=>({drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,footprint:TILE_SPEC.footprint})};
+window.forestTile={car,playground,campus,grid:{GRID,HOME_NUMBER,tileNumber,tileCenter},composer,ao,art,applyArt,setQuality,get quality(){return {name:qualityName,mode:qualityMode,scale:renderScale,pixelRatio:renderer.getPixelRatio()};},spec:TILE_SPEC,art:ART,scene,camera,renderer,materials,canopies,refresh:()=>{needsRender=true;renderer.shadowMap.needsUpdate=true;},stats:()=>({drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,footprint:TILE_SPEC.footprint})};
 
 // Development benchmark: runs n full animated frames (breeze, car, shadows,
 // composer) back to back, each synced with a 1 px read so GPU time is included.
