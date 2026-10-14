@@ -1,6 +1,6 @@
 # My House — Block 001
 
-A single minimal isometric 3D tile based on the supplied neighborhood reference: cream house, coral roof, turquoise windows, a smooth flat lawn, a clean blue sports coupe that you drive yourself (W A S D or arrow keys, Space handbrake, R or the Park button to put it back; on touch screens use the on screen pad), and a small Turkish flag beside the entrance.
+A single minimal isometric 3D tile based on the supplied neighborhood reference: cream house, coral roof, turquoise windows, a smooth flat lawn, a clean blue supercar that you drive yourself (W A S D or arrow keys, Space handbrake, R or the Park button to put it back; on touch screens use the on screen pad), and a small Turkish flag beside the entrance.
 
 ## Run
 
@@ -12,7 +12,7 @@ The toolbar offers zoom, breeze on/off, and an art-direction panel. Adjust dayli
 
 Defaults are in `src/config.js`: palette, lighting, fixed camera, house dimensions, car placement, and tile footprint. `src/home.js` creates the minimal house and Turkish flag; `src/car.js` models the car and its driving; `src/tile.js` assembles the lawn, driveway, house, car, trees, and entrance path. `src/main.js` controls rendering and the interface.
 
-The car is an original sports coupe in the tile's style: a low sculpted body with a long hood and ducktail, a fastback glass cabin, wide wheels with red calipers, slim LED lamps, black splitter, skirts and diffuser. It is not manufacturer CAD. All assets are live 3D geometry, with a local canvas texture for the Turkish crescent and star. No remote models or images are required. Interface fonts have sans-serif fallbacks.
+The car is an original supercar in the tile's style: one smooth sculpted shell with a wedge nose, narrow waist and hips flared over the wheels, a low dark canopy, a rear wing, a big front intake, side scoops, a finned diffuser, twin exhausts, and big five spoke wheels with red calipers. It is not manufacturer CAD. All assets are live 3D geometry, with a local canvas texture for the Turkish crescent and star. No remote models or images are required. Interface fonts have sans-serif fallbacks.
 
 ## Modular footprint
 
