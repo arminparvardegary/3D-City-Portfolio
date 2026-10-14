@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { THEME } from '../world/theme.js';
-import { buildDistrict } from './district.js';
 import { buildKeel } from './keel.js';
 import { createPeople } from './people.js';
 import { buildCity } from './drive/build.js';
@@ -10,32 +9,25 @@ import { G,CURB,HALF,LANE,ST,AV,MAN,BKN,NS,BRIDGE,blocks,bridgeHeight,onBridgeBa
 
 // New York as the world you drive (world units, about 1.5 m each). The plan is
 // in drive/layout.js: Manhattan, the East River, a strip of Brooklyn, water all
-// round. Armin's Experience Row and its parking lot face Skills Street across
-// street z = 78. Returns what main.js needs: the scene group, solids, the road
-// height (surface), the start, places for the Experience list, the parking lot,
-// tall buildings for the camera, and a per frame update.
+// round. Keel HQ, Armin's project, stands on street z = 78. Returns what main.js
+// needs: the scene group, solids, the road height (surface), the start, places
+// the camera can visit, tall buildings for the camera, and a per frame update.
 export function buildNYCWorld({prep,materials,player}){
   const group=new THREE.Group();group.name='new-york';
   const bl=blocks(),find=(i,j)=>bl.find(b=>b.i===i&&b.j===j);
-  // Armin's blocks: Experience Row (0, 4); Skills Street shops in front of (0, 5) and (1, 5).
-  const exp=find(0,4),sk1=find(0,5),sk2=find(1,5),top=G+CURB;
-  const city=buildCity({reserved:new Set(['0,4','0,5','1,5','1,4']),pave:new Set(['0,5','1,5','1,4']),fills:[
-    {x0:sk1.x0+2.6,x1:sk1.x1-2.6,z0:sk1.z0+12.5,z1:sk1.z1-2.6,zone:'low'},{x0:sk2.x0+2.6,x1:sk2.x1-2.6,z0:sk2.z0+12.5,z1:sk2.z1-2.6,zone:'low'}]});
+  // Armin's block: Keel HQ at (1, 4). Experience and skills are off for now; their
+  // blocks are ordinary city.
+  const top=G+CURB;
+  const city=buildCity({reserved:new Set(['1,4']),pave:new Set(['1,4'])});
   group.add(city.root);
-  const district=buildDistrict({top,row:{x0:exp.x0,x1:exp.x1,z0:exp.z0,z1:exp.z1},shops:[
-    {x0:sk1.x0,x1:sk1.x1,z0:sk1.z0,z1:sk1.z1,front:sk1.z0,yaw:Math.PI,count:6,slab:false},
-    {x0:sk2.x0,x1:sk2.x1,z0:sk2.z0,z1:sk2.z1,front:sk2.z0,yaw:Math.PI,count:6,slab:false},
-  ]});
-  group.add(district.root);
-  // Keel HQ next to Experience Row.
   const keel=buildKeel({block:find(1,4),top});group.add(keel.root);
   const bridge=buildBridge({prep});group.add(bridge.root);
-  for(const o of [city.root,district.root])o.traverse(m=>{if(m.isMesh)[].concat(m.material).forEach(x=>prep?.(x));});
+  for(const o of [city.root])o.traverse(m=>{if(m.isMesh)[].concat(m.material).forEach(x=>prep?.(x));});
   keel.root.traverse(m=>{if(m.isMesh)[].concat(m.material).forEach(x=>prep?.(x));});
   // Traffic: about twenty cars of every type, each with its own speed.
   const traffic=createTraffic({phase:city.phase,player,prep,parked:city.parking});group.add(traffic.root);
-  // People on every sidewalk loop, including Armin's blocks.
-  const people=createPeople({loops:[...city.loops,...district.solids.map(([cx,cz,hw,hd])=>({x0:cx-hw+1,x1:cx+hw-1,z0:cz-hd+1,z1:cz+hd-1,y:top}))],perLoop:2});
+  // People on every sidewalk loop.
+  const people=createPeople({loops:city.loops,perLoop:2});
   group.add(people.root);
   // Sky: a physically based sky dome (it follows the camera), clouds drifting high
   // over the city, and steam rising from the street stacks.
@@ -63,10 +55,9 @@ export function buildNYCWorld({prep,materials,player}){
       const w=120+rnd()*160;sp.scale.set(w,w*.55,1);sp.position.set(-480+rnd()*960,120+rnd()*80,-480+rnd()*960);sp.renderOrder=-1;group.add(sp);clouds.push(sp);}}
   const steamMat=new THREE.SpriteMaterial({map:puffTex,transparent:true,depthWrite:false,opacity:.5,color:'#f2f3f5'});
   const steam=city.steam.flatMap(p=>Array.from({length:7},(_,i)=>{const sp=new THREE.Sprite(steamMat.clone());sp.userData={x:p.x,z:p.z,age:i/7*3};group.add(sp);return sp;}));
-  const solids=[...city.solids,...district.solids,...keel.solids];
-  const occluders=[...city.occluders,...district.occluders,...bridge.occluders,...keel.occluders];
-  const places={};for(const b of district.row)places[b.id]={x:b.x,z:b.z,y:b.top*.45};
-  places.keel=keel.place;places.skills={x:(sk1.x0+sk2.x1)/2,z:sk1.z0,y:3};
+  const solids=[...city.solids,...keel.solids];
+  const occluders=[...city.occluders,...bridge.occluders,...keel.occluders];
+  const places={keel:keel.place};
   // Where the car can drive and how high: the streets on land (not under the
   // low parts of the bridge ramps, which stand on a solid viaduct), and the bridge.
   const viaduct=(x,z)=>onBridgeBand(x,z)&&((x>BRIDGE.landM+.5&&x<39.6)||(x>96.4&&x<BRIDGE.landB-.5));
@@ -76,14 +67,13 @@ export function buildNYCWorld({prep,materials,player}){
     return Math.abs(deck-y)<Math.abs(ground-y)?deck:ground;
   }
   return {
-    group,solids,places,labels:[],row:district.row,lot:district.lot,occluders,surface,trafficCars:traffic.cars,
+    group,solids,places,labels:[],row:null,lot:null,occluders,surface,trafficCars:traffic.cars,
     obstacles:()=>traffic.obstacles(),circles:bridge.circles,
     bounds:{x0:MAN.x0-1,x1:BKN.x1+1,z0:NS.z0-1,z1:NS.z1+1},
-    // Start on the avenue between Skills Street's two blocks, heading north:
-    // Keel HQ on the right, Experience Row on the left.
-    start:{x:AV[1]+LANE,z:ST[5]+20,h:Math.PI},
+    // Start on the street in front of Keel HQ, heading west: Keel on the right.
+    start:{x:AV[2]+12,z:ST[5]-LANE,h:-Math.PI/2},
     vehicle:'Sport',carColor:'#b5121b',zoom:.62,fixedZoom:true,
-    placeAt(x,z){for(const b of district.row)if(Math.abs(x-b.x)<b.w/2&&z>district.lot.z0-16&&z<district.lot.z0)return b.id;return null;},
+    placeAt(){return null;},
     update(t,dt,camera){city.update(dt);city.sea.value+=dt;traffic.update(dt);people.update(dt);
       if(camera)sky.position.copy(camera.position);
       for(const c of clouds){c.position.x+=dt*1.6;if(c.position.x>500)c.position.x-=1000;}

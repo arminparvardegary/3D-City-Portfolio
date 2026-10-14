@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 
-// Keel HQ: Armin's company, the tallest thing on his corner. A white tower with
-// glass bands, a giant "Keel." sign on the roof, the "Meet Keel." banner from
-// keeltwin.com on its face and the character's poses as posters at street level.
-// Everything faces south (+z), toward the start of the drive.
+// Keel HQ: Armin's project, a one floor pavilion with a giant "Keel." sign on
+// the roof, the "Meet Keel." banner from keeltwin.com on its face and the
+// character's poses along its side. The front faces south (+z), onto the street
+// where the drive starts.
 const BLUE='#2f6bff',INK='#1d1d1f';
 const IMG=name=>`${import.meta.env.BASE_URL}keel/${name}`;
 const FONT='-apple-system,"SF Pro Display","Helvetica Neue",Arial,sans-serif';
@@ -25,41 +25,42 @@ const contain=(g,im,x,y,w,h)=>{if(!im)return;const s=Math.min(w/im.naturalWidth,
 export function buildKeel({block:b,top}){
   const root=new THREE.Group();root.name='keel-hq';
   const solids=[],occluders=[];
-  const cx=(b.x0+b.x1)/2,cz=(b.z0+b.z1)/2+1,W=Math.min(18,b.x1-b.x0-6),D=Math.min(15,b.z1-b.z0-7),H=46,front=cz+D/2;
+  // One floor: a white pavilion with a glass storefront, the "Meet Keel." banner
+  // on its face, the poses along the side, and the giant name on the roof.
+  const cx=(b.x0+b.x1)/2,W=Math.min(20,b.x1-b.x0-6),D=10,H=5,cz=b.z1-2.6-2-D/2,front=cz+D/2;
   const white=new THREE.MeshStandardMaterial({color:'#f4f5f7',roughness:.35,metalness:.05});
-  const glass=new THREE.MeshStandardMaterial({color:'#24324a',roughness:.08,metalness:.6,envMapIntensity:1.6});
-  const blue=new THREE.MeshStandardMaterial({color:BLUE,roughness:.4});
+  const glass=new THREE.MeshStandardMaterial({color:'#24324a',roughness:.08,metalness:.6,envMapIntensity:1.6,emissive:'#ffb15c',emissiveIntensity:.35});
+  const blue=new THREE.MeshStandardMaterial({color:BLUE,roughness:.4,emissive:BLUE,emissiveIntensity:.6});
   const mesh=(g,m,x,y,z)=>{const o=new THREE.Mesh(g,m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;root.add(o);return o;};
-  // Podium, tower, glass bands (one merged mesh), a blue crown line.
-  mesh(new THREE.BoxGeometry(W+4,5,D+4),white,cx,top+2.5,cz);
-  mesh(new THREE.BoxGeometry(W,H-5,D),white,cx,top+5+(H-5)/2,cz);
-  const bands=[];for(let y=top+7;y<top+H-2;y+=3.2)bands.push(new THREE.BoxGeometry(W+.1,1.6,D+.1).translate(cx,y,cz));
-  for(const g of bands)mesh(g,glass,0,0,0);
-  mesh(new THREE.BoxGeometry(W+.4,.6,D+.4),blue,cx,top+H,cz);
-  // The giant roof sign: "Keel." in black with a blue dot, on a white board with a frame.
-  const signW=W+8,signH=signW*.3,signY=top+H+.6+signH/2+1.2;
-  const signTex=canvasTexture(2048,614,g=>{
-    g.fillStyle='#ffffff';g.fillRect(0,0,2048,614);
-    g.font=`700 470px ${FONT}`;g.textBaseline='alphabetic';const t='Keel',w=g.measureText(t).width,dot=g.measureText('.').width,x=(2048-w-dot)/2;
-    g.fillStyle=INK;g.fillText(t,x,500);g.fillStyle=BLUE;g.fillText('.',x+w,500);});
-  const sign=new THREE.MeshStandardMaterial({map:signTex,emissiveMap:signTex,emissive:'#ffffff',emissiveIntensity:.35,roughness:.6});
-  mesh(new THREE.BoxGeometry(signW,signH,.4),[white,white,white,white,sign,white],cx,signY,cz+D/2-1.5);
-  for(const s of [-1,1])mesh(new THREE.BoxGeometry(.4,1.6,.4),white,cx+s*signW*.35,top+H+1.1,cz+D/2-1.5);
-  // The banner from the landing page: the character, "Meet Keel." and the line under it.
-  const banW=W-2,banH=banW*.62;
+  mesh(new THREE.BoxGeometry(W,H,D),white,cx,top+H/2,cz);
+  mesh(new THREE.BoxGeometry(W+.8,.5,D+.8),white,cx,top+H+.25,cz);                 // roof slab
+  mesh(new THREE.BoxGeometry(W+.84,.16,D+.84),blue,cx,top+H+.08,cz);               // a glowing blue line under it
+  // Banner on the left of the front, storefront glass on the right.
+  const banW=W*.42,banH=Math.min(H-.7,banW*.62);
   const banTex=canvasTexture(1600,992,(g,[pose])=>{
     const grd=g.createLinearGradient(0,0,0,992);grd.addColorStop(0,'#ffffff');grd.addColorStop(1,'#eaf0ff');g.fillStyle=grd;g.fillRect(0,0,1600,992);
     g.fillStyle=INK;g.font=`700 200px ${FONT}`;g.fillText('Meet',70,300);g.fillStyle=BLUE;g.fillText('Keel.',70,510);
     g.fillStyle='#6e6e73';g.font=`500 64px ${FONT}`;g.fillText('The AI assistant',74,650);g.fillText('you text like a friend.',74,730);
     g.fillStyle=BLUE;g.beginPath();g.roundRect(70,800,560,120,60);g.fill();g.fillStyle='#fff';g.font=`600 52px ${FONT}`;g.fillText('keeltwin.com',148,878);
     contain(g,pose,760,40,820,952);},['pose-chat.webp']);
-  const ban=new THREE.MeshStandardMaterial({map:banTex,emissiveMap:banTex,emissive:'#ffffff',emissiveIntensity:.25,roughness:.7});
-  mesh(new THREE.PlaneGeometry(banW,banH),ban,cx,top+7+banH/2,front+.08);
-  // Street posters on the podium: three of Keel's poses.
-  const poses=['pose-remind.webp','pose-money.webp','pose-plan.webp'],pw=(W+2)/3-.8,ph=3.6;
+  const ban=new THREE.MeshStandardMaterial({map:banTex,emissiveMap:banTex,emissive:'#ffffff',emissiveIntensity:.6,roughness:.7});
+  const bx=cx-W/2+.6+banW/2;mesh(new THREE.PlaneGeometry(banW,banH),ban,bx,top+.35+banH/2,front+.03);
+  const gw=W-banW-1.8,gx=cx+W/2-.6-gw/2;mesh(new THREE.BoxGeometry(gw,H-1,.12),glass,gx,top+(H-1)/2+.15,front+.02);
+  for(let k=1;k<4;k++)mesh(new THREE.BoxGeometry(.12,H-1,.16),white,gx-gw/2+k*gw/4,top+(H-1)/2+.15,front+.04);
+  // The giant name on the roof: "Keel." in black with a blue dot, glowing at night.
+  const signW=W+4,signH=signW*.3,signY=top+H+.5+1.2+signH/2;
+  const signTex=canvasTexture(2048,614,g=>{
+    g.fillStyle='#ffffff';g.fillRect(0,0,2048,614);
+    g.font=`700 470px ${FONT}`;g.textBaseline='alphabetic';const t='Keel',w=g.measureText(t).width,dot=g.measureText('.').width,x=(2048-w-dot)/2;
+    g.fillStyle=INK;g.fillText(t,x,500);g.fillStyle=BLUE;g.fillText('.',x+w,500);});
+  const sign=new THREE.MeshStandardMaterial({map:signTex,emissiveMap:signTex,emissive:'#ffffff',emissiveIntensity:.42,roughness:.6});
+  mesh(new THREE.BoxGeometry(signW,signH,.4),[white,white,white,white,sign,white],cx,signY,cz+1);
+  for(const s of [-1,1])mesh(new THREE.BoxGeometry(.4,1.4,.4),white,cx+s*signW*.35,top+H+.5+.7,cz+1);
+  // Keel's poses along the east side, facing the avenue you arrive on.
+  const poses=['pose-remind.webp','pose-money.webp','pose-plan.webp'],pw=(D-1.6)/3-.4,ph=Math.min(H-1,pw*1.12);
   poses.forEach((p,i)=>{const tex=canvasTexture(512,576,(g,[im])=>{g.fillStyle='#eef3ff';g.fillRect(0,0,512,576);contain(g,im,16,16,480,560);},[p]);
-    mesh(new THREE.PlaneGeometry(pw,ph),new THREE.MeshStandardMaterial({map:tex,roughness:.7}),cx-(W+2)/2+pw/2+.4+i*(pw+.8),top+.6+ph/2,cz+D/2+2.06);});
-  solids.push([cx,cz,(W+4)/2,(D+4)/2]);
-  occluders.push(new THREE.Box3(new THREE.Vector3(cx-W/2,top,cz-D/2),new THREE.Vector3(cx+W/2,top+H,cz+D/2)));
-  return {root,solids,occluders,place:{x:cx,z:cz,y:top+H*.62,dist:62}};
+    const o=mesh(new THREE.PlaneGeometry(pw,ph),new THREE.MeshStandardMaterial({map:tex,emissiveMap:tex,emissive:'#ffffff',emissiveIntensity:.45,roughness:.7}),cx+W/2+.03,top+.5+ph/2,cz-D/2+1+pw/2+i*(pw+.4));o.rotation.y=Math.PI/2;});
+  solids.push([cx,cz,W/2+.4,D/2+.4]);
+  occluders.push(new THREE.Box3(new THREE.Vector3(cx-W/2,top,cz-D/2),new THREE.Vector3(cx+W/2,top+H+signH+2,cz+D/2)));
+  return {root,solids,occluders,place:{x:cx,z:cz,y:top+4,dist:28}};
 }

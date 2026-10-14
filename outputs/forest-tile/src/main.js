@@ -236,10 +236,11 @@ function pick(e){
 }
 function hover(e){if(e.pointerType==='mouse')canvasEl.style.cursor=pick(e)?'pointer':'';}
 function focusOn(id){const q=world.places[id];if(!q)return;focus={x:q.x,z:q.z,y:q.y??BASE_Y,dist:q.dist,zoom:FIXED?zoom:THREE.MathUtils.clamp(zoom,.5,.75)};followHold=0;needsRender=true;}
-const experience=createExperience({onSelect:focusOn});
+// The city has no Experience list for now (experience and skills are off).
+const experience=WORLD==='nyc'?{open(){},close(){},first:null,get isOpen(){return false;}}:createExperience({onSelect:focusOn});
 // The Work tower opens the timeline at the newest job.
 function openPlace(id){experience.open(id==='work'?experience.first:id);}
-if(WORLD==='nyc')createIntro({onExperience:()=>experience.open(experience.first),onPlace:focusOn});
+if(WORLD==='nyc')createIntro({onPlace:focusOn});
 
 // --- Experience story: park in a bay at Experience Row and press Enter ------------
 const story=world.lot?createStory({scene,row:world.row,lot:world.lot,jobs:JOBS,profile:PROFILE,
