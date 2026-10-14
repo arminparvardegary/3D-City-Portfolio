@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { createKit } from '../../diorama/kit.js';
 import { FACADE, storyFacade, towerFacade } from './facades.js';
-import { G,CURB,HALF,LANE,EDGE,PARK,WALK,MAN,BKN,NS,AV,BAV,ST,BRIDGE,blocks,network } from './layout.js';
+import { G,CURB,HALF,LANE,EDGE,PARK,WALK,MAN,BKN,NS,AV,BAV,ST,BRIDGE,blocks,network,CORNER_R } from './layout.js';
 
 // The city itself (world units): land and water, sidewalks with curbs, street
 // markings and crosswalks, traffic lights, street lamps and trees, Central Park,
@@ -10,7 +10,7 @@ import { G,CURB,HALF,LANE,EDGE,PARK,WALK,MAN,BKN,NS,AV,BAV,ST,BRIDGE,blocks,netw
 // Brooklyn brownstones). Realistic materials, merged per material.
 let seed=7;const rand=()=>((seed=(seed*16807)%2147483647)/2147483647),pick=a=>a[Math.floor(rand()*a.length)],range=(a,b)=>a+rand()*(b-a);
 
-export function buildCity({reserved=new Set(),fills=[]}={}){
+export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
   seed=7;
   const root=new THREE.Group(),K=createKit({flat:false}),{box,cyl,add,mat}=K;
   const solids=[],occluders=[],loops=[];
@@ -58,13 +58,26 @@ export function buildCity({reserved=new Set(),fills=[]}={}){
   // them on the lane coming in, lane arrows for the allowed moves, curb ramps with
   // yellow tactile pads, and storm drains at the curb. Manholes in the lanes.
   const {nodes,edges}=network();
+  // Corners at the city's edge are a full curve: the centre line turns on a 12 unit
+  // radius around C, the inside curb on 6, the outside on 18 (the corner fills in).
+  const corners=nodes.filter(n=>n.corner),R=CORNER_R;
+  const centre=n=>[n.x+R*n.s[0],n.z+R*n.s[1]];
+  // Points on the quarter circle of radius r, from the first road's side to the second's.
+  const arc=(n,r,N=24)=>{const [cx,cz]=centre(n);return Array.from({length:N+1},(_,k)=>{const t=k/N*Math.PI/2;return [cx-Math.sin(t)*n.s[0]*r,cz-Math.cos(t)*n.s[1]*r];});};
+  // A flat painted line along that curve.
+  const ribbon=(n,r,w)=>{const a=arc(n,r-w/2),b=arc(n,r+w/2),pos=[],idx=[];
+    a.forEach((p,k)=>{pos.push(p[0],0,p[1],b[k][0],0,b[k][1]);if(k){const i=2*k-2;idx.push(i,i+1,i+2,i+1,i+3,i+2);}});
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();
+    if(g.attributes.normal.getY(0)<0){g.setIndex(idx.map((v,i)=>idx[i-i%3+2-i%3]));g.computeVertexNormals();}return g;};
+  // Inside curb radius for a block corner at (x, z): 6 where it faces a curve, else 3.
+  const cornerR=(x,z)=>corners.some(n=>Math.abs(x-(n.x+HALF*n.s[0]))<.01&&Math.abs(z-(n.z+HALF*n.s[1]))<.01)?R-HALF:3;
   const yellow=mat('#e3bd3a',{roughness:.6}),white=mat('#ecebe6',{roughness:.6}),iron=mat('#2b2d31',{roughness:.5,metalness:.6}),tactile=mat('#d9a92e',{roughness:.7});
   const XW=HALF+2.3,BAR=HALF+3.9,parking=[];
   const seen=new Set();
   for(const e of edges){
     if(e.kind!=='road')continue;const k=[e.a.k,e.b.k].sort().join('|');if(seen.has(k))continue;seen.add(k);
     const dx=e.b.x-e.a.x,dz=e.b.z-e.a.z,len=Math.hypot(dx,dz),fx=dx/len,fz=dz/len,rx=-fz,rz=fx;
-    const s0=e.a.degree>2?BAR+.6:HALF+1,s1=len-(e.b.degree>2?BAR+.6:HALF+1),inner=s1-s0;if(inner<=0)continue;
+    const s0=e.a.degree>2?BAR+.6:e.a.corner?R:HALF+1,s1=len-(e.b.degree>2?BAR+.6:e.b.corner?R:HALF+1),inner=s1-s0;if(inner<=0)continue;
     const cx=e.a.x+fx*(s0+s1)/2,cz=e.a.z+fz*(s0+s1)/2,ang=Math.atan2(fx,fz);
     for(const o of [-.14,.14])add(new THREE.BoxGeometry(.12,.02,inner).rotateY(ang),yellow,[cx+rx*o,G+.005,cz+rz*o]);
     for(const sd of [-1,1])add(new THREE.BoxGeometry(.12,.02,inner).rotateY(ang),white,[cx+rx*sd*EDGE,G+.005,cz+rz*sd*EDGE]);
@@ -75,6 +88,8 @@ export function buildCity({reserved=new Set(),fills=[]}={}){
     if(!(Math.abs(dz)<1&&e.a.z===ST[5])&&!edgeRoad)for(const sd of [-1,1])for(let t=s0+3;t<s1-3;t+=6.2)if(rand()<.55)
       parking.push({x:e.a.x+fx*t+rx*sd*PARK,z:e.a.z+fz*t+rz*sd*PARK,h:sd>0?ang:ang+Math.PI});
   }
+  // The same lines round each corner.
+  for(const n of corners){for(const o of [-.14,.14])add(ribbon(n,R+o,.12),yellow,[0,G+.005,0]);for(const sd of [-1,1])add(ribbon(n,R+sd*EDGE,.12),white,[0,G+.005,0]);}
   // Arrow shapes, pointing +z in their own frame: a stem and heads for straight, left, right.
   const tri=(w,l)=>{const sh=new THREE.Shape([new THREE.Vector2(-w/2,0),new THREE.Vector2(w/2,0),new THREE.Vector2(0,l)]);return new THREE.ShapeGeometry(sh).rotateX(-Math.PI/2).rotateY(Math.PI);};
   const arrow=(moves)=>{const parts=[new THREE.BoxGeometry(.22,.02,1.6).translate(0,0,.8)];
@@ -124,14 +139,28 @@ export function buildCity({reserved=new Set(),fills=[]}={}){
   // --- Blocks ------------------------------------------------------------------------
   // Sidewalks with rounded curb returns (radius 3, about 4.5 m) and a granite curb.
   const granite=mat('#a7a49e',{roughness:.7});
-  const rounded=(x0,x1,z0,z1,r)=>{const sh=new THREE.Shape();sh.moveTo(x0+r,-z0);sh.lineTo(x1-r,-z0);sh.quadraticCurveTo(x1,-z0,x1,-z0-r);sh.lineTo(x1,-z1+r);sh.quadraticCurveTo(x1,-z1,x1-r,-z1);
-    sh.lineTo(x0+r,-z1);sh.quadraticCurveTo(x0,-z1,x0,-z1+r);sh.lineTo(x0,-z0-r);sh.quadraticCurveTo(x0,-z0,x0+r,-z0);return sh;};
-  function sidewalk(b,R=3){
-    const top=rounded(b.x0+.32,b.x1-.32,b.z0+.32,b.z1-.32,R-.32);
-    add(new THREE.ExtrudeGeometry(top,{depth:CURB,bevelEnabled:false,curveSegments:8}).rotateX(-Math.PI/2),paving,[0,G,0]);
-    const ring=rounded(b.x0,b.x1,b.z0,b.z1,R);ring.holes.push(rounded(b.x0+.32,b.x1-.32,b.z0+.32,b.z1-.32,R-.32));
-    add(new THREE.ExtrudeGeometry(ring,{depth:CURB+.01,bevelEnabled:false,curveSegments:8}).rotateX(-Math.PI/2),granite,[0,G,0]);
-    solids.push([(b.x0+b.x1)/2,(b.z0+b.z1)/2,(b.x1-b.x0)/2,(b.z1-b.z0)/2]);
+  // A rounded rectangle (shape space x, -z). r: one radius, or four for the corners
+  // (x1,z0), (x1,z1), (x0,z1), (x0,z0).
+  const rounded=(x0,x1,z0,z1,r)=>{const [ra,rb,rc,rd]=[].concat(r).length===4?r:[r,r,r,r],sh=new THREE.Shape();
+    sh.moveTo(x0+rd,-z0);sh.lineTo(x1-ra,-z0);sh.absarc(x1-ra,-z0-ra,ra,Math.PI/2,0,true);
+    sh.lineTo(x1,-z1+rb);sh.absarc(x1-rb,-z1+rb,rb,0,-Math.PI/2,true);
+    sh.lineTo(x0+rc,-z1);sh.absarc(x0+rc,-z1+rc,rc,-Math.PI/2,-Math.PI,true);
+    sh.lineTo(x0,-z0-rd);sh.absarc(x0+rd,-z0-rd,rd,Math.PI,Math.PI/2,true);return sh;};
+  // Solid for the car: the whole block, or strips that follow the big curved corners.
+  const solidBlock=(x0,x1,z0,z1,[ra,rb,rc,rd])=>{
+    if(Math.max(ra,rb,rc,rd)<=3){solids.push([(x0+x1)/2,(z0+z1)/2,(x1-x0)/2,(z1-z0)/2]);return;}
+    const cut=(r,d)=>r>3&&d<r?r-Math.sqrt(r*r-(r-d)*(r-d)):0,S=.75;let run=null;
+    const flush=()=>{if(run)solids.push([(run.a+run.b)/2,(run.z0+run.z1)/2,(run.b-run.a)/2,(run.z1-run.z0)/2]);run=null;};
+    for(let z=z0;z<z1-1e-6;z+=S){const zb=Math.min(z+S,z1),m=(z+zb)/2,a=x0+Math.max(cut(rd,m-z0),cut(rc,z1-m)),b=x1-Math.max(cut(ra,m-z0),cut(rb,z1-m));
+      if(run&&run.a===a&&run.b===b)run.z1=zb;else{flush();run={a,b,z0:z,z1:zb};}}
+    flush();};
+  function sidewalk(b){
+    const r=[[b.x1,b.z0],[b.x1,b.z1],[b.x0,b.z1],[b.x0,b.z0]].map(([x,z])=>cornerR(x,z)),ri=r.map(v=>v-.32);
+    const top=rounded(b.x0+.32,b.x1-.32,b.z0+.32,b.z1-.32,ri);
+    add(new THREE.ExtrudeGeometry(top,{depth:CURB,bevelEnabled:false,curveSegments:16}).rotateX(-Math.PI/2),paving,[0,G,0]);
+    const ring=rounded(b.x0,b.x1,b.z0,b.z1,r);ring.holes.push(rounded(b.x0+.32,b.x1-.32,b.z0+.32,b.z1-.32,ri));
+    add(new THREE.ExtrudeGeometry(ring,{depth:CURB+.01,bevelEnabled:false,curveSegments:16}).rotateX(-Math.PI/2),granite,[0,G,0]);
+    solidBlock(b.x0,b.x1,b.z0,b.z1,r);
   }
   const lampHead=mat('#fff3d6',{emissive:'#ffe2a8',emissiveIntensity:.5});
   const lamp=(x,z,ox,oz)=>{cyl(.09,.13,5.6,8,x,top,z,dark);add(new THREE.BoxGeometry(.08,.08,1.6).rotateY(Math.atan2(ox,oz)),dark,[x+ox*.8,top+5.5,z+oz*.8]);
@@ -234,8 +263,21 @@ export function buildCity({reserved=new Set(),fills=[]}={}){
   };
   const LANDMARK={'1,3':'empire','2,2':'chrysler','3,5':'wtc','3,1':'dome'};
 
+  // Outside each curve: the square corner of the roads becomes a small plaza with
+  // a granite curb on the curve and a tree.
+  for(const n of corners){const [sx,sz]=n.s,P=[n.x-HALF*sx,n.z-HALF*sz],ro=R+HALF;
+    const pts=[P,...arc(n,ro,32)].map(([x,z])=>new THREE.Vector2(x,-z));
+    add(new THREE.ExtrudeGeometry(new THREE.Shape(pts),{depth:CURB,bevelEnabled:false}).rotateX(-Math.PI/2),paving,[0,G,0]);
+    const band=[...arc(n,ro,32),...arc(n,ro+.32,32).reverse()].map(([x,z])=>new THREE.Vector2(x,-z));
+    add(new THREE.ExtrudeGeometry(new THREE.Shape(band),{depth:CURB+.01,bevelEnabled:false}).rotateX(-Math.PI/2),granite,[0,G,0]);
+    // Collision: strips from the outer edge to the curve.
+    for(let b=0;b<ro-1e-6;b+=.75){const m=Math.min(b+.375,ro),len=ro-Math.sqrt(Math.max(0,ro*ro-(ro-m)*(ro-m)));if(len<.05)continue;
+      const zA=P[1]+sz*b,zB=P[1]+sz*Math.min(b+.75,ro),xA=P[0],xB=P[0]+sx*len;
+      solids.push([(xA+xB)/2,(zA+zB)/2,Math.abs(xB-xA)/2,Math.abs(zB-zA)/2]);}
+    tree(P[0]+sx*3.2,P[1]+sz*3.2,1.1);}
+
   for(const b of blocks()){
-    const key=b.i+','+b.j;if(reserved.has(key)){continue;}
+    const key=b.i+','+b.j;if(pave.has(key))sidewalk(b);if(reserved.has(key)){continue;}
     sidewalk(b);
     const inner={x0:b.x0+WALK,x1:b.x1-WALK,z0:b.z0+WALK,z1:b.z1-WALK};
     loops.push({x0:b.x0+1,x1:b.x1-1,z0:b.z0+1,z1:b.z1-1,y:top});

@@ -15,7 +15,8 @@ export const HALF=6;             // centre line to curb
 export const EDGE=3.85;          // white edge line between travel and parking lanes
 export const LANE=EDGE/2;        // travel lane centre: arrows, traffic and the car sit mid lane
 export const PARK=4.75;          // parking lane centre
-export const WALK=2.6;           // sidewalk width inside each block
+export const WALK=2.6;
+export const CORNER_R=12;        // centre line radius where two roads meet at the city's edge           // sidewalk width inside each block
 
 export const MAN={x0:-120,x1:54},RIVER={x0:54,x1:82},BKN={x0:82,x1:132},NS={z0:-120,z1:120};
 // Avenues (run north to south) and streets (run east to west).
@@ -49,7 +50,9 @@ export function network(){
   for(const z of ST){if(z===BRIDGE.z)continue;link(node(BAV[0],z),node(BAV[1],z));}
   // The bridge.
   link(node(BRIDGE.x0,BRIDGE.z),node(BRIDGE.x1,BRIDGE.z),'bridge');
-  for(const n of nodes.values())n.degree=n.out.length;
+  for(const n of nodes.values()){n.degree=n.out.length;
+    // A corner: two roads meeting at a right angle (the city's edge). s points into the curve.
+    if(n.degree===2){const [a,b]=n.out.map(e=>[Math.sign(e.b.x-n.x),Math.sign(e.b.z-n.z)]);if(a[0]*b[0]+a[1]*b[1]===0){n.corner=true;n.s=[a[0]+b[0],a[1]+b[1]];}}}
   return {nodes:[...nodes.values()],edges};
 }
 

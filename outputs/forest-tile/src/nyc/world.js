@@ -18,12 +18,12 @@ export function buildNYCWorld({prep,materials,player}){
   const bl=blocks(),find=(i,j)=>bl.find(b=>b.i===i&&b.j===j);
   // Armin's blocks: Experience Row (0, 4); Skills Street shops in front of (0, 5) and (1, 5).
   const exp=find(0,4),sk1=find(0,5),sk2=find(1,5),top=G+CURB;
-  const city=buildCity({reserved:new Set(['0,4','0,5','1,5']),fills:[
+  const city=buildCity({reserved:new Set(['0,4','0,5','1,5']),pave:new Set(['0,5','1,5']),fills:[
     {x0:sk1.x0+2.6,x1:sk1.x1-2.6,z0:sk1.z0+12.5,z1:sk1.z1-2.6,zone:'low'},{x0:sk2.x0+2.6,x1:sk2.x1-2.6,z0:sk2.z0+12.5,z1:sk2.z1-2.6,zone:'low'}]});
   group.add(city.root);
   const district=buildDistrict({top,row:{x0:exp.x0,x1:exp.x1,z0:exp.z0,z1:exp.z1},shops:[
-    {x0:sk1.x0,x1:sk1.x1,z0:sk1.z0,z1:sk1.z1,front:sk1.z0,yaw:Math.PI,count:6,slab:true},
-    {x0:sk2.x0,x1:sk2.x1,z0:sk2.z0,z1:sk2.z1,front:sk2.z0,yaw:Math.PI,count:6,slab:true},
+    {x0:sk1.x0,x1:sk1.x1,z0:sk1.z0,z1:sk1.z1,front:sk1.z0,yaw:Math.PI,count:6,slab:false},
+    {x0:sk2.x0,x1:sk2.x1,z0:sk2.z0,z1:sk2.z1,front:sk2.z0,yaw:Math.PI,count:6,slab:false},
   ]});
   group.add(district.root);
   const bridge=buildBridge({prep});group.add(bridge.root);

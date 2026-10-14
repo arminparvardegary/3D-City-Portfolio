@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { G,HALF,LANE,network,bridgeHeight } from './layout.js';
+import { G,HALF,LANE,network,bridgeHeight,CORNER_R } from './layout.js';
 import { TYPES, createFleet } from './carfamily.js';
 import { dampAngle } from '../../motion.js';
 
@@ -25,7 +25,7 @@ export function createTraffic({phase,player,prep,count=MIX.length,parked=[],seed
   const height=e=>e.kind==='bridge'?bridgeHeight:()=>0;
   // A lane: from just after the start crossing to just before the end one.
   function lane(e){const dx=e.b.x-e.a.x,dz=e.b.z-e.a.z,len=Math.hypot(dx,dz),fx=dx/len,fz=dz/len,rx=-fz,rz=fx;
-    const s0=e.a.degree>2?STOP:HALF+1,s1=len-(e.b.degree>2?STOP:HALF+1);
+    const s0=e.a.degree>2?STOP:e.a.corner?CORNER_R:HALF+1,s1=len-(e.b.degree>2?STOP:e.b.corner?CORNER_R:HALF+1);
     return {e,fx,fz,len:s1-s0,x0:e.a.x+fx*s0+rx*LANE,z0:e.a.z+fz*s0+rz*LANE,axis:Math.abs(fx)>.5?'x':'z',light:e.b.degree>2};}
   // The way through a crossing: a quadratic curve from the end of one lane to the start of the next.
   function turn(L1,L2){const p0=[L1.x0+L1.fx*L1.len,L1.z0+L1.fz*L1.len],p2=[L2.x0,L2.z0],n=L1.e.b;
