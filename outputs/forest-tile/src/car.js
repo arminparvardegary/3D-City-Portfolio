@@ -60,7 +60,7 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
   function blocked(px,pz,ph){
     if(impossible(px,pz,ph))return true;
     const dn=depth(px,pz,ph);if(dn<=1e-6)return false;
-    return dn>=depth(x,z,h)-1e-5;
+    return dn>depth(x,z,h)+1e-4;   // sliding along or turning while touching is fine; only going deeper is not
   }
   const down=new Set();let locked=false;
   m.headlight.emissive.set('#fff6e0');m.tailLight.emissive.set('#ff2a22');
@@ -163,10 +163,44 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
     vy+=-yaw*v*dt*(hand?.55:.08);vy=damp(vy,0,hand?1.6:14,dt);
     const nh=h+yaw*dt,fx=Math.sin(nh),fz=Math.cos(nh);
     const nx=x+(fx*v+fz*vy)*dt,nz=z+(fz*v-fx*vy)*dt;
-    if(!blocked(nx,nz,nh)){h=nh;x=nx;z=nz;lat=yaw*v;
+    // Collisions: the car never stops dead and never gets stuck. Try the full move;
+    // if something is in the way, slide along it (keep the part of the move that is
+    // free); if it cannot slide, it can still turn on the spot. A hard knock bounces
+    // it back a little; gentle contact just takes the speed off.
+    let moved=false;
+    if(!blocked(nx,nz,nh)){h=nh;x=nx;z=nz;moved=true;lat=yaw*v;}
+    else{
+      const mx=nx-x,mz=nz-z,hard=Math.abs(v)>2.2;
+      if(hard)hit(Math.abs(v)/C.maxSpeed*1.4);
+      const slides=Math.abs(mx)>Math.abs(mz)?[[mx,0],[0,mz]]:[[0,mz],[mx,0]];
+      let progress=0;
+      for(const [tx,tz] of slides)if(Math.abs(tx)+Math.abs(tz)>1e-6&&!blocked(x+tx*.9,z+tz*.9,nh)){x+=tx*.9;z+=tz*.9;h=nh;moved=true;progress=Math.hypot(tx,tz)*.9;break;}
+      if(!moved&&!blocked(x,z,nh)){h=nh;moved=true;}
+      // Hardly getting anywhere (head on into a wall or a car): slide along the
+      // obstacle's surface, the way you steer (or the way the car leans), turning to follow it.
+      if(progress<.3*Math.hypot(mx,mz)){moved=false;
+        const e=.06,dn=(ox,oz)=>depth(nx+ox,nz+oz,nh),gx=dn(e,0)-dn(-e,0),gz=dn(0,e)-dn(0,-e),gl=Math.hypot(gx,gz);
+        const steerSign=(down.has('left')?1:0)-(down.has('right')?1:0),fx0=Math.sin(h),fz0=Math.cos(h);
+        if(gl>1e-6){let tx=-gz/gl,tz=gx/gl;const along=tx*fx0+tz*fz0,leftX=fz0,leftZ=-fx0;
+          let sgn=Math.abs(along)>.2?Math.sign(along):steerSign?Math.sign(steerSign*(tx*leftX+tz*leftZ)):0;
+          if(sgn){tx*=sgn;tz*=sgn;const step=Math.max(.025,Math.abs(v)*dt*.7);
+            if(!blocked(x+tx*step,z+tz*step,h)){x+=tx*step;z+=tz*step;moved=true;v=Math.max(Math.abs(v),1.2)*Math.sign(v||1);
+              const want=Math.atan2(tx,tz),dh=Math.atan2(Math.sin(want-h),Math.cos(want-h));if(!blocked(x,z,h+dh*.06))h+=dh*.06;}}}
+      }
+      // Steering while pressed against something turns the car firmly on the spot,
+      // so it quickly faces along the obstacle and drives away.
+      {const steerSign=(down.has('left')?1:0)-(down.has('right')?1:0);
+        if(steerSign){const turn=steerSign*1.6*dt*(v<-.1||down.has('brake')?-1:1);if(!blocked(x,z,h+turn)){h+=turn;moved=true;}}}
+      if(moved)v*=hard?.6:.985;else{v=hard?v*-.2:0;yaw*=.5;}
+      vy=0;a=0;lat=0;
+    }
+    // Something overlapping the car (a taxi nudging in): ease it clear, a little each step.
+    const d0=depth(x,z,h);
+    if(d0>1e-4){let best=null,bd=d0;for(let k=0;k<8;k++){const ang=k*Math.PI/4,px=x+Math.sin(ang)*.05,pz=z+Math.cos(ang)*.05;if(impossible(px,pz,h))continue;const dd=depth(px,pz,h);if(dd<bd){bd=dd;best=[px,pz];}}
+      if(best){x=best[0];z=best[1];}}
+    if(moved&&surface){
       // Follow the road height; tilt with the slope between the front and back of the car.
-      if(surface){cy=surface(x,z,cy)??cy;const L=parts.length*.42,fy=surface(x+fx*L,z+fz*L,cy),by=surface(x-fx*L,z-fz*L,cy);slope=fy!==null&&by!==null?Math.atan2(fy-by,2*L):slope;}}
-    else{hit(Math.abs(v)/C.maxSpeed*1.4);v*=-.15;vy=0;yaw=0;a=0;lat=0;}   // a soft bump, not a dead stop
+      const fx2=Math.sin(h),fz2=Math.cos(h);cy=surface(x,z,cy)??cy;const L=parts.length*.42,fy=surface(x+fx2*L,z+fz2*L,cy),by=surface(x-fx2*L,z-fz2*L,cy);slope=fy!==null&&by!==null?Math.atan2(fy-by,2*L):slope;}
     rollAngle+=v*dt/parts.wheelR;
 
     // Suspension: each axis is a spring-damper pulled toward where the load puts it.
