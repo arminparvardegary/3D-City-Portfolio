@@ -36,3 +36,10 @@
 
 /* Storybook sky behind the transparent canvas (colours from the theme). */
 html,body,#app{background:linear-gradient(180deg,var(--sky-top,#bfe3ff) 0%,var(--sky-horizon,#fff4e2) 78%) fixed}
+
+/* Studio card: opens when a studio (work experience) is clicked. */
+.studio-card{position:absolute;left:24px;bottom:24px;z-index:6;max-width:300px;padding:18px 44px 16px 20px;border-radius:18px;background:#fffffbf2;border:1px solid #e6e1d6;box-shadow:0 14px 44px #1f2a3a1f;backdrop-filter:blur(14px);color:#2f3650}
+.studio-card[hidden]{display:none}.studio-card h2{font:700 18px/1.2 'DM Sans',sans-serif;margin:10px 0 6px;letter-spacing:-.3px}
+.studio-card p{margin:0;font-size:12px;line-height:1.5;color:#5a6274}.studio-card .studio-meta{margin-top:6px;color:#8a90a0}
+.studio-dot{display:block;width:10px;height:10px;border-radius:50%}.studio-card button{position:absolute;right:12px;top:10px;font-size:20px;color:#8a90a0;width:28px;height:28px;border-radius:50%}
+.studio-card button:hover{background:#f1ede4}

@@ -1,17 +1,19 @@
 import './style.css';
 import * as THREE from 'three';
-import { EffectComposer, RenderPass, EffectPass, ToneMappingEffect, ToneMappingMode } from 'postprocessing';
+import { EffectComposer, RenderPass, EffectPass, ToneMappingEffect, ToneMappingMode, HueSaturationEffect } from 'postprocessing';
 import { N8AOPostPass } from 'n8ao';
 import { ART, TILE_SPEC } from './config.js';
 import { createMaterials } from './materials.js';
-import { buildTile } from './tile.js';
+import { createCarControls } from './car.js';
 import { softenShadows, setShadowTaps } from './shadows.js';
 import { PRESETS, ORDER, detectQuality, FrameMonitor } from './quality.js';
 import { LIGHTING, createLights, createEnvironment, applyLighting } from './world/lighting.js';
 import { wind, setDensity } from './world/vegetation.js';
 import { buildGrid, GRID, HOME_NUMBER, tileNumber, tileCenter } from './world/grid.js';
-import { buildRoad } from './world/roads.js';
-import { buildPark } from './world/park.js';
+import { buildTerrain } from './world/terrain.js';
+import { buildWater, buildShips } from './world/water.js';
+import { buildDistrict, LOOP } from './world/district.js';
+import { createLife } from './world/life.js';
 import { createClouds } from './world/clouds.js';
 import { THEME } from './world/theme.js';
 import { createTraffic } from './world/traffic.js';
@@ -34,7 +36,7 @@ renderer.info.autoReset=false;
 // Tone mapping happens once, in the final effect pass (renderer stays linear).
 renderer.toneMapping=THREE.NoToneMapping;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.domElement.setAttribute('aria-label','My House: a minimal cream house with a coral roof, a little blue car in the parking space, and a small Turkish flag on a 100 by 100 design-pixel tile.');
+renderer.domElement.setAttribute('aria-label','A creative harbour district between mountains and the sea: a river from a waterfall, a park, studios, a boardwalk with docks and cafés, ships on the sea, and your car on the loop road.');
 renderer.domElement.setAttribute('role','img');
 viewport.appendChild(renderer.domElement);
 
@@ -49,37 +51,30 @@ const CAMERA_DISTANCE=160;
 function placeCamera(){camera.position.copy(target).addScaledVector(viewDir,CAMERA_DISTANCE);camera.lookAt(target);}
 placeCamera();
 
-const art=structuredClone(LIGHTING.storybook);
+const art=structuredClone(LIGHTING.storybook);   // the harbour theme (world/theme.js)
 art.fog.enabled=false;   // a 150 tile map: every tile should read the same
 const lights=createLights(scene),{sky,sun,fill}=lights;
-scene.environment=createEnvironment(renderer);
+scene.environment=createEnvironment(renderer,art);
 const materials=createMaterials();
 Object.values(materials).forEach(softenShadows);
-const {group:tile,canopies,animate:animateTile,car,meadow,extraMaterials=[]}=buildTile(materials);scene.add(tile);
-extraMaterials.forEach(softenShadows);
-// Tiles with content: the road with its junction in front of the house (79 to 87).
-const ROAD_TILES=[79,80,81,82,83,84,85,86,87];
-const road=buildRoad({numbers:ROAD_TILES,junction:83,prep:softenShadows,m:materials});scene.add(road.group);
-// Tile 98, across the road from the house: a park with trees.
-const park=buildPark({number:98,m:materials,prep:softenShadows});scene.add(park.group);
-const grid150=buildGrid(softenShadows,{occupied:[...ROAD_TILES,98]});scene.add(grid150.group);
-car.setBounds(grid150.bounds);car.addStatic(road.poles);
-const clouds=createClouds({bounds:grid150.bounds,prep:softenShadows});scene.add(clouds.group);
-// The sky behind the world (the canvas is transparent).
-document.documentElement.style.setProperty('--sky-top',THEME.sky.top);document.documentElement.style.setProperty('--sky-horizon',THEME.sky.horizon);car.addStatic(park.circles,park.boxes);
-const traffic=createTraffic({parent:scene,m:materials,prep:softenShadows,lanes:road.lanes,setLights:road.setLights,
-  player:()=>{const p=car.pose();return {x:p.x,z:p.z,len:car.length};}});
+// --- The world: one island over the 150 tile grid ---------------------------
+const grid150=buildGrid(softenShadows,{occupied:Array.from({length:GRID.cols*GRID.rows},(_,i)=>i+1)});
+const bounds=grid150.bounds;
+// Tile numbers stay underneath for building; they are shown only with ?tiles.
+if(new URLSearchParams(location.search).has('tiles'))scene.add(grid150.group);
+const terrain=buildTerrain({bounds,prep:softenShadows});scene.add(terrain.group);
+const water=buildWater({bounds,prep:softenShadows});scene.add(water.group);
+const district=buildDistrict({bounds,m:materials,prep:softenShadows});scene.add(district.group);
+const ships=buildShips({bounds,prep:softenShadows,moorings:district.moorings});scene.add(ships.group);
+const life=createLife({bounds,benches:district.benches,prep:softenShadows});scene.add(life.group);
+const clouds=createClouds({bounds,prep:softenShadows});scene.add(clouds.group);
+document.documentElement.style.setProperty('--sky-top',THEME.sky.top);document.documentElement.style.setProperty('--sky-horizon',THEME.sky.horizon);
+// Your car starts on the loop road, south side, heading east.
+const car=createCarControls(scene,materials,{prep:softenShadows,index:VEHICLES.findIndex(v=>v.name==='City'),home:{x:-22,z:LOOP.z1+1.1,h:Math.PI/2},y:.135});
+car.setBounds({x0:bounds.x0+.4,x1:bounds.x1-.4,z0:bounds.z0+.4,z1:bounds.z1-.4});car.addStatic(district.circles,district.boxes);
+const traffic=createTraffic({parent:scene,m:materials,prep:softenShadows,loop:LOOP,player:()=>{const p=car.pose();return {x:p.x,z:p.z,len:car.length};}});
 car.setObstacles(()=>traffic.obstacles());
-const floor=new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.ShadowMaterial({color:'#76806a',opacity:.21}));
-floor.rotation.x=-Math.PI/2;floor.position.y=-.012;floor.receiveShadow=true;scene.add(floor);
-softenShadows(floor.material);
-
-// A low-frequency contact shadow anchors the base without adding geometry.
-const shadowCanvas=document.createElement('canvas');shadowCanvas.width=shadowCanvas.height=256;
-const ctx=shadowCanvas.getContext('2d');ctx.filter='blur(13px)';ctx.fillStyle='#485035';ctx.fillRect(30,30,196,196);
-const contact=new THREE.Mesh(new THREE.PlaneGeometry(12.5,12.5),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(shadowCanvas),transparent:true,opacity:.18,depthWrite:false,toneMapped:false}));
-contact.rotation.x=-Math.PI/2;contact.position.y=-.009;contact.material.opacity=.08;contact.renderOrder=1;scene.add(contact);
-
+const canopies=[],animateTile=null,meadow={layers:[],grassMaterial:null};
 const grid=new THREE.Group();grid.visible=false;scene.add(grid);
 const gridMat=new THREE.LineBasicMaterial({color:'#738662',transparent:true,opacity:.32,depthTest:false});
 const gridVertices=[];
@@ -101,12 +96,17 @@ ao.autoDetectTransparency=false;
 Object.assign(ao.configuration,{gammaCorrection:false,screenSpaceRadius:false,depthAwareUpsampling:true,transparencyAware:false});
 composer.addPass(ao);
 const toneMapping=new ToneMappingEffect({mode:ToneMappingMode.NEUTRAL});
-composer.addPass(new EffectPass(camera,toneMapping));
+// Saturation runs in the same pass as tone mapping: no extra cost. (A contrast
+// effect here pushed the darkest shadows below zero, which tone mapping turned
+// white; contrast comes from the light instead: strong sun, low fill, deep AO.)
+const saturation=new HueSaturationEffect({saturation:.08});
+composer.addPass(new EffectPass(camera,toneMapping,saturation));
 const TONE={neutral:ToneMappingMode.NEUTRAL,agx:ToneMappingMode.AGX,aces:ToneMappingMode.ACES_FILMIC};
 function applyArt(){
   applyLighting(art,lights,scene);if(typeof placeSun==='function')placeSun();
   renderer.toneMappingExposure=art.exposure;toneMapping.mode=TONE[art.toneMapping]??ToneMappingMode.NEUTRAL;
   Object.assign(ao.configuration,{intensity:art.ao.intensity,aoRadius:art.ao.radius,distanceFalloff:art.ao.falloff});ao.configuration.color.set(art.ao.color);
+  if(art.grade)saturation.saturation=art.grade.saturation;
   renderer.shadowMap.needsUpdate=true;needsRender=true;
 }
 
@@ -150,9 +150,9 @@ new ResizeObserver(resize).observe(viewport);
 // (with a little look-ahead); a pan holds the view for a moment before follow resumes.
 let zoomGoal=1,followHold=0;const ZOOM_MIN=.08,ZOOM_MAX=2.2;
 const groundRight=new THREE.Vector3(Math.cos(az),0,-Math.sin(az)),groundUp=new THREE.Vector3(-Math.sin(az),0,-Math.cos(az)).multiplyScalar(1/Math.sin(el));
-const pointers=new Map();let pinch=0;
+const pointers=new Map();let pinch=0,downAt=null;
 const canvasEl=renderer.domElement;canvasEl.style.touchAction='none';
-canvasEl.addEventListener('pointerdown',e=>{canvasEl.setPointerCapture(e.pointerId);pointers.set(e.pointerId,[e.clientX,e.clientY]);});
+canvasEl.addEventListener('pointerdown',e=>{try{canvasEl.setPointerCapture(e.pointerId);}catch{}pointers.set(e.pointerId,[e.clientX,e.clientY]);downAt=[e.clientX,e.clientY];});
 canvasEl.addEventListener('pointermove',e=>{
   const p=pointers.get(e.pointerId);if(!p)return;
   if(pointers.size===2){const [a,b]=[...pointers.values()];const d0=Math.hypot(a[0]-b[0],a[1]-b[1]);pointers.set(e.pointerId,[e.clientX,e.clientY]);const [c,d]=[...pointers.values()];const d1=Math.hypot(c[0]-d[0],c[1]-d[1]);if(d0>0)zoomGoal=THREE.MathUtils.clamp(zoomGoal*d1/d0,ZOOM_MIN,ZOOM_MAX);return;}
@@ -162,6 +162,26 @@ canvasEl.addEventListener('pointermove',e=>{
   followHold=2.5;placeCamera();placeSun();needsRender=true;
 });
 for(const ev of ['pointerup','pointercancel'])canvasEl.addEventListener(ev,e=>pointers.delete(e.pointerId));
+// Studios are interactive: hovering shows a pointer, clicking opens a small card.
+const ray=new THREE.Raycaster(),ndc=new THREE.Vector2(),ground=new THREE.Plane(new THREE.Vector3(0,1,0),-.12),hitP=new THREE.Vector3();
+// Each studio is tested as a box around its footprint (its walls are merged into
+// the district for speed, so there is no per-building mesh to hit).
+const studioBoxes=district.studios.map(s=>({s,box:new THREE.Box3(new THREE.Vector3(s.box[0]-s.box[2],0,s.box[1]-s.box[3]),new THREE.Vector3(s.box[0]+s.box[2],6.5,s.box[1]+s.box[3]))}));
+function studioAt(e){
+  const r=canvasEl.getBoundingClientRect();ndc.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1);ray.setFromCamera(ndc,camera);
+  let best=null,dist=Infinity;
+  for(const {s,box} of studioBoxes){const p=ray.ray.intersectBox(box,hitP);if(p){const d=p.distanceTo(ray.ray.origin);if(d<dist){dist=d;best=s;}}}
+  return best;
+}
+const card=document.createElement('aside');card.className='studio-card';card.hidden=true;document.querySelector('.scene').append(card);
+function openCard(s){
+  card.innerHTML=`<span class="studio-dot" style="background:${s.accent}"></span><h2></h2><p class="studio-role"></p><p class="studio-meta"></p><button type="button" aria-label="Close">×</button>`;
+  card.querySelector('h2').textContent=s.name;card.querySelector('.studio-role').textContent=s.role;card.querySelector('.studio-meta').textContent=`${s.years} · ${s.place}`;
+  card.querySelector('button').onclick=()=>{card.hidden=true;};card.hidden=false;
+}
+canvasEl.addEventListener('pointerup',e=>{if(!downAt||Math.hypot(e.clientX-downAt[0],e.clientY-downAt[1])>5)return;const s=studioAt(e);if(s)openCard(s);else card.hidden=true;});
+canvasEl.addEventListener('pointermove',e=>{if(pointers.size)return;canvasEl.style.cursor=studioAt(e)?'pointer':'';});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')card.hidden=true;});
 canvasEl.addEventListener('wheel',e=>{e.preventDefault();zoomGoal=THREE.MathUtils.clamp(zoomGoal*Math.exp(-e.deltaY*.0015),ZOOM_MIN,ZOOM_MAX);},{passive:false});
 const followTo=new THREE.Vector3();
 function updateView(dt){
@@ -190,7 +210,7 @@ function placeSun(){
   sun.target.position.copy(sunAt);sun.position.copy(sunAt).addScaledVector(sunDir,25);sun.target.updateMatrixWorld();
   renderer.shadowMap.needsUpdate=true;
 }
-let timeScale=1,animClock=0,lastFrame=0;
+let timeScale=1,animClock=0,lastFrame=0,worldClock=0;
 function render(time=0){
   requestAnimationFrame(render);
   if(hidden){lastFrame=time;return;}
@@ -206,6 +226,10 @@ function render(time=0){
   if(car.update(time)){animating=true;renderer.shadowMap.needsUpdate=true;}
   if(traffic.update(frameDt/1000)){animating=true;renderer.shadowMap.needsUpdate=true;}
   if(breeze)clouds.update(frameDt/1000*timeScale);
+  // Water, ships and people move all the time (scaled by the animation speed).
+  worldClock+=frameDt/1000*timeScale;water.update(worldClock);ships.update(worldClock);life.update(worldClock,frameDt/1000*timeScale);
+  for(const st of district.studios){const k=.5+.5*Math.sin(worldClock*2.4);st.pad.scale.setScalar(1+k*.18);st.pad.material.opacity=.55+.4*k;}
+  animating=true;
   if(updateView(frameDt/1000))animating=true;
   if(!animating&&!needsRender)return;
   renderer.info.reset();composer.render();needsRender=false;
@@ -232,7 +256,7 @@ for(const b of document.querySelectorAll('[data-drive]')){
 car.select(VEHICLES.findIndex(v=>v.name==='City'));
 
 // Deliberately small inspection API for performance checks and future tiles.
-window.forestTile={car,traffic,road,grid:{GRID,HOME_NUMBER,tileNumber,tileCenter},composer,ao,art,applyArt,setQuality,get quality(){return {name:qualityName,mode:qualityMode,scale:renderScale,pixelRatio:renderer.getPixelRatio()};},spec:TILE_SPEC,art:ART,scene,camera,renderer,materials,tile,canopies,refresh:()=>{needsRender=true;renderer.shadowMap.needsUpdate=true;},stats:()=>({drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,footprint:TILE_SPEC.footprint})};
+window.forestTile={car,traffic,district,life,ships,grid:{GRID,HOME_NUMBER,tileNumber,tileCenter},composer,ao,art,applyArt,setQuality,get quality(){return {name:qualityName,mode:qualityMode,scale:renderScale,pixelRatio:renderer.getPixelRatio()};},spec:TILE_SPEC,art:ART,scene,camera,renderer,materials,canopies,refresh:()=>{needsRender=true;renderer.shadowMap.needsUpdate=true;},stats:()=>({drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,footprint:TILE_SPEC.footprint})};
 
 // Development benchmark: runs n full animated frames (breeze, car, shadows,
 // composer) back to back, each synced with a 1 px read so GPU time is included.

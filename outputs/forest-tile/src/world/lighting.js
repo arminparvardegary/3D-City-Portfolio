@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { Sky } from 'three/addons/objects/Sky.js';
 import { THEME } from './theme.js';
 
 // Lighting presets: one object describes the whole look of a time of day, so
@@ -26,11 +26,15 @@ export function createLights(scene){
   return {sky,sun,fill};
 }
 
-// A soft studio environment, prefiltered once: gives paint, glass and leaves a
-// gentle sheen without any texture download.
-export function createEnvironment(renderer){
-  const pmrem=new THREE.PMREMGenerator(renderer);
-  const env=pmrem.fromScene(new RoomEnvironment(),.04).texture;pmrem.dispose();
+// A real sky (physical sky model, sun placed where the scene's sun is),
+// prefiltered once: glass, water and paint reflect a believable daylight sky.
+export function createEnvironment(renderer,L){
+  const sky=new Sky();sky.scale.setScalar(1000);
+  const u=sky.material.uniforms;u.turbidity.value=3.2;u.rayleigh.value=1.4;u.mieCoefficient.value=.004;u.mieDirectionalG.value=.82;
+  const a=THREE.MathUtils.degToRad(L.sun.azimuth),e=THREE.MathUtils.degToRad(L.sun.elevation);
+  u.sunPosition.value.set(Math.sin(a)*Math.cos(e),Math.sin(e),Math.cos(a)*Math.cos(e));
+  const scene=new THREE.Scene();scene.add(sky);
+  const pmrem=new THREE.PMREMGenerator(renderer),env=pmrem.fromScene(scene,0,.1,1000).texture;pmrem.dispose();sky.geometry.dispose();sky.material.dispose();
   return env;
 }
 

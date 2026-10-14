@@ -57,3 +57,13 @@ Across the road from the house (`src/world/park.js`): a stone fountain on a circ
 ## Design system: storybook
 
 All colours, light and surfaces come from one set of tokens in `src/world/theme.js`, so every tile shares the look. Storybook is an original style in the spirit of classic animated films: lush, saturated but soft greens; warm golden sunlight with sky-blue fill light in the shadows; cream walls and coral roofs; a soft sky gradient behind the world with faceted clouds drifting slowly over the map; contact shading tinted violet, never black.
+
+## The harbour district (current world)
+
+One island over all 150 tiles (`src/world/`), surrounded by sea so nobody can drive off:
+- `terrain.js`: continuous lawn, sand beach rim, river channel from a waterfall, grey-brown mountains with snow along the north and west, rock terraces and boulders.
+- `water.js`: animated sea (GPU swells, turquoise shallows, foam at the shore, reflective ripples), the river current, the waterfall, ships and sailboats on offshore routes, boats at the docks.
+- `district.js`: loop road with timber bridges, the park with pond, fountain and glass coworking pavilion, the creative campus, the waterfront boardwalk with docks and cafés, cabins, a lighthouse. Four studios represent the work history (Rush Graphics, Hindra Studio, AAQ Real Estate, Big Uppetite) with roof signs and a pulsing entrance; clicking one opens a card with role, years and place.
+- `life.js`: walkers, people sitting on benches, cyclists, dogs and cats, birds (instanced, a few draw calls). `traffic.js`: slow cars both ways round the loop (one old van with exhaust smoke).
+- `textures.js`: procedural surface detail (grass, asphalt, planks, rock, paving, water ripples) mapped at world scale. `lighting.js`: a physical sky for reflections.
+Tile numbers are hidden; add `?tiles` to the URL to show them.

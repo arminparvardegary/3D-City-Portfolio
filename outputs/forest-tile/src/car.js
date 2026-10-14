@@ -20,8 +20,8 @@ let BOUNDS={x0:-4.95,x1:4.95,z0:-4.95,z1:4.95};
 let dynamicObstacles=()=>[];
 const AMBULANCE=VEHICLES.findIndex(q=>q.name==='Ambulance');
 
-export function createCarControls(parent,m,{prep,index=0}={}){
-  const home={x:ART.car.position[0],z:ART.car.position[2],h:ART.car.rotation};
+export function createCarControls(parent,m,{prep,index=0,home:start=null,y=ART.car.position[1]}={}){
+  const home=start??{x:ART.car.position[0],z:ART.car.position[2],h:ART.car.rotation};
   let x=home.x,z=home.z,h=home.h,v=0,steer=0,a=0,lat=0,pitch=0,head=.55,tail=.45;
   let parts=buildVehicle(index,parent,m,prep),current=index;
   // The footprint as a row of circles along the car.
@@ -50,6 +50,7 @@ export function createCarControls(parent,m,{prep,index=0}={}){
   addEventListener('keyup',e=>{const k=KEYS[e.code];if(k)down.delete(k);});
   addEventListener('blur',()=>down.clear());
   const place=()=>{parts.rig.position.x=x;parts.rig.position.z=z;parts.rig.rotation.y=h;};
+  place();   // at its start position from the very first frame
   const api={
     press(k,on){on?down.add(k):down.delete(k);},
     reset(){x=home.x;z=home.z;h=home.h;v=0;vy=0;yaw=0;steer=0;snapshot();place();},

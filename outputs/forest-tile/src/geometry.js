@@ -52,7 +52,7 @@ export function mergeStatic(group) {
   const buckets = new Map();
   const old = [];
   group.traverse(object => {
-    if (!object.isMesh || object.isInstancedMesh) return;
+    if (!object.isMesh || object.isInstancedMesh || object.userData.keep) return;   // `keep`: stays its own object (clickable, animated)
     const key = object.material.uuid;
     if (!buckets.has(key)) buckets.set(key, {material: object.material, geometries: []});
     let geo = object.geometry.clone().applyMatrix4(inverse.clone().multiply(object.matrixWorld));
