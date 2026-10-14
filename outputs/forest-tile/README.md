@@ -2,6 +2,10 @@
 
 A single minimal isometric 3D tile based on the supplied neighborhood reference: cream house, coral roof, turquoise windows, a smooth flat lawn, the City car, which you drive yourself (W A S D or arrow keys, Space handbrake, R or the Park button to put it back; on touch screens use the on screen pad), and a small Turkish flag beside the entrance.
 
+## The corner block (block.html)
+
+A single low poly block on its own page (`/block.html`, `src/block/`): a two storey corner restaurant with striped awnings, glowing shop windows, a sign, café tables, a rooftop terrace with umbrellas and a flat roof with AC units; a road with three vintage cars and four figures in coats and hats; a utility pole, hydrant, lantern, faceted tree, hedge, scooter and manhole. The base shows a dark asphalt layer over pale stone with a wavy line between them. Flat shaded, pastel, ambient occlusion, a soft shadow on a teal backdrop. Drag turns it a little (it eases back), the wheel zooms.
+
 ## Run
 
 Use Node.js 20.19+ or 22.12+. Run `npm install`, then `npm run dev -- --port 5173`. Open http://127.0.0.1:5173/ . For production, run `npm run build` and `npm run preview`.

@@ -9,6 +9,8 @@ export default defineConfig({
   build: {
     chunkSizeWarningLimit: 700,
     rollupOptions: {
+      // Two pages: the map (index) and the single corner block.
+      input: { main: 'index.html', block: 'block.html' },
       output: {
         manualChunks: { three: ['three'], effects: ['postprocessing', 'n8ao'] },
       },
