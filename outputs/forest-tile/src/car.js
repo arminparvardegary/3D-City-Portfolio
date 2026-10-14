@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { ART } from './config.js';
-import { VEHICLES, buildVehicle, disposeVehicle } from './vehicles.js';
+import { VEHICLES, MAX_STEER, buildVehicle, disposeVehicle } from './vehicles.js';
 
 // You drive it. W / Up = gas, S / Down = brake then reverse, A D / Left Right =
 // steer, Space = handbrake, R = back to the parking space. Simple bicycle
@@ -17,7 +17,7 @@ const AMBULANCE=VEHICLES.findIndex(q=>q.name==='Ambulance');
 
 export function createCarControls(parent,m,{prep,index=0}={}){
   const home={x:ART.car.position[0],z:ART.car.position[2],h:ART.car.rotation};
-  let x=home.x,z=home.z,h=home.h,v=0,steer=0,a=0,lat=0;
+  let x=home.x,z=home.z,h=home.h,v=0,steer=0,a=0,lat=0,pitch=0,roll=0,head=.55,tail=.45;
   let parts=buildVehicle(index,parent,m,prep),current=index;
   // The footprint as a row of circles along the car.
   let probes=[],r=1;
@@ -63,7 +63,8 @@ export function createCarControls(parent,m,{prep,index=0}={}){
   // time in ms. Returns true while anything is moving so the caller can keep
   // rendering and refresh the moving shadow.
   api.update=function(time){
-    const dt=Math.min(.05,last===null?0:(time-last)/1000);last=time;
+    // Clamp the step: never negative (a clock reset) and never huge (a tab coming back).
+    const dt=last===null?0:THREE.MathUtils.clamp((time-last)/1000,0,.05);last=time;
     const gas=down.has('gas'),brake=down.has('brake'),hand=down.has('hand');
     let acc=0;
     if(gas)acc=v<0?5:2.6;
@@ -73,7 +74,7 @@ export function createCarControls(parent,m,{prep,index=0}={}){
     const prev=v;v=THREE.MathUtils.clamp(v+acc*dt,-MAX_REVERSE,MAX_SPEED);
     if(!gas&&!brake&&!hand&&Math.abs(v)<.03)v=0;
     a=dt?(v-prev)/dt:0;
-    const target=((down.has('left')?1:0)-(down.has('right')?1:0))*THREE.MathUtils.lerp(.62,.28,Math.min(1,Math.abs(v)/MAX_SPEED));
+    const target=((down.has('left')?1:0)-(down.has('right')?1:0))*THREE.MathUtils.lerp(MAX_STEER,.28,Math.min(1,Math.abs(v)/MAX_SPEED));
     steer+=(target-steer)*Math.min(1,dt*7);
     const rate=v/parts.wheelbase*Math.tan(steer);
     const nh=h+rate*dt,nx=x+Math.sin(nh)*v*dt,nz=z+Math.cos(nh)*v*dt;
@@ -82,16 +83,20 @@ export function createCarControls(parent,m,{prep,index=0}={}){
     place();
     for(const w of parts.wheels){w.rotation.x+=v*dt/parts.wheelR;if(w.userData.front)w.userData.steer.rotation.y=steer;}
     const moving=Math.abs(v)>.02;
-    parts.car.rotation.x=-THREE.MathUtils.clamp(a*.012,-.035,.035);
-    parts.car.rotation.z=-THREE.MathUtils.clamp(lat*.006,-.04,.04);
-    parts.car.position.y=moving?Math.sin(time*.04)*.0012*Math.min(1,Math.abs(v)):0;
+    // Body pitch and roll ease toward their targets instead of snapping each frame.
+    const ease=Math.min(1,dt*8);
+    pitch+=(-THREE.MathUtils.clamp(a*.012,-.035,.035)-pitch)*ease;
+    roll+=(-THREE.MathUtils.clamp(lat*.006,-.04,.04)-roll)*ease;
+    parts.car.rotation.x=pitch;parts.car.rotation.z=roll;
+    // Lights fade between states so a stop and go never strobes them.
     const braking=brake&&v>.05||hand&&moving||(gas&&v<-.02);
-    m.tailLight.emissiveIntensity=braking?1.9:(v<-.02?1.1:.45);
-    m.headlight.emissiveIntensity=moving?1.35:.55;
+    tail+=((braking?1.9:(v<-.02?1.1:.45))-tail)*Math.min(1,dt*14);
+    head+=((moving?1.35:.55)-head)*Math.min(1,dt*6);
+    m.tailLight.emissiveIntensity=tail;m.headlight.emissiveIntensity=head;
     // The ambulance light bar pulses.
     const flashing=current===AMBULANCE;
     if(flashing)m.siren.emissiveIntensity=.4+1.2*Math.max(0,Math.sin(time*.012));
-    return moving||Math.abs(steer)>.01||flashing;
+    return moving||Math.abs(steer)>.001||Math.abs(pitch)>1e-4||Math.abs(roll)>1e-4||flashing;
   };
   return api;
 }

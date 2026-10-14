@@ -56,6 +56,7 @@ export function createMaterials() {
     carGlass: make('#24303b', { roughness: 0.12, metalness: 0.35, vertexColors: true }),
     carTrim: make('#2b3036', { roughness: 0.7, vertexColors: true }),
     caliper: make('#e0453a', { roughness: 0.5 }),
+    wheelWell: make('#1d2125', { roughness: 0.9, vertexColors: true, side: THREE.BackSide }),
     siren: make('#2f7cf0', { emissive: '#2f7cf0', emissiveIntensity: 0.6 }),
     rubber: make('#242526', { roughness: 0.92 }),
     rim: make('#9a9c9e', { roughness: 0.5, metalness: 0.35 }),

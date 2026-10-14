@@ -74,7 +74,7 @@ const renderTarget=new THREE.WebGLRenderTarget(1,1,{type:THREE.HalfFloatType,sam
 const composer=new EffectComposer(renderer,renderTarget);composer.addPass(new RenderPass(scene,camera));
 const ao=new SSAOPass(scene,camera,1,1,16);ao.kernelRadius=.72;ao.minDistance=.0006;ao.maxDistance=.025;
 composer.addPass(ao);composer.addPass(new OutputPass());
-let zoom=1,breeze=ART.vegetation.breeze,needsRender=true,hidden=document.hidden,lastTime=0,lastShadow=0,noticeTimer;
+let zoom=1,breeze=ART.vegetation.breeze,needsRender=true,hidden=document.hidden,lastTime=0,noticeTimer;
 const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
 if(reducedMotion.matches)breeze=false;
 
@@ -98,8 +98,9 @@ function render(time=0){
     animateTile?.(time);
     for(const canopy of canopies){const phase=canopy.userData.phase;canopy.rotation.z=Math.sin(time*.00065+phase)*ART.vegetation.sway;canopy.rotation.x=Math.cos(time*.00048+phase)*ART.vegetation.sway*.6;}
     needsRender=true;
-    // The breeze is tiny; refreshing shadows at 6 Hz is enough to follow it.
-    if(time-lastShadow>160){renderer.shadowMap.needsUpdate=true;lastShadow=time;}
+    // Shadows follow the swaying canopies on every rendered frame; refreshing
+    // them less often than the scene draws made them visibly step and shimmer.
+    renderer.shadowMap.needsUpdate=true;
   }
   // The car is driven by the visitor, so it keeps running even with the breeze paused.
   if(car.update(time)){needsRender=true;renderer.shadowMap.needsUpdate=true;}

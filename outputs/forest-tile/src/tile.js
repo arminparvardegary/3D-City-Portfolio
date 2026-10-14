@@ -31,7 +31,8 @@ export function buildTile(m){
   box(staticGroup,[2.8,.025,6.55],[2.2,.1325,1.725],m.parking,.004);
   // White edges frame one parking bay; the access end stays open.
   for(const x of [.92,3.48])box(staticGroup,[.045,.006,4.4],[x,.148,.95],m.trim,.001);
-  box(staticGroup,[2.6,.006,.045],[2.2,.148,-1.25],m.trim,.001);
+  // The end line runs between the side lines, so no two line tops overlap in one plane.
+  box(staticGroup,[2.515,.006,.045],[2.2,.148,-1.25],m.trim,.001);
   box(staticGroup,[.76,.09,.12],[2.2,.19,-1.03],m.path,.008);
   // Simple entrance stepping slabs across the lawn.
   for(let i=0;i<5;i++)box(staticGroup,[.89,.025,.43],[-2.03,.1325,1.56+i*.68],m.path,.008);
