@@ -15,9 +15,10 @@ import { STUDIOS } from './district.js';
 const C=THEME.campus,G=TILE.slab,PLINTH=.35;
 const FLOOR=G+PLINTH;   // top of a plinth
 
-// Roads (floor level) and the blocks between them. x: -75..75, z: -45..55.
-export const ROADS={h:[-30,0,30],v:[-45,-15,15,45],half:3};
-const COLS=[[-75,-48],[-42,-18],[-12,12],[18,42],[48,75]],ROWS=[[-45,-33],[-27,-3],[3,27],[33,55]];
+// Roads (floor level) and the blocks between them. A square map: x and z -45..45.
+export const ROADS={h:[-30,0,30],v:[-15,15],half:3};
+const MAP={x0:-45,x1:45,z0:-45,z1:45};
+const COLS=[[-45,-18],[-12,12],[18,45]],ROWS=[[-45,-33],[-27,-3],[3,27],[33,45]];
 // The start: an open plaza where the roads cross at the origin.
 export const PLAZA={x0:-12,x1:12,z0:-9,z1:9};
 
@@ -33,8 +34,8 @@ export function buildCampus({prep}){
   // --- Ground: road strips and raised plinths ---------------------------------
   const roadMat=std(THEME.palette.road,{roughness:.95});
   const strip=(x0,x1,z0,z1)=>{const o=new THREE.Mesh(new THREE.PlaneGeometry(x1-x0,z1-z0).rotateX(-Math.PI/2),roadMat);o.position.set((x0+x1)/2,G+.004,(z0+z1)/2);o.receiveShadow=true;group.add(o);};
-  for(const z of ROADS.h)strip(-75,75,z-ROADS.half,z+ROADS.half);
-  for(const x of ROADS.v)strip(x-ROADS.half,x+ROADS.half,-45,55);
+  for(const z of ROADS.h)strip(MAP.x0,MAP.x1,z-ROADS.half,z+ROADS.half);
+  for(const x of ROADS.v)strip(x-ROADS.half,x+ROADS.half,MAP.z0,MAP.z1);
   strip(PLAZA.x0,PLAZA.x1,PLAZA.z0,PLAZA.z1);
   function plinth(x0,x1,z0,z1){
     const w=x1-x0,d=z1-z0,o=new THREE.Mesh(new RoundedBoxGeometry(w,PLINTH*2,d,2,.3),M.plinth);
@@ -175,36 +176,36 @@ export function buildCampus({prep}){
     return plinth(cut.x0??(x0+(ci===0?edge:inset)),cut.x1??(x1-(ci===COLS.length-1?edge:inset)),cut.z0??(z0+(ri===0?edge:inset)),cut.z1??(z1-(ri===ROWS.length-1?edge:inset)));};
 
   // Hero campus around the start (the composition of the reference model).
-  {const p=block(2,1,{z1:PLAZA.z0-1.6});                 // Work: two towers on a podium
+  {const p=block(1,1,{z1:PLAZA.z0-1.6});                 // Work: two towers on a podium
     const podium=bandBlock(p.x,p.z-1,p.w-2.5,p.d-5,1,{roof:false});
     const t1=finTower(p.x-3.2,p.z-3.2,5.2,4.4,11,{base:podium});B(.08,2.4,.08,p.x-1.6,podium+9,p.z+.4,M.dark);
     finTower(p.x+4.2,p.z-1.6,4.2,4.2,8.4,{base:podium,gap:.32});
     for(let i=0;i<3;i++)B(3.6,.05,.05,p.x+1.4,podium+6.5+i*.5,p.z-1.2+i*.1,M.dark);   // cables between the towers
     beacon(p.x-3.2,p.z-3.2,t1,'Work',{size:1.15});}
-  {const p=block(1,1);                                     // Skills: stepped block, gatehouse, bridge to Work
+  {const p=block(0,1);                                     // Skills: stepped block, gatehouse, bridge to Work
     const t=stepped(p.x-5,p.z+3,8,7.5);beacon(p.x-5.6,p.z+2.4,t,'Skills');
     gate(p.x+6,p.z-4,5.4,3.6);bridge(p.x+8.7,-9,p.z-4,FLOOR+2.2);
     parking(p.x-7,p.z-7.5,3,Math.PI/2);}
-  {const p=block(3,1);                                     // Contact: warehouse, truck, pallets
+  {const p=block(2,1);                                     // Contact: warehouse, truck, pallets
     const t=warehouse(p.x-2,p.z-1,10,13,3.2);beacon(p.x-2,p.z-1,t,'Contact');
     truck(p.x+8,p.z+5,0);truck(p.x+8,p.z-3.5,Math.PI);
     for(let i=0;i<3;i++)for(let k=0;k<2;k++)B(1.1,.5,1.1,p.x+5.5+k*1.3,FLOOR+.25,p.z-10+i*1.3,M.soft);}
-  {const p=block(2,2,{z0:PLAZA.z1+1.6});                  // About: the factory with the name plate
+  {const p=block(1,2,{z0:PLAZA.z1+1.6});                  // About: the factory with the name plate
     const t=factory(p.x-1,p.z-1.5);beacon(p.x-4,p.z-1.5,t,'About',{size:1.1});
     parking(p.x-9,p.z+5.8,4,0);for(let i=0;i<5;i++)B(.5,.6,.5,p.x+8+(i%3)*.7,FLOOR+.3,p.z+5+Math.floor(i/3)*.7,M.soft);}
-  {const p=block(3,2);                                     // Projects: banded block with an annex
+  {const p=block(2,2);                                     // Projects: banded block with an annex
     const t=slabBlock(p.x-2,p.z-2,9,7,4);beacon(p.x-2,p.z-2,t,'Projects');
     slabBlock(p.x+7,p.z+3,4.4,4,1);B(2.2,1.6,.1,p.x+7,FLOOR+.8,p.z+5.05,M.groove);
     parking(p.x-7,p.z+7.5,6,0);}
 
-  // Studio campuses: the places Armin worked.
-  {const p=block(0,1),s=STUDIOS[0];const t=finTower(p.x-4,p.z,6,6,13,{gap:.36});slabBlock(p.x+6,p.z+4,7,5,3);beacon(p.x-4,p.z,t,s.name);parking(p.x+3,p.z-7,4,Math.PI/2);}
-  {const p=block(4,2),s=STUDIOS[1];const t=slabBlock(p.x-3,p.z-1,10,8,5);beacon(p.x-3,p.z-1,t,s.name);shed(p.x+8,p.z+4,6,6);truck(p.x+8,p.z-6,Math.PI/2);}
-  {const p=block(1,2),s=STUDIOS[2];const t=stepped(p.x+2,p.z,9,8);beacon(p.x+1.4,p.z-.6,t,s.name);gate(p.x-7,p.z+5,5,3.4);parking(p.x-8,p.z-6,4,0);}
-  {const p=block(2,3),s=STUDIOS[3];const t=warehouse(p.x+2,p.z,9,10,2.8);beacon(p.x+2,p.z,t,s.name);truck(p.x-7,p.z-2,0);parking(p.x-8,p.z+6,2,Math.PI/2);}
+  // Studio campuses: the places Armin worked (the slim blocks at the north and south edges, and west).
+  {const p=block(0,0),s=STUDIOS[0];const t=finTower(p.x-6,p.z,6,6,13,{gap:.36});slabBlock(p.x+4.5,p.z+.4,8,5,3);beacon(p.x-6,p.z,t,s.name);}
+  {const p=block(2,0),s=STUDIOS[1];const t=slabBlock(p.x-3,p.z,10,6,5);beacon(p.x-3,p.z,t,s.name);truck(p.x+8.5,p.z,0);}
+  {const p=block(0,2),s=STUDIOS[2];const t=stepped(p.x+2,p.z,9,8);beacon(p.x+1.4,p.z-.6,t,s.name);gate(p.x-7,p.z+5,5,3.4);parking(p.x-8,p.z-6,4,0);}
+  {const p=block(0,3),s=STUDIOS[3];const t=warehouse(p.x-3,p.z,9,6,2.6);beacon(p.x-3,p.z,t,s.name);truck(p.x+7,p.z,0);}
 
-  // Quiet blocks: sheds, solar rows, smaller offices and parking.
-  const fill=[[0,0,'solar'],[1,0,'shed'],[2,0,'office'],[3,0,'shed'],[4,0,'solar'],[4,1,'office'],[0,2,'shed'],[0,3,'office'],[1,3,'solar'],[3,3,'office'],[4,3,'shed']];
+  // Quiet blocks: solar rows, an office with parking, sheds.
+  const fill=[[1,0,'solar'],[1,3,'office'],[2,3,'shed']];
   for(const [ci,ri,kind] of fill){
     const p=block(ci,ri);
     if(kind==='solar'){solar(p.x,p.z,p.w-3,p.d-2);}

@@ -6,7 +6,7 @@ import { THEME } from './theme.js';
 // 1..N row by row from the north-west corner (row 1 is the northernmost, -z).
 // The house tile sits at GRID.home and keeps its own content; every other tile
 // is a plain grey block showing its number, ready to be given its own content.
-export const GRID=Object.freeze({cols:15,rows:10,home:{col:7,row:4}});
+export const GRID=Object.freeze({cols:9,rows:9,home:{col:4,row:4}});   // a square map, 81 tiles
 
 export const tileNumber=(col,row)=>row*GRID.cols+col+1;
 export const tileCell=n=>({col:(n-1)%GRID.cols,row:Math.floor((n-1)/GRID.cols)});

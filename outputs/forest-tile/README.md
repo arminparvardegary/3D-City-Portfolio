@@ -38,7 +38,7 @@ Stack: Three.js r180 (vanilla, no React), Vite 7, `postprocessing` 6.39.5 (pmndr
 
 ## The map
 
-150 tiles of 100 x 100 design pixels (15 across, 10 down), numbered 1 to 150 row by row from the north west corner (`src/world/grid.js`). The house is tile 68; every other tile is a plain grey block showing its number, waiting for its own content. Drag to pan, scroll or pinch to zoom; the camera angle never changes and the view follows the car while it drives.
+A square of 81 tiles of 100 x 100 design pixels (9 across, 9 down, 90 x 90 units), numbered 1 to 81 row by row from the north west corner (`src/world/grid.js`); the start plaza is tile 41, in the middle. Add `?tiles` to the URL to see the numbers. Drag to pan, scroll or pinch to zoom; the camera angle never changes and the view follows the car while it drives.
 
 ## Driving
 
@@ -86,4 +86,4 @@ All motion shares `src/motion.js`: one smoothing helper, `damp(a, b, lambda, dt)
 - Camera: a critically damped spring follow with look-ahead along the car's velocity, a slight zoom out at speed and a tiny shake on hard hits (off with reduced motion). Drag pans and wheel or pinch zooms glide to a stop after release.
 - Every constant is in `FEEL` (motion.js) and live in the dev build's Feel panel (bottom left), saved per browser.
 
-The earlier harbour district is kept in git history (commit 3bc1d28); its modules are still in `src/world/` for reuse. Tile numbers show only with `?tiles` in the URL.
+The earlier harbour district is kept in git history (commit 3bc1d28); its modules are still in `src/world/` for reuse. 

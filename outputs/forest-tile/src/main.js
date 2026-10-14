@@ -39,7 +39,7 @@ viewport.appendChild(renderer.domElement);
 
 const scene=new THREE.Scene();
 // Fixed isometric angle. The camera can pan over the map and zoom, but never rotates;
-// it sits far back so the whole 150 tile map fits between the clip planes.
+// it sits far back so the whole map fits between the clip planes.
 const camera=new THREE.OrthographicCamera(-10,10,8,-8,1,400);
 const target=new THREE.Vector3(...ART.camera.target);
 const az=THREE.MathUtils.degToRad(ART.camera.azimuth),el=THREE.MathUtils.degToRad(ART.camera.elevation);
@@ -49,15 +49,15 @@ function placeCamera(){camera.position.copy(target).addScaledVector(viewDir,CAME
 placeCamera();
 
 const art=structuredClone(LIGHTING.storybook);   // the harbour theme (world/theme.js)
-art.fog.enabled=false;   // a 150 tile map: every tile should read the same
+art.fog.enabled=false;   // the whole map: every tile should read the same
 const lights=createLights(scene),{sky,sun,fill}=lights;
 scene.environment=createEnvironment(renderer,art);
 const materials=createMaterials();
 Object.values(materials).forEach(softenShadows);
-// --- The map: 150 numbered tiles, ready for new content -----------------------
+// --- The map: a square of 9 x 9 numbered tiles (81) ------------------------------
 // The numbered tiles show only with ?tiles; normally the playground floor is the map.
-const grid150=buildGrid(softenShadows);if(new URLSearchParams(location.search).has('tiles'))scene.add(grid150.group);
-const bounds=grid150.bounds;
+const tileGrid=buildGrid(softenShadows);if(new URLSearchParams(location.search).has('tiles'))scene.add(tileGrid.group);
+const bounds=tileGrid.bounds;
 document.documentElement.style.setProperty('--sky-top',THEME.sky.top);document.documentElement.style.setProperty('--sky-horizon',THEME.sky.horizon);
 // Your car starts in the middle of the map.
 const car=createCarControls(scene,materials,{prep:softenShadows,index:VEHICLES.findIndex(v=>v.name==='City'),home:{x:0,z:0,h:Math.PI/2}});
