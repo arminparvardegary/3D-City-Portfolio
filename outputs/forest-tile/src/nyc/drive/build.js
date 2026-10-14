@@ -95,7 +95,11 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
   // Inside curb radius for a block corner at (x, z): 6 where it faces a curve, else 3.
   const cornerR=(x,z)=>corners.some(n=>Math.abs(x-(n.x+HALF*n.s[0]))<.01&&Math.abs(z-(n.z+HALF*n.s[1]))<.01)?R-HALF:3;
   const yellow=mat('#e3bd3a',{roughness:.6}),white=mat('#ecebe6',{roughness:.6}),iron=mat('#2b2d31',{roughness:.5,metalness:.6}),tactile=mat('#d9a92e',{roughness:.7});
-  const XW=HALF+2.3,BAR=HALF+3.9,parking=[];
+  // The crosswalk starts where the curb's corner curve ends, so its tactile pads
+  // sit on the straight sidewalk; the stop bar is just before it.
+  const XW=HALF+4,BAR=HALF+5.6,parking=[];
+  // Tactile pads only on a real sidewalk (not on Experience Row's street level lot).
+  const BL=blocks(),onWalk=(x,z)=>{const b=BL.find(b=>x>b.x0&&x<b.x1&&z>b.z0&&z<b.z1);return !b||!reserved.has(b.i+','+b.j)||pave.has(b.i+','+b.j);};
   const seen=new Set();
   for(const e of edges){
     if(e.kind!=='road')continue;const k=[e.a.k,e.b.k].sort().join('|');if(seen.has(k))continue;seen.add(k);
@@ -104,8 +108,8 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
     const cx=e.a.x+fx*(s0+s1)/2,cz=e.a.z+fz*(s0+s1)/2,ang=Math.atan2(fx,fz);
     for(const o of [-.14,.14])add(new THREE.BoxGeometry(.12,.02,inner).rotateY(ang),yellow,[cx+rx*o,G+.005,cz+rz*o]);
     for(const sd of [-1,1])add(new THREE.BoxGeometry(.12,.02,inner).rotateY(ang),white,[cx+rx*sd*EDGE,G+.005,cz+rz*sd*EDGE]);
-    // A manhole or two in the travel lanes.
-    for(let m=0;m<2;m++){const t=s0+inner*(.3+.4*rand()),sd=rand()<.5?-1:1;add(new THREE.CylinderGeometry(.45,.45,.03,20),iron,[e.a.x+fx*t+rx*sd*LANE*.9,G+.005,e.a.z+fz*t+rz*sd*LANE*.9]);}
+    // A manhole mid block in a travel lane (lane arrows stop well before the middle).
+    for(let m=0;m<1;m++){const t=len/2+(rand()-.5)*1.5,sd=rand()<.5?-1:1;add(new THREE.CylinderGeometry(.45,.45,.03,20),iron,[e.a.x+fx*t+rx*sd*LANE*.9,G+.005,e.a.z+fz*t+rz*sd*LANE*.9]);}
     // Parking along both curbs (not on Armin's street, FDR Drive or the edge roads).
     const edgeRoad=Math.abs(dx)<1&&(e.a.x===AV[0]||e.a.x===AV.at(-1))||Math.abs(dz)<1&&(e.a.z===ST[0]||e.a.z===ST.at(-1));
     if(!(Math.abs(dz)<1&&e.a.z===ST[5])&&!edgeRoad)for(const sd of [-1,1])for(let t=s0+3;t<s1-3;t+=6.2)if(rand()<.55)
@@ -125,7 +129,7 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
       // Continental crosswalk across this road, just past the curb return.
       for(let k=-5;k<=5;k++)add(new THREE.BoxGeometry(.6,.02,2.4).rotateY(ang),white,[n.x+fx*XW+rx*k*1.1,G+.006,n.z+fz*XW+rz*k*1.1]);
       // Curb ramps with tactile pads at both ends of the crosswalk.
-      for(const sd of [-1,1])add(new THREE.BoxGeometry(.9,.03,2).rotateY(ang),tactile,[n.x+fx*XW+rx*sd*(HALF+.55),G+CURB+.005,n.z+fz*XW+rz*sd*(HALF+.55)]);
+      for(const sd of [-1,1])if(onWalk(n.x+fx*XW+rx*sd*(HALF+.82),n.z+fz*XW+rz*sd*(HALF+.82)))add(new THREE.BoxGeometry(.9,.03,1.6).rotateY(ang),tactile,[n.x+fx*XW+rx*sd*(HALF+.82),G+CURB+.005,n.z+fz*XW+rz*sd*(HALF+.82)]);
       if(e.kind!=='road')continue;
       // Traffic coming in along this road drives toward the node (direction -f); its lane is on the -r side.
       add(new THREE.BoxGeometry(HALF-.4,.02,.45).rotateY(ang),white,[n.x+fx*BAR-rx*(HALF/2),G+.006,n.z+fz*BAR-rz*(HALF/2)]);

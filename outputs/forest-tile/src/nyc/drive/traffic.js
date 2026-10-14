@@ -10,7 +10,7 @@ import { dampAngle } from '../../motion.js';
 // crossing, slows for the turn and follows a smooth curve through it, waits at
 // red lights and keeps its distance from the car ahead (yours too). Cars never
 // appear or vanish.
-const STOP=HALF+4.4,ACCEL=3,BRAKE=7.5,TURN_SPEED=3.6;
+const STOP=HALF+6.1,ACCEL=3,BRAKE=7.5,TURN_SPEED=3.6;
 const MIX=['sedan','sedan','taxi','taxi','taxi','suv','suv','hatch','hatch','city','wagon','van','pickup','pickup','coupe','sports','police','sedan','suv','taxi'];
 
 export function createTraffic({phase,player,prep,count=MIX.length,parked=[],seed=3}){

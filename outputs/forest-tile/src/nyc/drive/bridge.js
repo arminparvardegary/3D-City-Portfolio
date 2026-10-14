@@ -34,9 +34,13 @@ export function buildBridge({prep}={}){
     }
   }
   // Viaducts: stone arches where the road is high, solid fill where it is low.
-  const viaduct=(xa,xb)=>{for(let x=xa;x<xb;x+=6){const x1=Math.min(x+6,xb),H=Math.min(y(x),y(x1))-.6-G;if(H<=.2)continue;
-    if(H<3.6){box(x1-x+.02,H,W,(x+x1)/2,G,Z,stoneM);continue;}
-    const r=(x1-x-1.2)/2,sy=H-1.4-r,s=new THREE.Shape();s.moveTo(x,H);s.lineTo(x1,H);s.lineTo(x1,0);s.lineTo(x1-.6,0);s.lineTo(x1-.6,sy);s.absarc((x+x1)/2,sy,r,0,Math.PI,false);s.lineTo(x+.6,0);s.lineTo(x,0);s.closePath();
+  // The top of every piece follows the road above it exactly (the road climbs), so
+  // the deck always rests on the stone with no step or gap.
+  const viaduct=(xa,xb)=>{for(let x=xa;x<xb-1e-6;x+=6){const x1=Math.min(x+6,xb),Ha=y(x)-.6-G,Hb=y(x1)-.6-G,H=Math.min(Ha,Hb);if(Math.max(Ha,Hb)<=.05)continue;
+    const s=new THREE.Shape(),ha=Math.max(Ha,0),hb=Math.max(Hb,0);
+    if(H>=3.6){const r=(x1-x-1.2)/2,sy=H-1.4-r;s.moveTo(x,ha);s.lineTo(x1,hb);s.lineTo(x1,0);s.lineTo(x1-.6,0);s.lineTo(x1-.6,sy);s.absarc((x+x1)/2,sy,r,0,Math.PI,false);s.lineTo(x+.6,0);s.lineTo(x,0);}
+    else{s.moveTo(x,0);s.lineTo(x1,0);s.lineTo(x1,hb);s.lineTo(x,ha);}
+    s.closePath();
     add(new THREE.ExtrudeGeometry(s,{depth:W,bevelEnabled:false,curveSegments:16}).translate(0,0,-W/2),stoneM,[0,G,Z]);}};
   viaduct(landM+1,fdr[0]-.5);viaduct(fdr[1]+.5,54);viaduct(82,brr[0]-.5);viaduct(brr[1]+.5,landB-1);
   // Steel spans over FDR Drive and the Brooklyn riverside road: girders on stone piers.
