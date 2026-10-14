@@ -5,7 +5,6 @@ import { buildCity } from './drive/build.js';
 import { buildBridge } from './drive/bridge.js';
 import { createTraffic } from './drive/traffic.js';
 import { G,CURB,HALF,LANE,ST,AV,MAN,BKN,NS,BRIDGE,blocks,bridgeHeight,onBridgeBand,onLand } from './drive/layout.js';
-import { VEHICLES, buildVehicle } from '../vehicles.js';
 
 // New York as the world you drive (world units, about 1.5 m each). The plan is
 // in drive/layout.js: Manhattan, the East River, a strip of Brooklyn, water all
@@ -28,10 +27,8 @@ export function buildNYCWorld({prep,materials,player}){
   group.add(district.root);
   const bridge=buildBridge({prep});group.add(bridge.root);
   for(const o of [city.root,district.root])o.traverse(m=>{if(m.isMesh)[].concat(m.material).forEach(x=>prep?.(x));});
-  // Taxis: instances of the realistic taxi.
-  const holder=new THREE.Group(),taxiParts=buildVehicle(VEHICLES.findIndex(v=>v.name==='Sport Taxi'),holder,materials,prep);
-  taxiParts.rig.position.set(0,0,0);taxiParts.rig.rotation.set(0,0,0);
-  const traffic=createTraffic({template:holder,count:9,phase:city.phase,player});group.add(traffic.root);
+  // Traffic: about twenty cars of every type, each with its own speed.
+  const traffic=createTraffic({phase:city.phase,player,prep});group.add(traffic.root);
   // People on every sidewalk loop, including Armin's blocks.
   const people=createPeople({loops:[...city.loops,...district.solids.map(([cx,cz,hw,hd])=>({x0:cx-hw+1,x1:cx+hw-1,z0:cz-hd+1,z1:cz+hd-1,y:top}))],perLoop:3});
   group.add(people.root);

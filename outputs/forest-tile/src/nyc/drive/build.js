@@ -64,7 +64,8 @@ export function buildCity({reserved=new Set(),fills=[]}={}){
   // --- Traffic lights: at every crossing with three or more roads ---------------------
   // One head per road coming in, on the corner to its right, facing the traffic.
   // Roads along z and along x take turns: 20 s cycle.
-  const LIGHT={z:{},x:{}};for(const a of ['z','x'])for(const [c,hex] of [['r','#ff3b30'],['y','#ffc93a'],['g','#33e07a']])LIGHT[a][c]=new THREE.MeshStandardMaterial({color:hex,emissive:hex,emissiveIntensity:.05});
+  // Lenses are dark glass; only the light that is on glows.
+  const LIGHT={z:{},x:{}};for(const a of ['z','x'])for(const [c,hex] of [['r','#ff2a1f'],['y','#ffb51f'],['g','#21e06e']])LIGHT[a][c]=new THREE.MeshStandardMaterial({color:'#1b1d20',emissive:hex,emissiveIntensity:0,roughness:.25});
   const lights=[];
   for(const n of nodes){if(n.degree<3)continue;lights.push(n);
     for(const e of n.out){
@@ -190,5 +191,5 @@ export function buildCity({reserved=new Set(),fills=[]}={}){
   root.traverse(o=>{if(o.isMesh){o.castShadow=o.receiveShadow=true;}});
   let lightTime=0;
   return {root,solids,occluders,loops,phase:()=>phase(lightTime),
-    update(dt){lightTime+=dt;const ph=phase(lightTime);for(const a of ['z','x'])for(const c of ['r','y','g'])LIGHT[a][c].emissiveIntensity=ph[a]===c?2:.05;}};
+    update(dt){lightTime+=dt;const ph=phase(lightTime);for(const a of ['z','x'])for(const c of ['r','y','g'])LIGHT[a][c].emissiveIntensity=ph[a]===c?3.2:0;}};
 }

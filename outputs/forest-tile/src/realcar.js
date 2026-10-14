@@ -11,13 +11,13 @@ import { mesh, mergeStatic } from './geometry.js';
 // plates. Units are tile units (about 1.5 m each); the nose points to +z.
 
 // Smooth interpolation through a table [[z, value], ...].
-const curve=table=>z=>{if(z<=table[0][0])return table[0][1];for(let i=1;i<table.length;i++){const [z1,v1]=table[i];if(z<=z1){const [z0,v0]=table[i-1],t=(z-z0)/(z1-z0),s=t*t*(3-2*t);return v0+(v1-v0)*s;}}return table.at(-1)[1];};
+export const curve=table=>z=>{if(z<=table[0][0])return table[0][1];for(let i=1;i<table.length;i++){const [z1,v1]=table[i];if(z<=z1){const [z0,v0]=table[i-1],t=(z-z0)/(z1-z0),s=t*t*(3-2*t);return v0+(v1-v0)*s;}}return table.at(-1)[1];};
 // Superellipse: a rounded rectangle point at angle a (n: squareness).
-const se=(a,n)=>{const c=Math.cos(a),s=Math.sin(a);return [Math.sign(c)*Math.abs(c)**(2/n),Math.sign(s)*Math.abs(s)**(2/n)];};
+export const se=(a,n)=>{const c=Math.cos(a),s=Math.sin(a);return [Math.sign(c)*Math.abs(c)**(2/n),Math.sign(s)*Math.abs(s)**(2/n)];};
 
 // Loft: rings of points (same count, counter clockwise seen from the front) at
 // increasing z, joined into one smooth surface; ends closed with a fan.
-function loft(rings,{caps=true,closed=true}={}){
+export function loft(rings,{caps=true,closed=true}={}){
   const M=rings[0].pts.length,pos=[],idx=[];
   for(const r of rings)for(const [x,y] of r.pts)pos.push(x,y,r.z);
   for(let k=0;k<rings.length-1;k++)for(let j=0;j<(closed?M:M-1);j++){const a=k*M+j,b=k*M+(j+1)%M,c=(k+1)*M+j,d=(k+1)*M+(j+1)%M;idx.push(a,b,c,b,d,c);}

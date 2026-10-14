@@ -28,7 +28,7 @@ export function spring(s,goal,time,dt){
 }
 
 export const FEEL={
-  car:{maxSpeed:9.6,maxReverse:3,engine:8.4,brake:12,coast:1.4,drag:.03,grip:12,steerIn:6,steerOut:9,handGrip:.35,handSwing:1.6},
+  car:{maxSpeed:9.6,maxReverse:3,engine:8.4,brake:12,coast:1.4,drag:.03,grip:12,steerIn:4.2,steerOut:6.5,handGrip:.35,handSwing:1.6},
   // Body on springs: stiffness (1/s²) and damping (1/s). Damping under 2·√stiffness
   // gives a small, weighty overshoot.
   suspension:{stiffness:85,damping:10,pitch:.0065,roll:.005,maxPitch:.055,maxRoll:.065,bump:.06},

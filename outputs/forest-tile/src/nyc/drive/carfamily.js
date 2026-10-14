@@ -1,0 +1,104 @@
+import * as THREE from 'three';
+import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { curve, se, loft } from '../../realcar.js';
+
+// A family of realistic cars for the traffic: one generator, many bodies. Each
+// type has its own proportions (length, width, ride height, cabin and roof
+// line), wheels and details (a taxi sign, a police light bar, a pickup bed),
+// its own colours and its own driving speed. Parts are grouped by material:
+// paint (tinted per car), glass, dark trim and tyres, bright metal, white and
+// red lamps (and blue for the police). Every car of every type is drawn with one
+// BatchedMesh per material: a handful of draw calls for all the traffic.
+// Units are world units (the car is about 3.7 long); the nose points to +z.
+
+// type: length, width, wheel radius, wheelbase, body height scale, lift,
+// cabin [rear base, roof rear, roof front, windscreen base], roof height, speed, colours.
+export const TYPES={
+  sports:{L:3.7,W:1.62,r:.33,wb:2.42,hs:1,lift:0,cab:[-1.12,-.72,.08,.66],roof:1.3,speed:8.8,colors:['#b5121b','#f2f2f0','#1d2a44','#f5a623']},
+  coupe:{L:3.8,W:1.64,r:.33,wb:2.4,hs:.97,lift:0,cab:[-1.0,-.55,.1,.6],roof:1.22,speed:8.2,colors:['#2e5aa8','#e8e6e1','#3a3d42','#8a1c2b']},
+  sedan:{L:4.0,W:1.66,r:.32,wb:2.5,hs:1,lift:0,cab:[-1.35,-.85,.2,.75],roof:1.38,speed:6.8,colors:['#c7cbd1','#24272c','#5b6d80','#7a1e22','#e8e6e1']},
+  hatch:{L:3.3,W:1.6,r:.3,wb:2.15,hs:1,lift:0,cab:[-1.5,-1.38,.1,.55],roof:1.4,speed:6.3,colors:['#d94f3d','#f0f0ec','#3c7d6b','#e3c34a']},
+  city:{L:3.0,W:1.52,r:.28,wb:1.95,hs:1,lift:0,cab:[-1.32,-1.18,.05,.45],roof:1.42,speed:5.6,colors:['#8fd0c3','#f2b6c6','#f6f5ef','#ffd86b']},
+  wagon:{L:4.1,W:1.66,r:.32,wb:2.6,hs:1,lift:0,cab:[-1.92,-1.78,.2,.75],roof:1.38,speed:6.3,colors:['#6b7a5a','#c7cbd1','#2f3b52']},
+  suv:{L:4.1,W:1.78,r:.38,wb:2.55,hs:1.12,lift:.14,cab:[-1.92,-1.76,.35,.85],roof:1.8,speed:6.5,colors:['#1f2226','#f4f4f2','#6e7680','#304a3a','#5c2a2a']},
+  van:{L:4.3,W:1.8,r:.34,wb:2.7,hs:1.1,lift:.1,cab:[-2.02,-1.92,1.0,1.5],roof:1.95,speed:5.2,colors:['#f4f4f2','#d9dde2','#2e5aa8']},
+  pickup:{L:4.4,W:1.8,r:.38,wb:2.8,hs:1.15,lift:.16,cab:[-.42,-.3,.45,.95],roof:1.78,speed:5.9,colors:['#8a1c2b','#1f2226','#c7cbd1','#3a5f8a'],bed:true},
+  taxi:{L:4.0,W:1.66,r:.32,wb:2.5,hs:1,lift:0,cab:[-1.35,-.85,.2,.75],roof:1.38,speed:6.9,colors:['#f5bf0a'],taxi:true},
+  police:{L:4.0,W:1.66,r:.32,wb:2.5,hs:1,lift:0,cab:[-1.35,-.85,.2,.75],roof:1.38,speed:7.4,colors:['#f6f6f4'],police:true},
+};
+const PARTS=['paint','glass','dark','metal','lampW','lampR','lampB','sign'];
+
+// Geometries of one type, grouped by part, in car space (ground at y = 0).
+function typeGeometry(T){
+  const out=Object.fromEntries(PARTS.map(p=>[p,[]])),add=(p,g,[x=0,y=0,z=0]=[],[rx=0,ry=0,rz=0]=[])=>{g=g.index?g.toNonIndexed():g;if(p!=='sign')g.deleteAttribute('uv');
+    g.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(x,y,z),new THREE.Quaternion().setFromEuler(new THREE.Euler(rx,ry,rz)),new THREE.Vector3(1,1,1)));out[p].push(g);};
+  const {L,W,r,wb,hs,lift}=T,zr=-L/2,zf=L/2,az=[wb/2,-wb/2],R=r+.07,k=L/3.7;
+  const shoulder=curve([[zr,(.66*hs)+lift],[zr+.18*k,.82*hs+lift],[zr+.6*k,.88*hs+lift],[.25*k,.88*hs+lift],[.62*k,.86*hs+lift],[zf-.45*k,.76*hs+lift],[zf-.08*k,.66*hs+lift],[zf,.56*hs+lift]]);
+  const half=curve([[zr,W*.37],[zr+.25*k,W*.47],[zr+.8*k,W*.5],[0,W/2],[zf-.7*k,W*.49],[zf-.2*k,W*.44],[zf,W*.35]]);
+  const floor=z=>{let y=.2+lift;for(const a of az){const d=Math.abs(z-a);if(d<R)y=Math.max(y,r+Math.sqrt(R*R-d*d)-.02);}return y;};
+  // Body.
+  const rings=[];for(let i=0;i<=36;i++){const z=zr+(zf-zr)*i/36,yb=floor(z),yt=Math.max(yb+.1,shoulder(z)),hw=half(z),yc=(yb+yt)/2,hh=(yt-yb)/2,pts=[];
+    for(let j=0;j<24;j++){const [sx,sy]=se(j/24*Math.PI*2,4.2);pts.push([sx*hw,yc+sy*hh]);}rings.push({z,pts});}
+  add('paint',loft(rings));
+  // Cabin glass and painted roof.
+  const [c0,rr,rf,c1]=T.cab,base0=shoulder(c0)-.05,base1=shoulder(c1)-.05;
+  const roofY=curve([[c0,base0],[rr,T.roof+lift*.5],[(rr+rf)/2,T.roof+lift*.5+.02],[rf,T.roof+lift*.5],[c1,base1]]);
+  const cab=[],roofRings=[];for(let i=0;i<=20;i++){const z=c0+(c1-c0)*i/20,base=shoulder(z)-.05,top=Math.max(base+.02,roofY(z)),wb2=half(z)-.11,wt=wb2-.17,yc=(base+top)/2,hh=(top-base)/2,pts=[],rp=[];
+    for(let j=0;j<20;j++){const [sx,sy]=se(j/20*Math.PI*2,3.6),y=yc+sy*hh,v=Math.max(0,(y-base)/(top-base)),x=sx*(wb2+(wt-wb2)*v);pts.push([x,y]);rp.push([x*1.012,y+.008]);}
+    cab.push({z,pts});roofRings.push({z,pts:rp});}
+  add('glass',loft(cab));
+  {const keep=j=>{const a=j/20*Math.PI*2;return a>Math.PI*.2&&a<Math.PI*.8;};add('paint',loft(roofRings.slice(4,17).map(rg=>({z:rg.z,pts:rg.pts.filter((_,j)=>keep(j))})),{caps:false,closed:false}));}
+  // Lamps, grille, bumpers.
+  const fy=shoulder(zf-.2)-.12,ry=shoulder(zr+.15)-.08;
+  for(const s of [-1,1]){add('lampW',new RoundedBoxGeometry(.36,.09,.12,2,.03),[s*W*.3,fy,zf-.14],[-.2,s*.3,0]);add('lampR',new RoundedBoxGeometry(.32,.1,.1,2,.03),[s*W*.3,ry,zr+.1]);}
+  add('lampR',new THREE.BoxGeometry(W*.55,.04,.04),[0,ry+.02,zr+.1]);
+  add('dark',new RoundedBoxGeometry(W*.38,.16+lift*.5,.1,2,.04),[0,.48+lift,zf-.02]);
+  add('dark',new THREE.BoxGeometry(W*.75,.14,.14),[0,.28+lift,zr+.06]);add('dark',new THREE.BoxGeometry(W*.75,.05,.14),[0,.24+lift,zf-.02]);
+  // Mirrors and sills.
+  for(const s of [-1,1]){add('paint',new RoundedBoxGeometry(.18,.1,.12,2,.04),[s*(half(c1-.15)+.1),shoulder(c1-.15)+.1,c1-.18]);add('dark',new THREE.BoxGeometry(.04,.08,wb-.9),[s*(half(0)-.02),.24+lift,0]);}
+  // Wheels: rounded tyres and a bright rim face.
+  const tyre=new THREE.CylinderGeometry(r,r,.26,18).rotateZ(Math.PI/2),rim=new THREE.CylinderGeometry(r*.64,r*.6,.03,16).rotateZ(Math.PI/2),hub=new THREE.CylinderGeometry(r*.14,r*.14,.04,10).rotateZ(Math.PI/2);
+  const track=W/2-.17;for(const z of az)for(const s of [-1,1]){add('dark',tyre.clone(),[s*track,r,z]);add('metal',rim.clone(),[s*(track+.12),r,z]);add('dark',hub.clone(),[s*(track+.135),r,z]);
+    for(let i=0;i<6;i++){const a=i/6*Math.PI*2;add('dark',new THREE.BoxGeometry(.02,r*.42,.05),[s*(track+.14),r+Math.sin(a)*r*.32,z+Math.cos(a)*r*.32],[Math.PI/2-a,0,0]);}}
+  // Extras.
+  if(T.bed){const bz0=zr+.1,bz1=c0-.06,by=shoulder(-1)+.02;for(const s of [-1,1])add('paint',new THREE.BoxGeometry(.08,.42,bz1-bz0),[s*(W/2-.06),by+.1,(bz0+bz1)/2]);add('paint',new THREE.BoxGeometry(W-.1,.42,.08),[0,by+.1,bz0]);add('dark',new THREE.BoxGeometry(W-.16,.04,bz1-bz0),[0,by-.08,(bz0+bz1)/2]);}
+  if(T.taxi){add('sign',new RoundedBoxGeometry(.56,.17,.24,2,.05),[0,T.roof+.08,-.15]);for(const s of [-1,1])for(let i=0;i<14;i++){const z=-1+i*.1;if(i%2)add('dark',new THREE.BoxGeometry(.006,.05,.1),[s*(half(z)+.004),.64,z]);}}
+  if(T.police){add('dark',new THREE.BoxGeometry(.9,.09,.24),[0,T.roof+.04,-.15]);add('lampR',new THREE.BoxGeometry(.38,.08,.2),[-.22,T.roof+.12,-.15]);add('lampB',new THREE.BoxGeometry(.38,.08,.2),[.22,T.roof+.12,-.15]);
+    for(const s of [-1,1])add('dark',new THREE.BoxGeometry(.01,.36,1.6),[s*(half(-.3)+.005),.6,-.3]);}
+  const merged={};for(const p of PARTS)if(out[p].length)merged[p]=mergeVertices(mergeGeometries(out[p],false));
+  return merged;
+}
+
+// Materials shared by every car (paint is white: each car gets its own colour).
+export function familyMaterials(prep){
+  const P=m=>{prep?.(m);return m;};
+  const sign=(()=>{const c=document.createElement('canvas');c.width=256;c.height=96;const g=c.getContext('2d');g.fillStyle='#fff8d6';g.fillRect(0,0,256,96);g.fillStyle='#1d1d1f';g.font='800 56px Arial';g.textAlign='center';g.textBaseline='middle';g.fillText('TAXI',128,52);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
+  return {
+    paint:P(new THREE.MeshPhysicalMaterial({color:'#ffffff',metalness:.5,roughness:.32,clearcoat:1,clearcoatRoughness:.07,envMapIntensity:1.3})),
+    glass:P(new THREE.MeshPhysicalMaterial({color:'#0c1218',metalness:.2,roughness:.05,clearcoat:1,envMapIntensity:1.6})),
+    dark:P(new THREE.MeshStandardMaterial({color:'#15171a',roughness:.6})),metal:P(new THREE.MeshStandardMaterial({color:'#c4c8ce',metalness:.9,roughness:.25,envMapIntensity:1.4})),
+    lampW:new THREE.MeshBasicMaterial({color:'#f2f6ff'}),lampR:new THREE.MeshBasicMaterial({color:'#e8261c'}),lampB:new THREE.MeshBasicMaterial({color:'#2a6cff'}),
+    sign:P(new THREE.MeshStandardMaterial({map:sign,emissive:'#fff2b0',emissiveIntensity:.3,emissiveMap:sign})),
+  };
+}
+
+// One BatchedMesh per material holding every type; add(type, colour) places a car.
+export function createFleet({cars,prep}){
+  const mats=familyMaterials(prep),geos={};for(const [name,T] of Object.entries(TYPES))geos[name]=typeGeometry(T);
+  const root=new THREE.Group(),batches={},ids={};
+  for(const p of PARTS){
+    const used=cars.filter(c=>geos[c.type][p]);if(!used.length)continue;
+    let verts=0,idx=0;const types=[...new Set(used.map(c=>c.type))];for(const t of types){const g=geos[t][p];verts+=g.attributes.position.count;idx+=g.index.count;}
+    const bm=new THREE.BatchedMesh(used.length,verts,idx,mats[p]);bm.castShadow=bm.receiveShadow=p!=='lampW'&&p!=='lampR'&&p!=='lampB';
+    const gid={};for(const t of types)gid[t]=bm.addGeometry(geos[t][p]);
+    ids[p]=cars.map(c=>geos[c.type][p]?bm.addInstance(gid[c.type]):null);
+    if(p==='paint')cars.forEach((c,i)=>bm.setColorAt(ids[p][i],new THREE.Color(c.color)));
+    batches[p]=bm;root.add(bm);
+  }
+  const m4=new THREE.Matrix4(),q=new THREE.Quaternion(),v=new THREE.Vector3(),one=new THREE.Vector3(1,1,1),up=new THREE.Vector3(0,1,0);
+  return {root,
+    // Place car i at (x, y, z) facing heading h.
+    set(i,x,y,z,h){m4.compose(v.set(x,y,z),q.setFromAxisAngle(up,h),one);for(const p in batches){const id=ids[p][i];if(id!==null)batches[p].setMatrixAt(id,m4);}},
+  };
+}

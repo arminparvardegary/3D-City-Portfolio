@@ -139,7 +139,7 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
     let yawWant=v/parts.wheelbase*Math.tan(steer);
     const cap=grip/Math.max(speed,.6);yawWant=THREE.MathUtils.clamp(yawWant,-cap,cap);
     if(hand&&speed>1.2)yawWant*=C.handSwing;                // the tail swings round when the rear locks
-    yaw=damp(yaw,yawWant,hand?5:12,dt);
+    yaw=damp(yaw,yawWant,hand?5:9,dt);   // turns build up smoothly
     // Sideways slip: decays fast with grip, lingers while the handbrake is on.
     vy+=-yaw*v*dt*(hand?.55:.08);vy=damp(vy,0,hand?1.6:14,dt);
     const nh=h+yaw*dt,fx=Math.sin(nh),fz=Math.cos(nh);
