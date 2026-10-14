@@ -2,23 +2,48 @@ import * as THREE from 'three';
 import { ART } from './config.js';
 import { box, mesh, tint, mergeStatic } from './geometry.js';
 
-// A clean little car in the style of the tile: one soft painted body, a tinted
-// glass cabin under a painted roof, dark bumpers and wheel arches, simple lamps.
+// A clean sports coupe in the style of the tile: a low sculpted body with a long
+// hood and a ducktail, a fastback glass cabin set back, wide wheels with red
+// calipers, slim LED lamps, black splitter, skirts and diffuser.
 // Units are tile units (1 = 10 design pixels). Nose points to +z.
-const L=3.6,W=1.6,WHEEL_R=.3,WHEEL_Z=1.15,TRACK=.7;
+const L=3.9,W=1.72,WHEEL_R=.34,WHEEL_Z=1.22,TRACK=.75;
 
-// Side profile of the cabin, extruded across the car with soft bevelled edges.
-function cabinGeometry(width){
-  const s=new THREE.Shape();
-  s.moveTo(.74,.76);s.lineTo(.2,1.22);s.quadraticCurveTo(.12,1.29,0,1.29);
-  s.lineTo(-.72,1.29);s.quadraticCurveTo(-.84,1.29,-.92,1.21);s.lineTo(-1.3,.76);s.closePath();
-  const bevel=.05,g=new THREE.ExtrudeGeometry(s,{depth:width-bevel*2,bevelEnabled:true,bevelThickness:bevel,bevelSize:bevel,bevelSegments:4,curveSegments:10});
+// A side profile ([z, y] path) extruded across the car with soft bevelled edges.
+function profile(draw,width,bevel){
+  const s=new THREE.Shape();draw(s);
+  const g=new THREE.ExtrudeGeometry(s,{depth:width-bevel*2,bevelEnabled:true,bevelThickness:bevel,bevelSize:bevel*.9,bevelSegments:6,curveSegments:16});
   return tint(g.rotateY(-Math.PI/2).translate(width/2-bevel,0,0));
 }
-// A slanted pillar from a to b ([z, y]) on both sides.
-function pillar(parent,a,b,m){
-  const dz=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dz,dy);
-  for(const sx of [-1,1])box(parent,[.07,len,.09],[sx*.715,(a[1]+b[1])/2,(a[0]+b[0])/2],m.carBody,.03,[Math.atan2(dz,dy),0,0]);
+const bodyShape=s=>{
+  s.moveTo(1.86,.27);                                   // under the nose
+  s.quadraticCurveTo(1.98,.29,1.97,.44);                // rounded nose
+  s.quadraticCurveTo(1.95,.55,1.72,.58);                // nose top
+  s.lineTo(.62,.71);                                    // long hood to the cowl
+  s.lineTo(-1.5,.77);                                   // belt line
+  s.quadraticCurveTo(-1.86,.79,-1.9,.8);                // ducktail lip
+  s.lineTo(-1.95,.62);                                  // tail
+  s.quadraticCurveTo(-1.97,.34,-1.82,.28);              // rear bumper
+  s.closePath();
+};
+const cabinShape=s=>{
+  s.moveTo(.62,.66);
+  s.quadraticCurveTo(.2,.98,-.12,1.07);                 // raked windscreen into the roof
+  s.quadraticCurveTo(-.4,1.11,-.68,1.04);               // roof
+  s.quadraticCurveTo(-1.2,.9,-1.62,.72);                // fastback
+  s.closePath();
+};
+
+// Ray casting onto the bare body places every detail exactly on its surface.
+function surface(geometry){
+  const probe=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({side:THREE.DoubleSide}));probe.updateMatrixWorld(true);
+  const ray=new THREE.Raycaster(),o=new THREE.Vector3(),d=new THREE.Vector3();
+  const cast=off=>{ray.set(o,d);const h=ray.intersectObject(probe)[0];return h?h.point.addScaledVector(d,-off).toArray():[0,-9,0];};
+  return {
+    front:(x,y,off=0)=>{o.set(x,y,6);d.set(0,0,-1);return cast(off);},
+    rear:(x,y,off=0)=>{o.set(x,y,-6);d.set(0,0,1);return cast(off);},
+    side:(z,y,off=0,sx=1)=>{o.set(sx*3,y,z);d.set(-sx,0,0);return cast(off);},
+    top:(x,z,off=0)=>{o.set(x,6,z);d.set(0,-1,0);return cast(off);},
+  };
 }
 
 export function buildCar(parent,m){
@@ -27,37 +52,45 @@ export function buildCar(parent,m){
   // hang off the rig so they stay planted and only spin and steer.
   const car=new THREE.Group();rig.add(car);
 
-  box(car,[W,.58,L],[0,.5,0],m.carBody,.2);                        // body
-  mesh(car,cabinGeometry(1.4),m.carGlass);                           // glass cabin
-  box(car,[1.46,.07,.94],[0,1.345,-.36],m.carBody,.034);             // painted roof
-  box(car,[1.48,.58,.1],[0,1.05,-.36],m.carBody,.03);                // B pillar
-  pillar(car,[.74,.78],[.16,1.26],m);                                 // A pillars
-  pillar(car,[-1.3,.78],[-.86,1.24],m);                               // C pillars
-  // Dark bumpers and sills ground the body; slim lamps and a grille slot.
-  for(const sz of [-1,1])box(car,[W+.03,.18,.2],[0,.32,sz*(L/2-.06)],m.carTrim,.08);
-  box(car,[W+.02,.1,L-.6],[0,.25,0],m.carTrim,.05);
-  box(car,[.62,.07,.03],[0,.5,L/2+.005],m.carTrim,.03);
+  const bodyGeo=profile(bodyShape,W,.12);
+  mesh(car,bodyGeo,m.carBody);
+  mesh(car,profile(cabinShape,1.34,.1),m.carGlass);
+  const S=surface(bodyGeo.clone());
+  const nose=S.front(0,.4)[2],tail=S.rear(0,.5)[2];
+  // Black splitter, side skirts, diffuser and a low wide intake.
+  box(car,[W-.12,.05,.3],[0,.25,nose-.12],m.carTrim,.025);
+  box(car,[.92,.08,.06],S.front(0,.38,-.02),m.carTrim,.03);
+  for(const sx of [-1,1])box(car,[.06,.09,2.0],[S.side(0,.33,-.025,sx)[0],.3,0],m.carTrim,.035);
+  box(car,[W-.2,.11,.24],[0,.3,tail+.1],m.carTrim,.045);
   for(const sx of [-1,1]){
-    box(car,[.34,.1,.04],[sx*.5,.64,L/2+.003],m.headlight,.04);
-    box(car,[.36,.09,.04],[sx*.5,.66,-L/2-.003],m.tailLight,.04);
-    box(car,[.14,.08,.11],[sx*.83,.86,.52],m.carBody,.035);           // mirrors
+    // Slim LED headlights swept into the corners of the nose.
+    const hl=S.front(sx*.55,.53,-.012);box(car,[.42,.05,.06],hl,m.headlight,.02,[0,sx*.4,0]);
+    // Side air intake ahead of the rear wheel.
+    box(car,[.05,.11,.32],S.side(-.6,.5,-.015,sx),m.carTrim,.03);
+    // Small mirrors at the base of the windscreen.
+    box(car,[.15,.065,.11],[sx*.74,S.top(sx*.74,.5)[1]+.05,.5],m.carBody,.03);
     // Wheel arches: a dark half disc on the body side above each wheel.
-    for(const sz of [-1,1]){
-      const arch=mesh(car,tint(new THREE.CircleGeometry(WHEEL_R+.07,24,0,Math.PI)),m.carTrim,[sx*(W/2+.003),WHEEL_R,sz*WHEEL_Z],[0,sx*Math.PI/2,0]);
+    for(const z of [-WHEEL_Z,WHEEL_Z]){
+      const arch=mesh(car,tint(new THREE.CircleGeometry(WHEEL_R+.06,28,0,Math.PI)),m.carTrim,[S.side(z,.5,-.004,sx)[0],WHEEL_R,z],[0,sx*Math.PI/2,0]);
       arch.castShadow=false;
     }
   }
+  // Full width red light bar under the ducktail.
+  box(car,[W-.36,.04,.05],S.rear(0,.68,-.012),m.tailLight,.018);
   mergeStatic(car);
 
-  // Wheels: tyre, a light rim with a dark hub. Front wheels steer.
+  // Wide wheels: low profile tyres, silver five spoke rims, red brake calipers.
   const wheels=[];
   for(const sx of [-1,1])for(const z of [-WHEEL_Z,WHEEL_Z]){
     const w=new THREE.Group();w.position.set(sx*TRACK,WHEEL_R,z);rig.add(w);
+    // The caliper does not spin with the wheel.
+    box(w,[.03,.14,.1],[sx*.1,.06,z>0?-.1:.1],m.caliper,.02);
     const spin=new THREE.Group();w.add(spin);spin.userData.steer=w;spin.userData.front=z>0;
-    mesh(spin,new THREE.CylinderGeometry(WHEEL_R,WHEEL_R,.26,28),m.rubber,[0,0,0],[0,0,Math.PI/2]);
-    mesh(spin,new THREE.CylinderGeometry(.17,.17,.02,24),m.rim,[sx*.13,0,0],[0,0,Math.PI/2]);
-    for(let i=0;i<5;i++){const a=i*Math.PI*2/5;box(spin,[.012,.05,.03],[sx*.142,Math.sin(a)*.1,Math.cos(a)*.1],m.carTrim,.006,[a,0,0]);}
-    mesh(spin,new THREE.CylinderGeometry(.045,.045,.024,14),m.carTrim,[sx*.142,0,0],[0,0,Math.PI/2]);
+    mesh(spin,new THREE.CylinderGeometry(WHEEL_R,WHEEL_R,.3,32),m.rubber,[0,0,0],[0,0,Math.PI/2]);
+    mesh(spin,new THREE.CylinderGeometry(.245,.245,.02,28),m.carTrim,[sx*.142,0,0],[0,0,Math.PI/2]);
+    mesh(spin,new THREE.TorusGeometry(.24,.016,6,28),m.rim,[sx*.152,0,0],[0,Math.PI/2,0]);
+    for(let i=0;i<5;i++){const a=i*Math.PI*2/5;box(spin,[.02,.2,.05],[sx*.155,Math.sin(a)*.12,Math.cos(a)*.12],m.rim,.01,[Math.PI/2-a,0,0]);}
+    mesh(spin,new THREE.CylinderGeometry(.05,.05,.03,16),m.rim,[sx*.16,0,0],[0,0,Math.PI/2]);
     wheels.push(spin);
   }
   return {rig,car,wheels};
@@ -76,8 +109,8 @@ const CIRCLES=[[-3.78,-2.75,.4],[3.63,-3.45,.4],[-.45,2.62,.14]];
 const BOUND=4.95;
 function blocked(x,z,h){
   const fx=Math.sin(h),fz=Math.cos(h);
-  for(const o of [-1.05,0,1.05]){
-    const cx=x+fx*o,cz=z+fz*o,r=.82;
+  for(const o of [-1.1,0,1.1]){
+    const cx=x+fx*o,cz=z+fz*o,r=.88;
     if(Math.abs(cx)>BOUND-r||Math.abs(cz)>BOUND-r)return true;
     for(const [bx,bz,hw,hd] of BOXES){
       const dx=cx-Math.max(bx-hw,Math.min(cx,bx+hw)),dz=cz-Math.max(bz-hd,Math.min(cz,bz+hd));

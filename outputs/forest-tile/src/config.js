@@ -9,7 +9,7 @@ export const ART = {
     leaves: '#84b254', leafLight: '#a4c870', bark: '#8d8270',
     soil: '#a1b77e', plaster: '#f2eddc', timber: '#f5f6ef',
     roof: '#f06b60', roofLight: '#fb8274', glass: '#6bb9c5', path: '#d8dbd7',
-    car: '#4f86c8', parking: '#c7ceca', trim: '#f8faf6',
+    car: '#2f6fd6', parking: '#c7ceca', trim: '#f8faf6',
   },
   light: { sun: 3.0, fill: 1.8, exposure: 1.05, position: [-3.5, 9, 6], shadowSize: 2048, shadowSoftness: 21 },
   material: { roughness: 0.9, bump: 0.002 },
