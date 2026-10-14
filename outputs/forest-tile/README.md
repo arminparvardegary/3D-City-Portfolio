@@ -49,3 +49,7 @@ W / Up gas, S / Down brake then reverse, A D / Left Right steer, Space handbrake
 An east-west road runs across tiles 79 to 87, directly in front of the house; the house driveway joins it at tile 83 (`src/world/roads.js`). Two lanes (right-hand traffic), dashed centre line, sidewalks, zebra crossings either side of the driveway, stop lines and three traffic lights: one for each road direction and one facing the driveway. The road lights cycle green 25 s, yellow 3 s, red 25 s (no timer is shown); the driveway light is green only while the road is red.
 
 Bot cars (`src/world/traffic.js`) use the Intelligent Driver Model: they keep a safe gap to the car ahead (including yours), stop behind the line on red, stop on yellow only when they comfortably can, and pull away on green. Cars leaving the road re-enter at the other end. Your car collides with them and with the light poles. In a 160 s simulated run: no red light violations, minimum gap 1.0 units, peak braking 1.2 units/s².
+
+## Park (tile 98)
+
+Across the road from the house (`src/world/park.js`): a stone fountain on a circular gravel path, four paths out to the tile edges (the north one meets the road's sidewalk), twelve faceted round trees and pines (three per quarter), four benches facing the fountain, four lamp posts, and a trimmed hedge framing the edges with openings at the paths. The car can drive on the grass and paths but collides with trees, benches, lamps, hedges and the fountain.

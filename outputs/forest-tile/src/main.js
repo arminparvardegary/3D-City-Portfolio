@@ -11,6 +11,7 @@ import { LIGHTING, createLights, createEnvironment, applyLighting } from './worl
 import { wind, setDensity } from './world/vegetation.js';
 import { buildGrid, GRID, HOME_NUMBER, tileNumber, tileCenter } from './world/grid.js';
 import { buildRoad } from './world/roads.js';
+import { buildPark } from './world/park.js';
 import { createTraffic } from './world/traffic.js';
 import { VEHICLES } from './vehicles.js';
 
@@ -57,8 +58,10 @@ extraMaterials.forEach(softenShadows);
 // Tiles with content: the road with its junction in front of the house (79 to 87).
 const ROAD_TILES=[79,80,81,82,83,84,85,86,87];
 const road=buildRoad({numbers:ROAD_TILES,junction:83,prep:softenShadows,m:materials});scene.add(road.group);
-const grid150=buildGrid(softenShadows,{occupied:ROAD_TILES});scene.add(grid150.group);
-car.setBounds(grid150.bounds);car.addStatic(road.poles);
+// Tile 98, across the road from the house: a park with trees.
+const park=buildPark({number:98,m:materials,prep:softenShadows});scene.add(park.group);
+const grid150=buildGrid(softenShadows,{occupied:[...ROAD_TILES,98]});scene.add(grid150.group);
+car.setBounds(grid150.bounds);car.addStatic(road.poles);car.addStatic(park.circles,park.boxes);
 const traffic=createTraffic({parent:scene,m:materials,prep:softenShadows,lanes:road.lanes,setLights:road.setLights,
   player:()=>{const p=car.pose();return {x:p.x,z:p.z,len:car.length};}});
 car.setObstacles(()=>traffic.obstacles());

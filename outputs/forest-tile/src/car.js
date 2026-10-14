@@ -59,7 +59,7 @@ export function createCarControls(parent,m,{prep,index=0}={}){
     get color(){return parts.color;},
     pose(){return {x,z,h,steer,v};},
     setObstacles(fn){dynamicObstacles=fn;},
-    addStatic(circles){CIRCLES.push(...circles);},
+    addStatic(circles,boxes=[]){CIRCLES.push(...circles);BOXES.push(...boxes);},
     get length(){return parts.length;},
     setBounds(b){BOUNDS={x0:b.x0+.05,x1:b.x1-.05,z0:b.z0+.05,z1:b.z1-.05};},
     count:VEHICLES.length,
