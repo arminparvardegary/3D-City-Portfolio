@@ -27,7 +27,7 @@ renderer.info.autoReset=false;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=ART.light.exposure;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.domElement.setAttribute('aria-label','My House: a minimal cream house with a coral roof, a Tesla Model S in the parking space, and a small Turkish flag on a 100 by 100 design-pixel tile.');
+renderer.domElement.setAttribute('aria-label','My House: a minimal cream house with a coral roof, a Tesla Model Y in the parking space, and a small Turkish flag on a 100 by 100 design-pixel tile.');
 renderer.domElement.setAttribute('role','img');
 viewport.appendChild(renderer.domElement);
 

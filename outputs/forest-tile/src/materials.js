@@ -57,7 +57,7 @@ export function createMaterials() {
     rubber: make('#303a40', { roughness: 0.92 }),
     rim: make('#9ea8ae', { roughness: 0.45, metalness: 0.4 }),
     truckDark: make('#42515a', { roughness: 0.75 }),
-    headlight: make('#f4f3d9', { emissive: '#fff2ce', emissiveIntensity: 0.15 }),
+    headlight: make('#ffffff', { emissive: '#ffffff', emissiveIntensity: 0.6 }),
     tailLight: make('#d84f4a', { roughness: 0.42, emissive: '#ff2a22', emissiveIntensity: 0.45 }),
     roofEdge: make('#dc5c53'),
   };

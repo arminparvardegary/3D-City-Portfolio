@@ -1,6 +1,6 @@
 # My House — Block 001
 
-A single minimal isometric 3D tile based on the supplied neighborhood reference: cream house, coral roof, turquoise windows, a smooth flat lawn, a pearl-white Tesla Model S that you drive yourself (W A S D or arrow keys, Space handbrake, R or the Park button to put it back; on touch screens use the on screen pad), and a small Turkish flag beside the entrance.
+A single minimal isometric 3D tile based on the supplied neighborhood reference: cream house, coral roof, turquoise windows, a smooth flat lawn, a graphite Tesla Model Y that you drive yourself (W A S D or arrow keys, Space handbrake, R or the Park button to put it back; on touch screens use the on screen pad), and a small Turkish flag beside the entrance.
 
 ## Run
 
@@ -12,7 +12,7 @@ The toolbar offers zoom, breeze on/off, and an art-direction panel. Adjust dayli
 
 Defaults are in `src/config.js`: palette, lighting, fixed camera, house dimensions, car placement, and tile footprint. `src/home.js` creates the minimal house and Turkish flag; `src/tesla.js` models the car; `src/tile.js` assembles the lawn, driveway, house, car, trees, and entrance path. `src/main.js` controls rendering and the interface.
 
-The Model S is a stylized procedural model with a fastback profile, panoramic glass roof, flush handles, slim lights, and five-spoke wheels. It is not manufacturer CAD. All assets are live 3D geometry, with a local canvas texture for the Turkish crescent and star. No remote models or images are required. Interface fonts have sans-serif fallbacks.
+The Model Y is a stylized procedural model with a tall crossover profile, glass roof sloping to a short hatch, a full width LED bar across the nose and tail, flush handles, and turbine wheels. It is not manufacturer CAD. All assets are live 3D geometry, with a local canvas texture for the Turkish crescent and star. No remote models or images are required. Interface fonts have sans-serif fallbacks.
 
 ## Modular footprint
 

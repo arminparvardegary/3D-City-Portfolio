@@ -62,68 +62,70 @@ function teslaBadge(){
   return new THREE.MeshStandardMaterial({map,transparent:true,roughness:.35,metalness:.4,depthWrite:false,side:THREE.DoubleSide});
 }
 
-const WHEEL_R=.29,WHEEL_Y=.29,WHEEL_Z=1.2,BODY_W=.77;
+const WHEEL_R=.3,WHEEL_Y=.3,WHEEL_Z=1.2,BODY_W=.79;
 
-export function buildTeslaModelS(parent,m){
-  const rig=new THREE.Group();rig.name='tesla-model-s';rig.position.set(...ART.car.position);rig.rotation.y=ART.car.rotation;rig.scale.setScalar(ART.car.scale);parent.add(rig);
+// Tesla Model Y (2025): a tall, smooth crossover with a low blunt nose, one
+// thin LED bar across the full width of the front, a glass roof that slopes
+// into a short hatch, a red light bar across the tail, and turbine wheels.
+export function buildTeslaModelY(parent,m){
+  const rig=new THREE.Group();rig.name='tesla-model-y';rig.position.set(...ART.car.position);rig.rotation.y=ART.car.rotation;rig.scale.setScalar(ART.car.scale);parent.add(rig);
   // `car` is the sprung body (pitches and bobs while driving); wheels hang off
   // the rig so they stay planted and only spin.
   const car=new THREE.Group();rig.add(car);
 
-  // Painted lower body: low hood, high tail, a clean beltline, no grille.
   mesh(car,bodyLoft([
-    [-1.96,.50,.40,.64],[-1.88,.68,.30,.82],[-1.66,.755,.22,.88],[-1.2,.77,.19,.87],[-.5,.77,.19,.82],[.4,.77,.19,.80],[.95,.77,.19,.80],
-    [1.3,.765,.20,.745],[1.66,.73,.24,.64],[1.88,.62,.30,.56],[1.96,.48,.36,.50],
+    [-1.99,.54,.42,.80],[-1.92,.72,.32,.94],[-1.7,.785,.23,.96],[-1.3,.79,.21,.93],[-.6,.79,.21,.90],[.4,.79,.21,.88],[.95,.79,.21,.87],
+    [1.35,.78,.23,.80],[1.72,.75,.26,.68],[1.93,.66,.30,.58],[1.99,.52,.35,.52],
   ]),m.carBody);
-  // Glass roof and windows in one smooth fastback greenhouse.
   const cabin=mesh(car,glassLoft([
-    [1.02,.66,.80,.835],[.78,.655,.80,1.0],[.45,.64,.80,1.17],[.05,.63,.80,1.245],[-.4,.63,.80,1.245],[-.85,.64,.82,1.17],[-1.2,.66,.85,1.03],[-1.52,.68,.88,.915],[-1.68,.66,.89,.89],
+    [1.12,.71,.87,.89],[.85,.70,.88,1.08],[.5,.69,.88,1.25],[.1,.68,.88,1.34],[-.4,.68,.9,1.345],[-.9,.69,.92,1.3],[-1.35,.71,.94,1.17],[-1.7,.7,.95,1.02],[-1.88,.65,.96,.97],
   ]),m.carGlass);cabin.material.side=THREE.DoubleSide;
   // Dark under tray, front splitter and rear diffuser.
-  box(car,[1.34,.07,3.5],[0,.2,0],m.truckDark,.03);
-  box(car,[1.0,.045,.09],[0,.29,1.9],m.truckDark,.02);
-  box(car,[1.1,.05,.1],[0,.31,-1.9],m.truckDark,.02);
+  box(car,[1.38,.07,3.6],[0,.22,0],m.truckDark,.03);
+  box(car,[1.05,.045,.09],[0,.31,1.93],m.truckDark,.02);
+  box(car,[1.1,.05,.1],[0,.33,-1.93],m.truckDark,.02);
+
+  // The signature: one slim light bar across the whole nose, swept back at the ends.
+  curve(car,[[-.66,.61,1.76],[-.5,.595,1.89],[-.2,.586,1.95],[.2,.586,1.95],[.5,.595,1.89],[.66,.61,1.76]],.014,m.headlight);
+  // Dark lower fascia with a wide air intake and small corner vents.
+  box(car,[.86,.05,.03],[0,.42,1.985],m.truckDark,.015);
+  for(const side of [-1,1])box(car,[.2,.035,.03],[side*.5,.455,1.93],m.truckDark,.012,[0,side*.45,0]);
+  // Tail: a full width red light bar and the lamps that wrap the corners.
+  curve(car,[[-.7,.87,-1.8],[-.5,.865,-1.925],[0,.862,-1.945],[.5,.865,-1.925],[.7,.87,-1.8]],.014,m.tailLight);
 
   for(const side of [-1,1]){
-    // Slim swept headlights with a bright daytime light strip, set into the nose.
-    box(car,[.3,.03,.09],[side*.43,.6,1.775],m.headlight,.012,[0,side*.42,0]);
-    // Tail lamps wrap around the rear corners.
-    box(car,[.34,.045,.06],[side*.5,.735,-1.885],m.tailLight,.016,[0,-side*.5,0]);
-    // Frameless door handles, quiet panel seams, and a body colored sill.
-    for(const z of [.3,-.62])box(car,[.016,.022,.14],[side*.775,.745,z],m.carBody,.007);
-    for(const z of [-.17,-1.04])curve(car,[[side*.775,.77,z],[side*.785,.55,z],[side*.765,.3,z]],.0035,m.truckDark);
-    box(car,[.06,.045,1.7],[side*.775,.27,0],m.truckDark,.015);
-    // Mirror on a short stalk.
-    box(car,[.1,.03,.05],[side*.76,.835,.86],m.truckDark,.01);
-    mesh(car,new THREE.SphereGeometry(1,16,10),m.carBody,[side*.83,.86,.84],[0,0,0],[.08,.055,.085]);
+    box(car,[.3,.05,.06],[side*.5,.77,-1.905],m.tailLight,.016,[0,-side*.5,0]);
+    // Frameless handles, panel seams, sill.
+    for(const z of [.42,-.5])box(car,[.016,.022,.14],[side*.79,.77,z],m.carBody,.007);
+    for(const z of [-.17,-1.04])curve(car,[[side*.785,.8,z],[side*.795,.56,z],[side*.775,.3,z]],.0035,m.truckDark);
+    box(car,[.06,.045,1.7],[side*.785,.28,0],m.truckDark,.015);
+    // Squarish body colored mirror on a short black arm, by the A pillar.
+    box(car,[.1,.03,.05],[side*.77,.865,.9],m.truckDark,.01);
+    box(car,[.13,.075,.1],[side*.86,.895,.9],m.carBody,.03,[0,side*.12,0]);
   }
-  // Lower air intake slot and the T badge on the nose.
-  box(car,[.8,.05,.03],[0,.43,1.955],m.truckDark,.015);
-  mesh(car,new THREE.PlaneGeometry(.095,.12),teslaBadge(),[0,.69,1.73],[-1.28,0,0]);
-  const plate=label('MODEL S',.34,.075);mesh(car,plate.geometry,plate.material,[0,.5,1.965]);
-  const rear=label('T E S L A',.46,.07,'#8a969c','#c9cfcd');mesh(car,rear.geometry,rear.material,[0,.6,-1.955],[0,Math.PI,0]);
-  const tbadge=mesh(car,new THREE.PlaneGeometry(.09,.11),teslaBadge(),[0,.7,-1.925],[0,Math.PI,0]);tbadge.castShadow=false;
-  // Thin red light bar joining the tail lamps.
-  box(car,[.6,.014,.03],[0,.775,-1.9],m.tailLight,.005,[-.25,0,0]);
+  mesh(car,new THREE.PlaneGeometry(.095,.12),teslaBadge(),[0,.62,1.97],[-1.4,0,0]).castShadow=false;
+  const plate=label('MODEL Y',.34,.075);mesh(car,plate.geometry,plate.material,[0,.52,1.995]);
+  const rear=label('T E S L A',.46,.07,'#8a969c','#c9cfcd');mesh(car,rear.geometry,rear.material,[0,.56,-1.985],[0,Math.PI,0]);
+  mesh(car,new THREE.PlaneGeometry(.09,.11),teslaBadge(),[0,.76,-1.94],[0,Math.PI,0]).castShadow=false;
 
   mergeStatic(car);
 
   // Dark wheel arches stay with the rig, so they do not spin.
   for(const side of [-1,1])for(const z of [-WHEEL_Z,WHEEL_Z])
-    mesh(rig,new THREE.CylinderGeometry(WHEEL_R+.07,WHEEL_R+.07,.03,28),m.truckDark,[side*(BODY_W-.012),WHEEL_Y,z],[0,0,Math.PI/2]);
-  // Aero wheels: a smooth turbine disc with dark slots, on a low profile tire.
+    mesh(rig,new THREE.CylinderGeometry(WHEEL_R+.075,WHEEL_R+.075,.03,30),m.truckDark,[side*(BODY_W-.012),WHEEL_Y,z],[0,0,Math.PI/2]);
+  // Turbine aero wheels: a swirl of slanted blades on a low profile tire.
   const wheels=[];
   for(const side of [-1,1])for(const z of [-WHEEL_Z,WHEEL_Z]){
-    const w=new THREE.Group();w.position.set(side*.675,WHEEL_Y,z);rig.add(w);
+    const w=new THREE.Group();w.position.set(side*.685,WHEEL_Y,z);rig.add(w);
     const spin=new THREE.Group();w.add(spin);spin.userData.steer=w;spin.userData.front=z>0;
-    mesh(spin,new THREE.CylinderGeometry(WHEEL_R,WHEEL_R,.2,32),m.rubber,[0,0,0],[0,0,Math.PI/2]);
-    mesh(spin,new THREE.CylinderGeometry(.215,.215,.02,28),m.rim,[side*.103,0,0],[0,0,Math.PI/2]);
-    mesh(spin,new THREE.TorusGeometry(.215,.012,6,28),m.truckDark,[side*.11,0,0],[0,Math.PI/2,0]);
-    for(let i=0;i<8;i++){
-      const a=i*Math.PI/4;
-      box(spin,[.012,.07,.03],[side*.115,Math.sin(a)*.13,Math.cos(a)*.13],m.truckDark,.004,[a,0,0]);
+    mesh(spin,new THREE.CylinderGeometry(WHEEL_R,WHEEL_R,.21,34),m.rubber,[0,0,0],[0,0,Math.PI/2]);
+    mesh(spin,new THREE.CylinderGeometry(.225,.225,.02,30),m.rim,[side*.108,0,0],[0,0,Math.PI/2]);
+    mesh(spin,new THREE.TorusGeometry(.225,.012,6,30),m.truckDark,[side*.116,0,0],[0,Math.PI/2,0]);
+    for(let i=0;i<9;i++){
+      const a=i*Math.PI*2/9;
+      box(spin,[.012,.12,.045],[side*.12,Math.sin(a)*.135,Math.cos(a)*.135],m.truckDark,.004,[a+.7,0,0]);
     }
-    mesh(spin,new THREE.CylinderGeometry(.04,.04,.02,14),m.truckDark,[side*.118,0,0],[0,0,Math.PI/2]);
+    mesh(spin,new THREE.CylinderGeometry(.04,.04,.02,14),m.truckDark,[side*.124,0,0],[0,0,Math.PI/2]);
     wheels.push(spin);
   }
   return {rig,car,wheels};
@@ -143,7 +145,7 @@ const BOUND=4.95;
 function blocked(x,z,h){
   const fx=Math.sin(h),fz=Math.cos(h);
   for(const o of [-1.15,0,1.15]){
-    const cx=x+fx*o,cz=z+fz*o,r=.76;
+    const cx=x+fx*o,cz=z+fz*o,r=.8;
     if(Math.abs(cx)>BOUND-r||Math.abs(cz)>BOUND-r)return true;
     for(const [bx,bz,hw,hd] of BOXES){
       const dx=cx-Math.max(bx-hw,Math.min(cx,bx+hw)),dz=cz-Math.max(bz-hd,Math.min(cz,bz+hd));
@@ -158,7 +160,7 @@ export function createTeslaControls({rig,car,wheels},m,{radius=.29}={}){
   const home={x:rig.position.x,z:rig.position.z,h:ART.car.rotation};
   let x=home.x,z=home.z,h=home.h,v=0,steer=0,a=0,lat=0;
   const down=new Set();
-  m.headlight.emissive.set('#fff2ce');m.tailLight.emissive.set('#ff2a22');
+  m.headlight.emissive.set('#ffffff');m.tailLight.emissive.set('#ff2a22');
   const typing=t=>t&&(t.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
   addEventListener('keydown',e=>{
     if(typing(e.target)||e.metaKey||e.ctrlKey||e.altKey)return;
