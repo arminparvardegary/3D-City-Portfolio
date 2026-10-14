@@ -14,6 +14,9 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
   seed=7;
   const root=new THREE.Group(),K=createKit({flat:false}),{box,cyl,add,mat}=K;
   const solids=[],occluders=[],loops=[];
+  // Sidewalks are not walls: the car can drive up the curb onto them. Each
+  // walkable area is recorded here; walkHeight() gives the ground height there.
+  const walks=[];
   const skin=(color,kind,size=2,extra={})=>{const m=mat(color,{map:FACADE[kind](),roughness:.8,...extra});m.userData.uvSize=size;return m;};
   const glassSkin=c=>skin(c,'glass',2,{metalness:.55,roughness:.12,envMapIntensity:1.3});
   // Animated film palette: candy coloured walls with painted windows, brick, and
@@ -62,8 +65,8 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
     near.position.set(6,-.9,0);near.receiveShadow=true;root.add(near);
     const far=new THREE.Mesh(new THREE.RingGeometry(440,3000,64,1).rotateX(-Math.PI/2),mat);far.position.set(6,-.96,0);root.add(far);}
   const paving=mat('#bcb8b1',{map:FACADE.paving(),roughness:.85});paving.userData.uvSize=4;
-  // Sidewalks are solid for the car; a waterfront strip (low=true) only at street level, so the bridge passes over it.
-  const walkRect=(x0,x1,z0,z1,low=false)=>{box(x1-x0,CURB,z1-z0,(x0+x1)/2,G,(z0+z1)/2,paving);solids.push(low?[(x0+x1)/2,(z0+z1)/2,(x1-x0)/2,(z1-z0)/2,1.5]:[(x0+x1)/2,(z0+z1)/2,(x1-x0)/2,(z1-z0)/2]);};
+  // Promenades are walkable: the car can climb onto them.
+  const walkRect=(x0,x1,z0,z1)=>{box(x1-x0,CURB,z1-z0,(x0+x1)/2,G,(z0+z1)/2,paving);walks.push({x0,x1,z0,z1});};
   // Promenades round the island and along the river, with railings.
   const rail=(x0,z0,x1,z1)=>{const len=Math.hypot(x1-x0,z1-z0),n=Math.ceil(len/2.5),ang=Math.atan2(x1-x0,z1-z0);
     add(new THREE.BoxGeometry(.12,.1,len).rotateY(ang),metal,[(x0+x1)/2,top+1.05,(z0+z1)/2]);
@@ -173,24 +176,18 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
     sh.lineTo(x1,-z1+rb);sh.absarc(x1-rb,-z1+rb,rb,0,-Math.PI/2,true);
     sh.lineTo(x0+rc,-z1);sh.absarc(x0+rc,-z1+rc,rc,-Math.PI/2,-Math.PI,true);
     sh.lineTo(x0,-z0-rd);sh.absarc(x0+rd,-z0-rd,rd,Math.PI,Math.PI/2,true);return sh;};
-  // Solid for the car: the whole block, or strips that follow the big curved corners.
-  const solidBlock=(x0,x1,z0,z1,[ra,rb,rc,rd])=>{
-    if(Math.max(ra,rb,rc,rd)<=3){solids.push([(x0+x1)/2,(z0+z1)/2,(x1-x0)/2,(z1-z0)/2]);return;}
-    const cut=(r,d)=>r>3&&d<r?r-Math.sqrt(r*r-(r-d)*(r-d)):0,S=.75;let run=null;
-    const flush=()=>{if(run)solids.push([(run.a+run.b)/2,(run.z0+run.z1)/2,(run.b-run.a)/2,(run.z1-run.z0)/2]);run=null;};
-    for(let z=z0;z<z1-1e-6;z+=S){const zb=Math.min(z+S,z1),m=(z+zb)/2,a=x0+Math.max(cut(rd,m-z0),cut(rc,z1-m)),b=x1-Math.max(cut(ra,m-z0),cut(rb,z1-m));
-      if(run&&run.a===a&&run.b===b)run.z1=zb;else{flush();run={a,b,z0:z,z1:zb};}}
-    flush();};
   function sidewalk(b){
     const r=[[b.x1,b.z0],[b.x1,b.z1],[b.x0,b.z1],[b.x0,b.z0]].map(([x,z])=>cornerR(x,z)),ri=r.map(v=>v-.32);
     const top=rounded(b.x0+.32,b.x1-.32,b.z0+.32,b.z1-.32,ri);
     add(new THREE.ExtrudeGeometry(top,{depth:CURB,bevelEnabled:false,curveSegments:16}).rotateX(-Math.PI/2),paving,[0,G,0]);
     const ring=rounded(b.x0,b.x1,b.z0,b.z1,r);ring.holes.push(rounded(b.x0+.32,b.x1-.32,b.z0+.32,b.z1-.32,ri));
     add(new THREE.ExtrudeGeometry(ring,{depth:CURB+.01,bevelEnabled:false,curveSegments:16}).rotateX(-Math.PI/2),granite,[0,G,0]);
-    solidBlock(b.x0,b.x1,b.z0,b.z1,r);
+    walks.push({x0:b.x0,x1:b.x1,z0:b.z0,z1:b.z1,r});
+    // Only what stands inside the sidewalk is solid.
+    solids.push([(b.x0+b.x1)/2,(b.z0+b.z1)/2,(b.x1-b.x0)/2-WALK,(b.z1-b.z0)/2-WALK]);
   }
   const lampHead=mat('#fff3d6',{emissive:'#ffb052',emissiveIntensity:4});
-  const lamp=(x,z,ox,oz)=>{cyl(.09,.13,5.6,8,x,top,z,dark);add(new THREE.BoxGeometry(.08,.08,1.6).rotateY(Math.atan2(ox,oz)),dark,[x+ox*.8,top+5.5,z+oz*.8]);
+  const lamp=(x,z,ox,oz)=>{solids.push([x,z,.15,.15]);cyl(.09,.13,5.6,8,x,top,z,dark);add(new THREE.BoxGeometry(.08,.08,1.6).rotateY(Math.atan2(ox,oz)),dark,[x+ox*.8,top+5.5,z+oz*.8]);
     add(new THREE.BoxGeometry(.5,.16,.8).rotateY(Math.atan2(ox,oz)),dark,[x+ox*1.6,top+5.38,z+oz*1.6]);box(.4,.04,.6,x+ox*1.6,top+5.3,z+oz*1.6,lampHead);};
   // Painterly canopies (as on bruno-simon.com): a blotchy alpha map tears each leaf
   // ball into ragged dabs, so trees read as brush strokes, not spheres.
@@ -200,7 +197,7 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
     const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.magFilter=THREE.NearestFilter;return t;})();
   // Fluffy rounded trees: a tapered trunk and a soft cloud of leafy balls, lighter on top.
   const leafs=['#3f7a5a','#4a6fa8','#5a5ac8','#3c8a6a'].map(c=>mat(c,{roughness:.9,alphaMap:LEAF,alphaTest:.5,side:THREE.DoubleSide})),leafTop=mat('#7a7ae0',{roughness:.9,alphaMap:LEAF,alphaTest:.5,side:THREE.DoubleSide}),bark=mat('#7a5236',{roughness:.9});
-  const tree=(x,z,s=1,y=top)=>{cyl(.13*s,.24*s,2.8*s,10,x,y,z,bark);
+  const tree=(x,z,s=1,y=top)=>{solids.push([x,z,.22*s,.22*s]);cyl(.13*s,.24*s,2.8*s,10,x,y,z,bark);
     for(let k=0;k<4;k++){const a=k/4*Math.PI*2+.4,rr=(1+rand()*.35)*s;add(new THREE.IcosahedronGeometry(rr,1),pick(leafs),[x+Math.cos(a)*.75*s,y+(3.1+rand()*.5)*s,z+Math.sin(a)*.75*s]);}
     add(new THREE.IcosahedronGeometry(1.05*s,1),leafTop,[x,y+4.2*s,z]);};
   const streetFurniture=(b,{trees=false}={})=>{
@@ -303,10 +300,7 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
     add(new THREE.ExtrudeGeometry(new THREE.Shape(pts),{depth:CURB,bevelEnabled:false}).rotateX(-Math.PI/2),paving,[0,G,0]);
     const band=[...arc(n,ro,32),...arc(n,ro+.32,32).reverse()].map(([x,z])=>new THREE.Vector2(x,-z));
     add(new THREE.ExtrudeGeometry(new THREE.Shape(band),{depth:CURB+.01,bevelEnabled:false}).rotateX(-Math.PI/2),granite,[0,G,0]);
-    // Collision: strips from the outer edge to the curve.
-    for(let b=0;b<ro-1e-6;b+=.75){const m=Math.min(b+.375,ro),len=ro-Math.sqrt(Math.max(0,ro*ro-(ro-m)*(ro-m)));if(len<.05)continue;
-      const zA=P[1]+sz*b,zB=P[1]+sz*Math.min(b+.75,ro),xA=P[0],xB=P[0]+sx*len;
-      solids.push([(xA+xB)/2,(zA+zB)/2,Math.abs(xB-xA)/2,Math.abs(zB-zA)/2]);}
+    walks.push({plaza:true,P,s:[sx,sz],C:centre(n),ro});
     tree(P[0]+sx*3.2,P[1]+sz*3.2,1.1);}
 
   for(const b of blocks()){
@@ -373,6 +367,14 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
   K.finish(root);
   root.traverse(o=>{if(o.isMesh){o.castShadow=o.receiveShadow=true;}});
   let lightTime=0;
-  return {root,solids,occluders,loops,parking,steam,sea:seaTime,phase:()=>phase(lightTime),
+  // Ground height at (x, z): the curb top on any sidewalk, promenade or plaza, else the street.
+  const inWalk=(w,x,z)=>{
+    if(w.plaza){const a=(x-w.P[0])*w.s[0],c=(z-w.P[1])*w.s[1];return a>=0&&c>=0&&a<=w.ro&&c<=w.ro&&Math.hypot(x-w.C[0],z-w.C[1])>=w.ro;}
+    if(x<w.x0||x>w.x1||z<w.z0||z>w.z1)return false;if(!w.r)return true;
+    const [ra,rb,rc,rd]=w.r,corner=(cx,cz,r)=>Math.hypot(x-cx,z-cz)<=r;
+    if(x>w.x1-ra&&z<w.z0+ra)return corner(w.x1-ra,w.z0+ra,ra);if(x>w.x1-rb&&z>w.z1-rb)return corner(w.x1-rb,w.z1-rb,rb);
+    if(x<w.x0+rc&&z>w.z1-rc)return corner(w.x0+rc,w.z1-rc,rc);if(x<w.x0+rd&&z<w.z0+rd)return corner(w.x0+rd,w.z0+rd,rd);return true;};
+  const walkHeight=(x,z)=>walks.some(w=>inWalk(w,x,z))?CURB:0;
+  return {root,solids,occluders,loops,parking,steam,sea:seaTime,walkHeight,phase:()=>phase(lightTime),
     update(dt){lightTime+=dt;const ph=phase(lightTime);for(const a of ['z','x'])for(const c of ['r','y','g'])LIGHT[a][c].emissiveIntensity=ph[a]===c?3.2:0;}};
 }

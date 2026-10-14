@@ -207,7 +207,8 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
       if(best){x=best[0];z=best[1];}}
     if(moved&&surface){
       // Follow the road height; tilt with the slope between the front and back of the car.
-      const fx2=Math.sin(h),fz2=Math.cos(h);cy=surface(x,z,cy)??cy;const L=parts.length*.42,fy=surface(x+fx2*L,z+fz2*L,cy),by=surface(x-fx2*L,z-fz2*L,cy);slope=fy!==null&&by!==null?Math.atan2(fy-by,2*L):slope;}
+      const fx2=Math.sin(h),fz2=Math.cos(h);{const ty=surface(x,z,cy)??cy;cy=Math.abs(ty-cy)>1.2?ty:damp(cy,ty,26,dt);}   // up and down curbs with a quick ease, not a pop
+      const L=parts.length*.42,fy=surface(x+fx2*L,z+fz2*L,cy),by=surface(x-fx2*L,z-fz2*L,cy);slope=fy!==null&&by!==null?Math.atan2(fy-by,2*L):slope;}
     rollAngle+=v*dt/parts.wheelR;
 
     // Suspension: each axis is a spring-damper pulled toward where the load puts it.

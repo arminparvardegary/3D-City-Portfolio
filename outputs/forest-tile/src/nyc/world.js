@@ -62,7 +62,7 @@ export function buildNYCWorld({prep,materials,player}){
   // low parts of the bridge ramps, which stand on a solid viaduct), and the bridge.
   const viaduct=(x,z)=>onBridgeBand(x,z)&&((x>BRIDGE.landM+.5&&x<39.6)||(x>96.4&&x<BRIDGE.landB-.5));
   function surface(x,z,y=0){
-    const ground=onLand(x,z)&&!viaduct(x,z)?0:null,deck=onBridgeBand(x,z)?bridgeHeight(x):null;
+    const ground=onLand(x,z)&&!viaduct(x,z)?city.walkHeight(x,z):null,deck=onBridgeBand(x,z)?bridgeHeight(x):null;
     if(ground===null)return deck;if(deck===null)return ground;
     return Math.abs(deck-y)<Math.abs(ground-y)?deck:ground;
   }
