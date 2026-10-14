@@ -10,6 +10,7 @@ export const THEME=Object.freeze({
   name:'harbour',
   sky:{top:'#a9d8f5',horizon:'#f6f1e7'},
   palette:{
+    floor:'#e8a26c',
     grass:'#5f9c3b',grassLight:'#78b04e',
     leaves:'#3f8c30',leafLight:'#6eae48',pine:'#1d5a3a',bark:'#6e4a32',
     soil:'#a8c97a',plaster:'#f7f2e8',timber:'#fffaf0',

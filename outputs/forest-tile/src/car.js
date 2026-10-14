@@ -13,9 +13,9 @@ const MAX_SPEED=9.6,MAX_REVERSE=3;            // three times the original top sp
 const ENGINE=8.4,BRAKE=12,COAST=1.4,DRAG=.03;  // accelerations (units/s²)
 const GRIP=12;                                 // lateral acceleration the tyres hold; beyond it the car runs wide
 const STEER_IN=6,STEER_OUT=9;                  // how fast the wheel turns in and returns (1/s)
-// Things the car can bump into: [x, z, halfW, halfD] boxes and [x, z, r] circles.
-const BOXES=[[-1.5,-.7,1.5,1.6],[-1.4,-2.71,1.2,.26]];
-const CIRCLES=[[-3.78,-2.75,.4],[3.63,-3.45,.4],[-.45,2.62,.14]];
+// Static solids the car cannot pass ([x,z,halfW,halfD] boxes, [x,z,r] circles); the world adds them.
+const BOXES=[];
+const CIRCLES=[];
 let BOUNDS={x0:-4.95,x1:4.95,z0:-4.95,z1:4.95};
 let dynamicObstacles=()=>[];
 const AMBULANCE=VEHICLES.findIndex(q=>q.name==='Ambulance');
@@ -58,7 +58,9 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null,y=ART.c
     get index(){return current;},
     get paint(){return parts.paint;},
     get color(){return parts.color;},
-    pose(){return {x,z,h,steer,v};},
+    pose(){return {x,z,h,steer,v,length:parts.length,width:parts.width};},
+    // Bumping into something heavy takes some speed off (f is the share kept).
+    slow(f){v*=f;},
     setObstacles(fn){dynamicObstacles=fn;},
     addStatic(circles,boxes=[]){CIRCLES.push(...circles);BOXES.push(...boxes);},
     get length(){return parts.length;},

@@ -58,12 +58,12 @@ Across the road from the house (`src/world/park.js`): a stone fountain on a circ
 
 All colours, light and surfaces come from one set of tokens in `src/world/theme.js`, so every tile shares the look. Storybook is an original style in the spirit of classic animated films: lush, saturated but soft greens; warm golden sunlight with sky-blue fill light in the shadows; cream walls and coral roofs; a soft sky gradient behind the world with faceted clouds drifting slowly over the map; contact shading tinted violet, never black.
 
-## The harbour district (current world)
+## The playground (current world)
 
-One island over all 150 tiles (`src/world/`), surrounded by sea so nobody can drive off:
-- `terrain.js`: continuous lawn, sand beach rim, river channel from a waterfall, grey-brown mountains with snow along the north and west, rock terraces and boulders.
-- `water.js`: animated sea (GPU swells, turquoise shallows, foam at the shore, reflective ripples), the river current, the waterfall, ships and sailboats on offshore routes, boats at the docks.
-- `district.js`: loop road with timber bridges, the park with pond, fountain and glass coworking pavilion, the creative campus, the waterfront boardwalk with docks and cafés, cabins, a lighthouse. Four studios represent the work history (Rush Graphics, Hindra Studio, AAQ Real Estate, Big Uppetite) with roof signs and a pulsing entrance; clicking one opens a card with role, years and place.
-- `life.js`: walkers, people sitting on benches, cyclists, dogs and cats, birds (instanced, a few draw calls). `traffic.js`: slow cars both ways round the loop (one old van with exhaust smoke).
-- `textures.js`: procedural surface detail (grass, asphalt, planks, rock, paving, water ripples) mapped at world scale. `lighting.js`: a physical sky for reflections.
-Tile numbers are hidden; add `?tiles` to the URL to show them.
+A driving sandbox in the spirit of Bruno Simon's portfolio, built from scratch in our own style (`src/world/playground.js`). The map is one warm flat floor; the car pushes real physics objects (cannon-es):
+- Big 3D letters spelling ARMIN at the start, and the section titles WORK, PROJECTS and CONTACT, all knockable.
+- A brick wall, ten bowling pins with a ball, a slalom of cones and stacks of crates.
+- Bumping something takes a little speed off the car, more for heavier things. Anything pushed off the edge comes back to where it started.
+- Bodies sleep until touched, so a still scene costs nothing; shadows refresh only while something moves.
+
+The earlier harbour district is kept in git history (commit 3bc1d28); its modules are still in `src/world/` for reuse. Tile numbers show only with `?tiles` in the URL.

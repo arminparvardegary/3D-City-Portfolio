@@ -10,13 +10,8 @@ import { PRESETS, ORDER, detectQuality, FrameMonitor } from './quality.js';
 import { LIGHTING, createLights, createEnvironment, applyLighting } from './world/lighting.js';
 import { wind, setDensity } from './world/vegetation.js';
 import { buildGrid, GRID, HOME_NUMBER, tileNumber, tileCenter } from './world/grid.js';
-import { buildTerrain } from './world/terrain.js';
-import { buildWater, buildShips } from './world/water.js';
-import { buildDistrict, LOOP } from './world/district.js';
-import { createLife } from './world/life.js';
-import { createClouds } from './world/clouds.js';
 import { THEME } from './world/theme.js';
-import { createTraffic } from './world/traffic.js';
+import { createPlayground } from './world/playground.js';
 import { VEHICLES } from './vehicles.js';
 
 const viewport=document.querySelector('#viewport');
@@ -36,7 +31,7 @@ renderer.info.autoReset=false;
 // Tone mapping happens once, in the final effect pass (renderer stays linear).
 renderer.toneMapping=THREE.NoToneMapping;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.domElement.setAttribute('aria-label','A creative harbour district between mountains and the sea: a river from a waterfall, a park, studios, a boardwalk with docks and cafés, ships on the sea, and your car on the loop road.');
+renderer.domElement.setAttribute('aria-label','A map of 150 numbered tiles, each 100 by 100 design pixels, and your car. Fixed isometric camera.');
 renderer.domElement.setAttribute('role','img');
 viewport.appendChild(renderer.domElement);
 
@@ -57,23 +52,15 @@ const lights=createLights(scene),{sky,sun,fill}=lights;
 scene.environment=createEnvironment(renderer,art);
 const materials=createMaterials();
 Object.values(materials).forEach(softenShadows);
-// --- The world: one island over the 150 tile grid ---------------------------
-const grid150=buildGrid(softenShadows,{occupied:Array.from({length:GRID.cols*GRID.rows},(_,i)=>i+1)});
+// --- The map: 150 numbered tiles, ready for new content -----------------------
+// The numbered tiles show only with ?tiles; normally the playground floor is the map.
+const grid150=buildGrid(softenShadows);if(new URLSearchParams(location.search).has('tiles'))scene.add(grid150.group);
 const bounds=grid150.bounds;
-// Tile numbers stay underneath for building; they are shown only with ?tiles.
-if(new URLSearchParams(location.search).has('tiles'))scene.add(grid150.group);
-const terrain=buildTerrain({bounds,prep:softenShadows});scene.add(terrain.group);
-const water=buildWater({bounds,prep:softenShadows});scene.add(water.group);
-const district=buildDistrict({bounds,m:materials,prep:softenShadows});scene.add(district.group);
-const ships=buildShips({bounds,prep:softenShadows,moorings:district.moorings});scene.add(ships.group);
-const life=createLife({bounds,benches:district.benches,prep:softenShadows});scene.add(life.group);
-const clouds=createClouds({bounds,prep:softenShadows});scene.add(clouds.group);
 document.documentElement.style.setProperty('--sky-top',THEME.sky.top);document.documentElement.style.setProperty('--sky-horizon',THEME.sky.horizon);
-// Your car starts on the loop road, south side, heading east.
-const car=createCarControls(scene,materials,{prep:softenShadows,index:VEHICLES.findIndex(v=>v.name==='City'),home:{x:-22,z:LOOP.z1+1.1,h:Math.PI/2},y:.135});
-car.setBounds({x0:bounds.x0+.4,x1:bounds.x1-.4,z0:bounds.z0+.4,z1:bounds.z1-.4});car.addStatic(district.circles,district.boxes);
-const traffic=createTraffic({parent:scene,m:materials,prep:softenShadows,loop:LOOP,player:()=>{const p=car.pose();return {x:p.x,z:p.z,len:car.length};}});
-car.setObstacles(()=>traffic.obstacles());
+// Your car starts in the middle of the map.
+const car=createCarControls(scene,materials,{prep:softenShadows,index:VEHICLES.findIndex(v=>v.name==='City'),home:{x:0,z:0,h:Math.PI/2},y:.12});
+car.setBounds({x0:bounds.x0+.4,x1:bounds.x1-.4,z0:bounds.z0+.4,z1:bounds.z1-.4});
+const playground=createPlayground({scene,prep:softenShadows,car,player:()=>car.pose(),bounds});
 const canopies=[],animateTile=null,meadow={layers:[],grassMaterial:null};
 const grid=new THREE.Group();grid.visible=false;scene.add(grid);
 const gridMat=new THREE.LineBasicMaterial({color:'#738662',transparent:true,opacity:.32,depthTest:false});
@@ -162,26 +149,7 @@ canvasEl.addEventListener('pointermove',e=>{
   followHold=2.5;placeCamera();placeSun();needsRender=true;
 });
 for(const ev of ['pointerup','pointercancel'])canvasEl.addEventListener(ev,e=>pointers.delete(e.pointerId));
-// Studios are interactive: hovering shows a pointer, clicking opens a small card.
-const ray=new THREE.Raycaster(),ndc=new THREE.Vector2(),ground=new THREE.Plane(new THREE.Vector3(0,1,0),-.12),hitP=new THREE.Vector3();
-// Each studio is tested as a box around its footprint (its walls are merged into
-// the district for speed, so there is no per-building mesh to hit).
-const studioBoxes=district.studios.map(s=>({s,box:new THREE.Box3(new THREE.Vector3(s.box[0]-s.box[2],0,s.box[1]-s.box[3]),new THREE.Vector3(s.box[0]+s.box[2],6.5,s.box[1]+s.box[3]))}));
-function studioAt(e){
-  const r=canvasEl.getBoundingClientRect();ndc.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1);ray.setFromCamera(ndc,camera);
-  let best=null,dist=Infinity;
-  for(const {s,box} of studioBoxes){const p=ray.ray.intersectBox(box,hitP);if(p){const d=p.distanceTo(ray.ray.origin);if(d<dist){dist=d;best=s;}}}
-  return best;
-}
-const card=document.createElement('aside');card.className='studio-card';card.hidden=true;document.querySelector('.scene').append(card);
-function openCard(s){
-  card.innerHTML=`<span class="studio-dot" style="background:${s.accent}"></span><h2></h2><p class="studio-role"></p><p class="studio-meta"></p><button type="button" aria-label="Close">×</button>`;
-  card.querySelector('h2').textContent=s.name;card.querySelector('.studio-role').textContent=s.role;card.querySelector('.studio-meta').textContent=`${s.years} · ${s.place}`;
-  card.querySelector('button').onclick=()=>{card.hidden=true;};card.hidden=false;
-}
-canvasEl.addEventListener('pointerup',e=>{if(!downAt||Math.hypot(e.clientX-downAt[0],e.clientY-downAt[1])>5)return;const s=studioAt(e);if(s)openCard(s);else card.hidden=true;});
-canvasEl.addEventListener('pointermove',e=>{if(pointers.size)return;canvasEl.style.cursor=studioAt(e)?'pointer':'';});
-document.addEventListener('keydown',e=>{if(e.key==='Escape')card.hidden=true;});
+
 canvasEl.addEventListener('wheel',e=>{e.preventDefault();zoomGoal=THREE.MathUtils.clamp(zoomGoal*Math.exp(-e.deltaY*.0015),ZOOM_MIN,ZOOM_MAX);},{passive:false});
 const followTo=new THREE.Vector3();
 function updateView(dt){
@@ -216,7 +184,7 @@ function render(time=0){
   if(hidden){lastFrame=time;return;}
   const frameDt=Math.min(100,time-lastFrame);lastFrame=time;
   let animating=false;
-  if(breeze){
+  if(breeze&&canopies.length){
     animClock+=frameDt*timeScale;wind.time.value=animClock/1000;
     animateTile?.(animClock);
     for(const canopy of canopies){const phase=canopy.userData.phase;canopy.rotation.z=Math.sin(animClock*.00065+phase)*ART.vegetation.sway;canopy.rotation.x=Math.cos(animClock*.00048+phase)*ART.vegetation.sway*.6;}
@@ -224,12 +192,7 @@ function render(time=0){
   }
   // The car is driven by the visitor, so it keeps running even with the breeze paused.
   if(car.update(time)){animating=true;renderer.shadowMap.needsUpdate=true;}
-  if(traffic.update(frameDt/1000)){animating=true;renderer.shadowMap.needsUpdate=true;}
-  if(breeze)clouds.update(frameDt/1000*timeScale);
-  // Water, ships and people move all the time (scaled by the animation speed).
-  worldClock+=frameDt/1000*timeScale;water.update(worldClock);ships.update(worldClock);life.update(worldClock,frameDt/1000*timeScale);
-  for(const st of district.studios){const k=.5+.5*Math.sin(worldClock*2.4);st.pad.scale.setScalar(1+k*.18);st.pad.material.opacity=.55+.4*k;}
-  animating=true;
+  if(playground.update(frameDt/1000)){animating=true;renderer.shadowMap.needsUpdate=true;}
   if(updateView(frameDt/1000))animating=true;
   if(!animating&&!needsRender)return;
   renderer.info.reset();composer.render();needsRender=false;
@@ -256,7 +219,7 @@ for(const b of document.querySelectorAll('[data-drive]')){
 car.select(VEHICLES.findIndex(v=>v.name==='City'));
 
 // Deliberately small inspection API for performance checks and future tiles.
-window.forestTile={car,traffic,district,life,ships,grid:{GRID,HOME_NUMBER,tileNumber,tileCenter},composer,ao,art,applyArt,setQuality,get quality(){return {name:qualityName,mode:qualityMode,scale:renderScale,pixelRatio:renderer.getPixelRatio()};},spec:TILE_SPEC,art:ART,scene,camera,renderer,materials,canopies,refresh:()=>{needsRender=true;renderer.shadowMap.needsUpdate=true;},stats:()=>({drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,footprint:TILE_SPEC.footprint})};
+window.forestTile={car,playground,grid:{GRID,HOME_NUMBER,tileNumber,tileCenter},composer,ao,art,applyArt,setQuality,get quality(){return {name:qualityName,mode:qualityMode,scale:renderScale,pixelRatio:renderer.getPixelRatio()};},spec:TILE_SPEC,art:ART,scene,camera,renderer,materials,canopies,refresh:()=>{needsRender=true;renderer.shadowMap.needsUpdate=true;},stats:()=>({drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,footprint:TILE_SPEC.footprint})};
 
 // Development benchmark: runs n full animated frames (breeze, car, shadows,
 // composer) back to back, each synced with a 1 px read so GPU time is included.
