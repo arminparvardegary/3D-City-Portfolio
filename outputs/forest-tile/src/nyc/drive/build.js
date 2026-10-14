@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { createKit } from '../../diorama/kit.js';
-import { FACADE } from './facades.js';
+import { FACADE, storyFacade, towerFacade } from './facades.js';
 import { G,CURB,HALF,LANE,EDGE,PARK,WALK,MAN,BKN,NS,AV,BAV,ST,BRIDGE,blocks,network } from './layout.js';
 
 // The city itself (world units): land and water, sidewalks with curbs, street
@@ -16,8 +16,16 @@ export function buildCity({reserved=new Set(),fills=[]}={}){
   const solids=[],occluders=[],loops=[];
   const skin=(color,kind,size=2,extra={})=>{const m=mat(color,{map:FACADE[kind](),roughness:.8,...extra});m.userData.uvSize=size;return m;};
   const glassSkin=c=>skin(c,'glass',2,{metalness:.55,roughness:.12,envMapIntensity:1.3});
-  const PAL={brick:['#a3543c','#8f4a37','#b06a50','#9a5b46'].map(c=>skin(c,'brick')),office:['#d9d6cf','#c4c8ce','#e2dccf'].map(c=>skin(c,'office')),
-    lime:['#d9ccb3','#e4d9c4','#cbbd9c'].map(c=>skin(c,'limestone')),brown:['#7f5642','#8d6450','#6f4b3a'].map(c=>skin(c,'brownstone')),glass:['#a9c1d8','#9db4c6','#b9cad8','#8fa9c2'].map(glassSkin)};
+  // Animated film palette: candy coloured walls with painted windows, brick, and
+  // pastel towers for the skyline. (Keys kept from the realistic set: brick,
+  // office, lime, brown, glass.)
+  const story=(c,kind)=>{const m=mat('#ffffff',{map:storyFacade(c,kind),roughness:.85});m.userData.uvSize=2;return m;};
+  const tower=c=>{const m=mat('#ffffff',{map:towerFacade(c),roughness:.7});m.userData.uvSize=2;return m;};
+  const WALLS=['#e88fa2','#f0a07a','#7fc8b0','#5aa9a4','#f2cf74','#b7a3d9','#86b9e3','#f3b28c','#e6c9a4','#a8d08d'];
+  const PAL={brick:WALLS.map(c=>story(c,'arch')),office:WALLS.map(c=>story(c,'square')),brown:['#c25b45','#b8664a','#a8523e','#c97a5a'].map(c=>story(c,'brick')),
+    lime:['#f3dcc0','#f1d2b2','#e8d6c8'].map(tower),glass:['#cfe2f0','#d9cdea','#f6d9c4','#bfd9ee'].map(tower)};
+  const AWN=[['#e8505b','#fff6ec'],['#3f9a96','#fff6ec'],['#f2b705','#fff6ec'],['#5a7fd6','#fff6ec'],['#8a5ad6','#fff6ec']].map(([a,b])=>[mat(a,{roughness:.7}),mat(b,{roughness:.7})]);
+  const flowers=['#ff6b8a','#ffd166','#ff9f6b','#c58cff','#ffffff'].map(c=>mat(c,{roughness:.8})),planter=mat('#8a5a3c',{roughness:.8});
   const stone=mat('#cfc6b4',{roughness:.85}),cornice=mat('#e6dfd0',{roughness:.8}),roofM=mat('#6d7077',{roughness:.9}),dark=mat('#23262b',{roughness:.6}),
     metal=mat('#9aa0a8',{metalness:.7,roughness:.35}),wood=mat('#7b5a44',{roughness:.85}),greenM=mat('#4f7f3a',{roughness:.95}),copper=mat('#6fae98',{roughness:.5,metalness:.3});
   const occl=(x,z,w,d,h,y=G+CURB)=>occluders.push(new THREE.Box3(new THREE.Vector3(x-w/2,y,z-d/2),new THREE.Vector3(x+w/2,y+h,z+d/2)));
@@ -127,8 +135,11 @@ export function buildCity({reserved=new Set(),fills=[]}={}){
   const lampHead=mat('#fff3d6',{emissive:'#ffe2a8',emissiveIntensity:.5});
   const lamp=(x,z,ox,oz)=>{cyl(.09,.13,5.6,8,x,top,z,dark);add(new THREE.BoxGeometry(.08,.08,1.6).rotateY(Math.atan2(ox,oz)),dark,[x+ox*.8,top+5.5,z+oz*.8]);
     add(new THREE.BoxGeometry(.5,.16,.8).rotateY(Math.atan2(ox,oz)),dark,[x+ox*1.6,top+5.38,z+oz*1.6]);box(.4,.04,.6,x+ox*1.6,top+5.3,z+oz*1.6,lampHead);};
-  const leafs=['#4e7d36','#5b8c3e','#46703a'].map(c=>mat(c,{roughness:.9})),bark=mat('#5b4636',{roughness:.95});
-  const tree=(x,z,s=1,y=top)=>{cyl(.14*s,.2*s,2.6*s,7,x,y,z,bark);for(let k=0;k<4;k++)add(new THREE.IcosahedronGeometry((1.1+rand()*.5)*s,1),pick(leafs),[x+(rand()-.5)*1.4*s,y+(3+rand()*1.4)*s,z+(rand()-.5)*1.4*s]);};
+  // Fluffy rounded trees: a tapered trunk and a soft cloud of leafy balls, lighter on top.
+  const leafs=['#6aa63f','#79b84a','#8ccf55','#5f9a3a'].map(c=>mat(c,{roughness:.85})),leafTop=mat('#a6dc6a',{roughness:.85}),bark=mat('#7a5236',{roughness:.9});
+  const tree=(x,z,s=1,y=top)=>{cyl(.13*s,.24*s,2.8*s,10,x,y,z,bark);
+    for(let k=0;k<4;k++){const a=k/4*Math.PI*2+.4,rr=(1+rand()*.35)*s;add(new THREE.IcosahedronGeometry(rr,1),pick(leafs),[x+Math.cos(a)*.75*s,y+(3.1+rand()*.5)*s,z+Math.sin(a)*.75*s]);}
+    add(new THREE.IcosahedronGeometry(1.05*s,1),leafTop,[x,y+4.2*s,z]);};
   const streetFurniture=(b,{trees=false}={})=>{
     // Lamps along each side, trees between them; never at the corners.
     for(const [x0,z0,x1,z1,ox,oz] of [[b.x0,b.z0,b.x1,b.z0,0,-1],[b.x0,b.z1,b.x1,b.z1,0,1],[b.x0,b.z0,b.x0,b.z1,-1,0],[b.x1,b.z0,b.x1,b.z1,1,0]]){
@@ -138,20 +149,40 @@ export function buildCity({reserved=new Set(),fills=[]}={}){
     }
   };
 
-  // Building types: each returns its height. (x, z) is the centre, on the sidewalk.
-  const storefront=(x,z,w,d)=>{const glass=mat('#2c3440',{roughness:.15,metalness:.4});box(w+.06,2.6,d+.06,x,top,z,glass);box(w+.3,.3,d+.3,x,top+2.6,z,cornice);};
+  // Building types: each returns its height. (x, z) is the centre, on the sidewalk;
+  // front: the street side ([0, 1]: +z and -z faces; [1, 0]: +x and -x faces).
+  const shopFloor=(x,z,w,d,front)=>{const glass=mat('#2f4f5c',{roughness:.2,metalness:.2}),[fx,fz]=front,aw=pick(AWN);
+    box(w,3,d,x,top,z,pick(PAL.office));
+    for(const sd of [-1,1]){const ox=fx*sd,oz=fz*sd,len=fx?d:w,cx=x+ox*(w/2+.04),cz=z+oz*(d/2+.04);
+      // Shop window and door, framed.
+      add(new THREE.BoxGeometry(fz?len*.62:.08,1.9,fz?.08:len*.62),glass,[cx-(fz?len*.12:0),top+.5,cz-(fx?len*.12:0)]);
+      add(new THREE.BoxGeometry(fz?1.1:.1,2.3,fz?.1:1.1),dark,[cx+(fz?len*.32:0),top,cz+(fx?len*.32:0)]);
+      // A striped awning sloping out over the window.
+      const n=Math.max(6,Math.round(len*.8/.55)),sw=len*.8/n,slope=.42;
+      for(let k=0;k<n;k++){const t=-len*.4+sw*(k+.5),m=aw[k%2],px=cx+(fz?t:0)+ox*.65,pz=cz+(fx?t:0)+oz*.65;
+        add(new THREE.BoxGeometry(fz?sw:1.4,.06,fz?1.4:sw).rotateX(fz?oz*slope:0).rotateZ(fx?-ox*slope:0),m,[px,top+2.65,pz]);
+        add(new THREE.BoxGeometry(fz?sw:.05,.3,fz?.05:sw),m,[cx+(fz?t:0)+ox*1.3,top+2.25,cz+(fx?t:0)+oz*1.3]);}
+    }};
+  const corniceRow=(x,z,w,d,y,color)=>{box(w+.7,.55,d+.7,x,y,z,color);for(const sd of [-1,1]){for(let t=-w/2+.5;t<=w/2-.3;t+=1.8)box(.2,.38,.32,x+t,y-.3,z+sd*(d/2+.2),color);for(let t=-d/2+.5;t<=d/2-.3;t+=1.8)box(.32,.38,.2,x+sd*(w/2+.2),y-.3,z+t,color);}};
+  const flowerBoxes=(x,z,w,d,front,y)=>{const [fx,fz]=front;for(const sd of [-1,1])for(let t=-(fz?w:d)/2+1;t<(fz?w:d)/2-.6;t+=4){
+    const px=x+(fz?t:sd*(w/2+.2)),pz=z+(fx?t:sd*(d/2+.2));add(new THREE.BoxGeometry(fz?.9:.3,.25,fz?.3:.9),planter,[px,y,pz]);
+    for(let k=0;k<3;k++)add(new THREE.IcosahedronGeometry(.16,0),k%2?pick(leafs):pick(flowers),[px+(fz?(k-1)*.3:0),y+.33,pz+(fx?(k-1)*.3:0)]);}};
+  const waterTank=(tx,tz,ty)=>{for(const [a,c] of [[-.7,-.7],[.7,-.7],[-.7,.7],[.7,.7]])box(.15,1.6,.15,tx+a,ty,tz+c,wood);
+    cyl(1.1,1.1,2.2,14,tx,ty+1.6,tz,wood);add(new THREE.ConeGeometry(1.25,.9,14).translate(0,.45,0),wood,[tx,ty+3.8,tz]);};
   const T={
-    walkup(x,z,w,d,h){storefront(x,z,w,d);box(w,h-2.9,d,x,top+2.9,z,pick(PAL.brick));box(w+.4,.6,d+.4,x,top+h,z,cornice);box(w,.4,d,x,top+h+.6,z,roofM);
-      // Water tank on legs, and a fire escape down one side.
-      const tx=x+(rand()-.5)*w*.4,tz=z+(rand()-.5)*d*.4,ty=top+h+.9;for(const [a,c] of [[-.7,-.7],[.7,-.7],[-.7,.7],[.7,.7]])box(.15,1.6,.15,tx+a,ty,tz+c,wood);
-      cyl(1.1,1.1,2.2,12,tx,ty+1.6,tz,wood);add(new THREE.ConeGeometry(1.25,.9,12).translate(0,.45,0),wood,[tx,ty+3.8,tz]);
-      const fz=z+d/2+.45;for(let y=top+4.4;y<top+h-.5;y+=2.2){box(w*.45,.08,.9,x,y,fz,dark);box(w*.45,.6,.05,x,y+.08,fz+.42,dark);}
+    walkup(x,z,w,d,h,front){shopFloor(x,z,w,d,front);const m=pick(PAL.brick),c=mat(pick(['#fbf3e4','#f6e7cf','#efe2cb']),{roughness:.8});
+      box(w,h-3,d,x,top+3,z,m);corniceRow(x,z,w,d,top+h,c);box(w-.2,.35,d-.2,x,top+h+.55,z,roofM);flowerBoxes(x,z,w,d,front,top+5.2);
+      if(rand()<.7)waterTank(x+(rand()-.5)*w*.4,z+(rand()-.5)*d*.4,top+h+.9);
+      // Fire escape on one street face.
+      const [fx,fz]=front,fe=fz?z+d/2+.45:x+w/2+.45;for(let y=top+5;y<top+h-.6;y+=2.2){if(fz){box(w*.42,.08,.9,x,y,fe,dark);box(w*.42,.6,.05,x,y+.08,fe+.42,dark);}else{box(.9,.08,d*.42,fe,y,z,dark);box(.05,.6,d*.42,fe+.42,y+.08,z,dark);}}
       return h+1.5;},
-    office(x,z,w,d,h){storefront(x,z,w,d);box(w,h-2.9,d,x,top+2.9,z,pick(PAL.office));box(w+.2,.4,d+.2,x,top+h,z,roofM);box(w*.4,1.6,d*.4,x+w*.15,top+h+.4,z,metal);return h+2;},
-    limestone(x,z,w,d,h){const m=pick(PAL.lime);const h1=h*.55,h2=h*.82;box(w,h1,d,x,top,z,m);box(w-3,h2-h1,d-3,x,top+h1,z,m);box(w-6,h-h2,d-6,x,top+h2,z,m);
-      for(const [hh,ww,dd] of [[h1,w,d],[h2,w-3,d-3],[h,w-6,d-6]])box(ww+.3,.4,dd+.3,x,top+hh,z,cornice);return h+.4;},
-    glass(x,z,w,d,h){const m=pick(PAL.glass);box(w,h,d,x,top,z,m);box(w+.2,.5,d+.2,x,top+h,z,metal);if(rand()<.5)box(w*.5,2.5,d*.5,x,top+h+.5,z,metal);return h+.5;},
-    brownstone(x,z,w,d,h,front){box(w,h,d,x,top,z,pick(PAL.brown));box(w+.3,.5,d+.3,x,top+h,z,cornice);
+    office(x,z,w,d,h,front){shopFloor(x,z,w,d,front);const m=pick(PAL.office),c=mat('#fbf3e4',{roughness:.8});box(w,h-3,d,x,top+3,z,m);corniceRow(x,z,w,d,top+h,c);flowerBoxes(x,z,w,d,front,top+5.2);
+      for(let k=0;k<2;k++)box(1.2,.7,.9,x+(k-.5)*w*.4,top+h+.55,z,metal);return h+1.3;},
+    limestone(x,z,w,d,h){const m=pick(PAL.lime),c=mat('#fbf3e4',{roughness:.8});const h1=h*.55,h2=h*.82;box(w,h1,d,x,top,z,m);box(w-3,h2-h1,d-3,x,top+h1,z,m);box(w-6,h-h2,d-6,x,top+h2,z,m);
+      for(const [hh,ww,dd] of [[h1,w,d],[h2,w-3,d-3],[h,w-6,d-6]])box(ww+.4,.5,dd+.4,x,top+hh,z,c);
+      add(new THREE.SphereGeometry(Math.min(w,d)*.18,20,12,0,Math.PI*2,0,Math.PI/2),mat(pick(['#7fc8b0','#e8a24a','#e88fa2']),{roughness:.5,metalness:.2}),[x,top+h+.5,z]);return h+Math.min(w,d)*.18;},
+    glass(x,z,w,d,h){const m=pick(PAL.glass);box(w,h,d,x,top,z,m);box(w+.3,.6,d+.3,x,top+h,z,mat('#fbf3e4',{roughness:.8}));if(rand()<.5)waterTank(x,z,top+h+.6);return h+1;},
+    brownstone(x,z,w,d,h,front){box(w,h,d,x,top,z,pick(PAL.brown));corniceRow(x,z,w,d,top+h,mat('#fbf3e4',{roughness:.8}));flowerBoxes(x,z,w,d,front,top+2.6);
       // A stoop up to the front door.
       const [fx,fz]=front;for(let k=0;k<5;k++)box(fz?1.6:.5,.3*(k+1),fz?.5:1.6,x+fx*(w/2+.25+k*.5)*(fx?1:0),top,z+fz*(d/2+.25+k*.5)*(fz?1:0),stone);
       return h+.5;},
@@ -214,6 +245,13 @@ export function buildCity({reserved=new Set(),fills=[]}={}){
     fill(inner,zone);
   }
   for(const r of fills)fill(r,r.zone??'low');
+
+  // String lights with glowing bulbs across the streets of Armin's corner.
+  {const bulb=mat('#fff3c4',{emissive:'#ffcf6a',emissiveIntensity:1.4,roughness:.4}),wire=mat('#2b2b2f');
+    for(const [z,x0,x1] of [[ST[5],-106,-40],[ST[4],-106,-40]])for(let x=x0;x<=x1;x+=11){
+      const pts=[];for(let k=0;k<=12;k++){const t=k/12,zz=z-HALF-1+t*(2*HALF+2),y=top+6.2-Math.sin(t*Math.PI)*1.1;pts.push(new THREE.Vector3(x,y,zz));}
+      add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),24,.03,4),wire);
+      for(let k=1;k<12;k++){const p=pts[k];add(new THREE.SphereGeometry(.13,6,4),bulb,[p.x,p.y-.18,p.z]);}}}
 
   // --- New York street details ------------------------------------------------------
   // Fire hydrants and green trash bins near the corners; subway entrances with green

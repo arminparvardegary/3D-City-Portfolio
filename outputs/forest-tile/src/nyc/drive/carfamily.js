@@ -15,15 +15,15 @@ import { curve, se, loft } from '../../realcar.js';
 // type: length, width, wheel radius, wheelbase, body height scale, lift,
 // cabin [rear base, roof rear, roof front, windscreen base], roof height, speed, colours.
 export const TYPES={
-  sports:{L:3.7,W:1.62,r:.33,wb:2.42,hs:1,lift:0,cab:[-1.12,-.72,.08,.66],roof:1.3,speed:8.8,colors:['#b5121b','#f2f2f0','#1d2a44','#f5a623']},
-  coupe:{L:3.8,W:1.64,r:.33,wb:2.4,hs:.97,lift:0,cab:[-1.0,-.55,.1,.6],roof:1.22,speed:8.2,colors:['#2e5aa8','#e8e6e1','#3a3d42','#8a1c2b']},
-  sedan:{L:4.0,W:1.66,r:.32,wb:2.5,hs:1,lift:0,cab:[-1.35,-.85,.2,.75],roof:1.38,speed:6.8,colors:['#c7cbd1','#24272c','#5b6d80','#7a1e22','#e8e6e1']},
-  hatch:{L:3.3,W:1.6,r:.3,wb:2.15,hs:1,lift:0,cab:[-1.5,-1.38,.1,.55],roof:1.4,speed:6.3,colors:['#d94f3d','#f0f0ec','#3c7d6b','#e3c34a']},
-  city:{L:3.0,W:1.52,r:.28,wb:1.95,hs:1,lift:0,cab:[-1.32,-1.18,.05,.45],roof:1.42,speed:5.6,colors:['#8fd0c3','#f2b6c6','#f6f5ef','#ffd86b']},
-  wagon:{L:4.1,W:1.66,r:.32,wb:2.6,hs:1,lift:0,cab:[-1.92,-1.78,.2,.75],roof:1.38,speed:6.3,colors:['#6b7a5a','#c7cbd1','#2f3b52']},
-  suv:{L:4.1,W:1.78,r:.38,wb:2.55,hs:1.12,lift:.14,cab:[-1.92,-1.76,.35,.85],roof:1.8,speed:6.5,colors:['#1f2226','#f4f4f2','#6e7680','#304a3a','#5c2a2a']},
-  van:{L:4.3,W:1.8,r:.34,wb:2.7,hs:1.1,lift:.1,cab:[-2.02,-1.92,1.0,1.5],roof:1.95,speed:5.2,colors:['#f4f4f2','#d9dde2','#2e5aa8']},
-  pickup:{L:4.4,W:1.8,r:.38,wb:2.8,hs:1.15,lift:.16,cab:[-.42,-.3,.45,.95],roof:1.78,speed:5.9,colors:['#8a1c2b','#1f2226','#c7cbd1','#3a5f8a'],bed:true},
+  sports:{L:3.7,W:1.62,r:.33,wb:2.42,hs:1,lift:0,cab:[-1.12,-.72,.08,.66],roof:1.3,speed:8.8,colors:['#e8505b','#ffcf3a','#3f8ee0','#f7f3ea']},
+  coupe:{L:3.8,W:1.64,r:.33,wb:2.4,hs:.97,lift:0,cab:[-1.0,-.55,.1,.6],roof:1.22,speed:8.2,colors:['#5a7fd6','#ff8a5c','#7fc8b0','#f2f2ee']},
+  sedan:{L:4.0,W:1.66,r:.32,wb:2.5,hs:1,lift:0,cab:[-1.35,-.85,.2,.75],roof:1.38,speed:6.8,colors:['#e9e4da','#6aa8e6','#e88fa2','#8ccf7a','#f4b860']},
+  hatch:{L:3.3,W:1.6,r:.3,wb:2.15,hs:1,lift:0,cab:[-1.5,-1.38,.1,.55],roof:1.4,speed:6.3,colors:['#ff6b5e','#ffd166','#5ec2b7','#c58cff']},
+  city:{L:3.0,W:1.52,r:.28,wb:1.95,hs:1,lift:0,cab:[-1.32,-1.18,.05,.45],roof:1.42,speed:5.6,colors:['#8fd0c3','#f7a8bd','#fff3d6','#ffcf6a']},
+  wagon:{L:4.1,W:1.66,r:.32,wb:2.6,hs:1,lift:0,cab:[-1.92,-1.78,.2,.75],roof:1.38,speed:6.3,colors:['#7fae6a','#d9c6a5','#5a8fd6']},
+  suv:{L:4.1,W:1.78,r:.38,wb:2.55,hs:1.12,lift:.14,cab:[-1.92,-1.76,.35,.85],roof:1.8,speed:6.5,colors:['#2f3a4f','#f4f1ea','#e86f4e','#4f9a7a','#7a6fd6']},
+  van:{L:4.3,W:1.8,r:.34,wb:2.7,hs:1.1,lift:.1,cab:[-2.02,-1.92,1.0,1.5],roof:1.95,speed:5.2,colors:['#f6f2e9','#9ad0ec','#f2b705']},
+  pickup:{L:4.4,W:1.8,r:.38,wb:2.8,hs:1.15,lift:.16,cab:[-.42,-.3,.45,.95],roof:1.78,speed:5.9,colors:['#d9534f','#3f6fb5','#e8c25a','#5d8a5a'],bed:true},
   taxi:{L:4.0,W:1.66,r:.32,wb:2.5,hs:1,lift:0,cab:[-1.35,-.85,.2,.75],roof:1.38,speed:6.9,colors:['#f5bf0a'],taxi:true},
   police:{L:4.0,W:1.66,r:.32,wb:2.5,hs:1,lift:0,cab:[-1.35,-.85,.2,.75],roof:1.38,speed:7.4,colors:['#f6f6f4'],police:true},
 };
@@ -74,7 +74,7 @@ export function familyMaterials(prep){
   const P=m=>{prep?.(m);return m;};
   const sign=(()=>{const c=document.createElement('canvas');c.width=256;c.height=96;const g=c.getContext('2d');g.fillStyle='#fff8d6';g.fillRect(0,0,256,96);g.fillStyle='#1d1d1f';g.font='800 56px Arial';g.textAlign='center';g.textBaseline='middle';g.fillText('TAXI',128,52);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
   return {
-    paint:P(new THREE.MeshPhysicalMaterial({color:'#ffffff',metalness:.5,roughness:.32,clearcoat:1,clearcoatRoughness:.07,envMapIntensity:1.3})),
+    paint:P(new THREE.MeshPhysicalMaterial({color:'#ffffff',metalness:.15,roughness:.35,clearcoat:1,clearcoatRoughness:.12,envMapIntensity:1})),   // candy paint, soft shine
     glass:P(new THREE.MeshPhysicalMaterial({color:'#0c1218',metalness:.2,roughness:.05,clearcoat:1,envMapIntensity:1.6})),
     dark:P(new THREE.MeshStandardMaterial({color:'#15171a',roughness:.6})),metal:P(new THREE.MeshStandardMaterial({color:'#c4c8ce',metalness:.9,roughness:.25,envMapIntensity:1.4})),
     lampW:new THREE.MeshBasicMaterial({color:'#f2f6ff'}),lampR:new THREE.MeshBasicMaterial({color:'#e8261c'}),lampB:new THREE.MeshBasicMaterial({color:'#2a6cff'}),

@@ -20,6 +20,36 @@ function window_(g,x,y,w,h,{frame='#f1efe9',dark=.18}={}){
   g.fillStyle=frame;g.fillRect(x+w/2-1.5,y,3,h);g.fillStyle='rgba(0,0,0,.25)';g.fillRect(x-4,y+h+3,w+8,4);
 }
 
+// Animated film style facades: the wall's own colour with soft painted texture, a
+// cream framed window (arched or square) with shutters a shade darker, dark
+// teal glass with a highlight, and a sill. Brick walls show their courses.
+// One tile is one window bay and one floor. Colours are baked in (the material
+// stays white), so frames stay cream on any wall.
+export function storyFacade(wall,kind='arch'){
+  return tex('story'+wall+kind,256,(g,s)=>{
+    const c=new THREE.Color(wall),hex=(k)=>'#'+c.clone().multiplyScalar(k).getHexString();
+    g.fillStyle=wall;g.fillRect(0,0,s,s);
+    if(kind==='brick'){const bh=s/22,bw=s/7;for(let r=0;r<22;r++)for(let k=-1;k<8;k++){const v=.9+rand()*.18;g.fillStyle=hex(v);g.fillRect(k*bw+(r%2)*bw/2+1.5,r*bh+1.5,bw-3,bh-3);}}
+    else{for(let i=0;i<2200;i++){g.fillStyle=`rgba(255,255,255,${rand()*.06})`;g.fillRect(rand()*s,rand()*s,2,2);}g.fillStyle='rgba(0,0,0,.05)';g.fillRect(0,s*.94,s,s*.06);}
+    const x=s*.3,w=s*.4,y=s*.2,h=s*.58,arch=kind==='arch';
+    // Shutters.
+    g.fillStyle=hex(.72);g.fillRect(x-s*.13,y+4,s*.11,h-4);g.fillRect(x+w+s*.02,y+4,s*.11,h-4);
+    g.fillStyle=hex(.6);for(let k=0;k<7;k++){g.fillRect(x-s*.12,y+10+k*h/7.4,s*.09,3);g.fillRect(x+w+s*.03,y+10+k*h/7.4,s*.09,3);}
+    // Frame, glass, highlight, cross bars, sill.
+    const path=(px,py,pw,ph)=>{g.beginPath();if(arch){g.moveTo(px,py+ph);g.lineTo(px,py+pw/2);g.arc(px+pw/2,py+pw/2,pw/2,Math.PI,0);g.lineTo(px+pw,py+ph);g.closePath();}else g.rect(px,py,pw,ph);};
+    g.fillStyle='#fbf3e4';path(x-7,y-7,w+14,h+14);g.fill();
+    const gl=g.createLinearGradient(x,y,x+w,y+h);gl.addColorStop(0,'#5d9fb0');gl.addColorStop(.6,'#2d5f73');gl.addColorStop(1,'#234a5c');g.fillStyle=gl;path(x,y,w,h);g.fill();
+    g.save();path(x,y,w,h);g.clip();g.fillStyle='rgba(255,255,255,.28)';g.beginPath();g.moveTo(x,y+h*.55);g.lineTo(x+w*.55,y);g.lineTo(x+w*.75,y);g.lineTo(x,y+h*.8);g.fill();g.restore();
+    g.fillStyle='#fbf3e4';g.fillRect(x+w/2-2,y+(arch?w/2:0),4,h-(arch?w/2:0));g.fillRect(x,y+h*.55,w,4);
+    g.fillStyle='#efe2cb';g.fillRect(x-12,y+h+6,w+24,9);g.fillStyle='rgba(0,0,0,.18)';g.fillRect(x-12,y+h+15,w+24,4);
+  });
+}
+// Pastel towers for the skyline: soft wall colour with simple light window bands.
+export function towerFacade(wall){
+  return tex('tower'+wall,128,(g,s)=>{const c=new THREE.Color(wall);g.fillStyle=wall;g.fillRect(0,0,s,s);
+    g.fillStyle='#'+c.clone().lerp(new THREE.Color('#3e6f8a'),.55).getHexString();g.fillRect(s*.18,s*.2,s*.64,s*.55);
+    g.fillStyle='rgba(255,255,255,.25)';g.fillRect(s*.18,s*.2,s*.2,s*.55);g.fillStyle='#'+c.clone().multiplyScalar(1.06).getHexString();g.fillRect(0,s*.85,s,s*.15);});
+}
 export const FACADE={
   // Glass curtain wall: panes with mullions and a soft vertical sky reflection.
   glass:()=>tex('glass',256,(g,s)=>{
