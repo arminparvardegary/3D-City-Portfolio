@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <meta name="theme-color" content="#f1f2f1"/>
-<meta name="description" content="My House: a minimal isometric house, a Tesla Model Y, and a small Turkish flag on one 100 by 100 tile."/>
+<meta name="description" content="My House: a minimal isometric house, a little car, and a small Turkish flag on one 100 by 100 tile."/>
 <title>My House — Tile 01</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M5 20L20 6l15 14v15H5z' fill='%23f06b60'/%3E%3C/svg%3E"/>
 </head>
@@ -12,9 +12,9 @@
 <header class="masthead"><a class="wordmark" href="./" aria-label="My House tile home"><svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M5 15L16 5l11 10M8 13v14h16V13M13 27v-9h6v9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span>little worlds<span class="wordmark-dot">.</span></span></a><div class="edition"><span class="status-dot"></span>A STUDY IN SMALL THINGS <span class="edition-no">/ 001</span></div></header>
 <section class="scene" aria-labelledby="scene-title">
 <div class="scene-intro"><div class="eyebrow">MY WORLD · TILE 001</div><h1 id="scene-title">My House.</h1><p>Every world starts somewhere.</p></div>
-<div id="viewport" aria-label="Interactive 3D preview of My House, a Tesla Model Y, and a small Turkish flag. Fixed isometric camera."><div id="loading"><span></span>Building a little home…</div></div>
-<aside class="tile-note" aria-label="Tile description"><span class="note-rule"></span><span class="eyebrow">THE FIRST BLOCK</span><p>A house. A Tesla.<br>A little piece of home.</p></aside>
-<div class="drive-hint" aria-label="Driving controls"><span class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span>Drive the Tesla</span><button id="park-car">Park</button></div>
+<div id="viewport" aria-label="Interactive 3D preview of My House, a little car, and a small Turkish flag. Fixed isometric camera."><div id="loading"><span></span>Building a little home…</div></div>
+<aside class="tile-note" aria-label="Tile description"><span class="note-rule"></span><span class="eyebrow">THE FIRST BLOCK</span><p>A house. A car.<br>A little piece of home.</p></aside>
+<div class="drive-hint" aria-label="Driving controls"><span class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span>Drive</span><button id="park-car">Park</button></div>
 <div class="drive-pad" aria-label="Touch driving controls"><button data-drive="left" aria-label="Steer left">◀</button><button data-drive="right" aria-label="Steer right">▶</button><button data-drive="brake" aria-label="Brake and reverse">▼</button><button data-drive="gas" aria-label="Accelerate">▲</button></div>
 <div class="view-tag"><span class="crosshair">⌖</span>FIXED ISOMETRIC VIEW <span>35°</span></div>
 <div class="viewport-toolbar" aria-label="Preview controls">
@@ -29,7 +29,7 @@
 <label class="range-row"><span>Daylight <output id="light-value">1.0</output></span><input id="light" type="range" min="0.6" max="1.5" step="0.05" value="1"/></label>
 <label class="range-row"><span>Tree size <output id="canopy-value">1.0</output></span><input id="canopy" type="range" min="0.78" max="1.16" step="0.01" value="1"/></label>
 <label class="range-row"><span>Material softness <output id="roughness-value">0.9</output></span><input id="roughness" type="range" min="0.55" max="1" step="0.01" value="0.9"/></label>
-<div class="color-row"><label>Lawn<input id="grass-color" type="color" value="#a7ca6e"/></label><label>Canopy<input id="leaf-color" type="color" value="#84b254"/></label><label>Roof<input id="roof-color" type="color" value="#f06b60"/></label></div>
+<div class="color-row"><label>Lawn<input id="grass-color" type="color" value="#a7ca6e"/></label><label>Canopy<input id="leaf-color" type="color" value="#84b254"/></label><label>Roof<input id="roof-color" type="color" value="#f06b60"/></label><label>Car<input id="car-color" type="color" value="#4f86c8"/></label></div>
 <label class="check-row"><input id="grid-toggle" type="checkbox"/><span>Show the 100 × 100 design grid</span></label>
 <div class="panel-footer"><button id="reset-style">Reset defaults</button><button id="save-render">Save a view <span>↗</span></button></div>
 <p class="panel-hint">Camera direction is fixed. Preview scale is independent of the tile footprint.</p>

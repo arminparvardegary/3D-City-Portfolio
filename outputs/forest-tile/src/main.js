@@ -27,7 +27,7 @@ renderer.info.autoReset=false;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=ART.light.exposure;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.domElement.setAttribute('aria-label','My House: a minimal cream house with a coral roof, a Tesla Model Y in the parking space, and a small Turkish flag on a 100 by 100 design-pixel tile.');
+renderer.domElement.setAttribute('aria-label','My House: a minimal cream house with a coral roof, a little blue car in the parking space, and a small Turkish flag on a 100 by 100 design-pixel tile.');
 renderer.domElement.setAttribute('role','img');
 viewport.appendChild(renderer.domElement);
 
@@ -48,7 +48,7 @@ const fill=new THREE.DirectionalLight('#dceaf4',.72);fill.position.set(5,4,-5);s
 
 const materials=createMaterials();
 Object.values(materials).forEach(softenShadows);
-const {group:tile,canopies,animate:animateTile,tesla,extraMaterials=[]}=buildTile(materials);scene.add(tile);
+const {group:tile,canopies,animate:animateTile,car,extraMaterials=[]}=buildTile(materials);scene.add(tile);
 extraMaterials.forEach(softenShadows);
 const floor=new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.ShadowMaterial({color:'#76806a',opacity:.21}));
 floor.rotation.x=-Math.PI/2;floor.position.y=-.012;floor.receiveShadow=true;scene.add(floor);
@@ -101,7 +101,7 @@ function render(time=0){
     if(time-lastShadow>160){renderer.shadowMap.needsUpdate=true;lastShadow=time;}
   }
   // The car is driven by the visitor, so it keeps running even with the breeze paused.
-  if(tesla.update(time)){needsRender=true;renderer.shadowMap.needsUpdate=true;}
+  if(car.update(time)){needsRender=true;renderer.shadowMap.needsUpdate=true;}
   if(!needsRender)return;
   renderer.info.reset();composer.render();lastTime=time;needsRender=false;
   renderer.domElement.dataset.ready='true';
@@ -124,12 +124,12 @@ function updateLight(){const value=Number($('light').value);sun.intensity=ART.li
 function updateCanopy(){const value=Number($('canopy').value);for(const c of canopies)c.scale.setScalar(value);$('canopy-value').value=value.toFixed(2);renderer.shadowMap.needsUpdate=true;needsRender=true;}
 function updateRoughness(){const value=Number($('roughness').value);for(const [name,mat] of Object.entries(materials)){if(!['window','gold'].includes(name))mat.roughness=value;}$('roughness-value').value=value.toFixed(2);needsRender=true;}
 $('light').oninput=updateLight;$('canopy').oninput=updateCanopy;$('roughness').oninput=updateRoughness;
-function updateColors(){materials.ground.color.set($('grass-color').value);materials.grass.color.copy(materials.ground.color);materials.leaves.color.set($('leaf-color').value);materials.leafTips.color.copy(materials.leaves.color).lerp(new THREE.Color('#d2cb76'),.32);materials.roof.color.set($('roof-color').value);needsRender=true;}
-for(const id of ['grass-color','leaf-color','roof-color'])$(id).oninput=updateColors;
+function updateColors(){materials.ground.color.set($('grass-color').value);materials.grass.color.copy(materials.ground.color);materials.leaves.color.set($('leaf-color').value);materials.leafTips.color.copy(materials.leaves.color).lerp(new THREE.Color('#d2cb76'),.32);materials.roof.color.set($('roof-color').value);materials.carBody.color.set($('car-color').value);needsRender=true;}
+for(const id of ['grass-color','leaf-color','roof-color','car-color'])$(id).oninput=updateColors;
 $('grid-toggle').onchange=()=>{grid.visible=$('grid-toggle').checked;needsRender=true;if(grid.visible)notify('10 divisions × 10 design pixels = 100 × 100');};
 $('reset-style').onclick=()=>{
-  $('light').value=1;$('canopy').value=1;$('roughness').value=ART.material.roughness;$('grass-color').value=ART.palette.grass;$('leaf-color').value=ART.palette.leaves;$('roof-color').value=ART.palette.roof;
-  tesla.reset();updateLight();updateCanopy();updateRoughness();updateColors();$('grid-toggle').checked=false;grid.visible=false;updateZoom(1);notify('Original house style restored.');
+  $('light').value=1;$('canopy').value=1;$('roughness').value=ART.material.roughness;$('grass-color').value=ART.palette.grass;$('leaf-color').value=ART.palette.leaves;$('roof-color').value=ART.palette.roof;$('car-color').value=ART.palette.car;
+  car.reset();updateLight();updateCanopy();updateRoughness();updateColors();$('grid-toggle').checked=false;grid.visible=false;updateZoom(1);notify('Original house style restored.');
 };
 $('save-render').onclick=()=>{
   composer.render();const image=document.createElement('canvas');image.width=renderer.domElement.width;image.height=renderer.domElement.height;
@@ -139,13 +139,13 @@ $('save-render').onclick=()=>{
 
 for(const b of document.querySelectorAll('[data-drive]')){
   const k=b.dataset.drive;
-  b.addEventListener('pointerdown',e=>{e.preventDefault();b.setPointerCapture(e.pointerId);tesla.press(k,true);});
-  for(const ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,()=>tesla.press(k,false));
+  b.addEventListener('pointerdown',e=>{e.preventDefault();b.setPointerCapture(e.pointerId);car.press(k,true);});
+  for(const ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,()=>car.press(k,false));
 }
-$('park-car').onclick=()=>{tesla.reset();needsRender=true;renderer.shadowMap.needsUpdate=true;notify('Parked.');};
+$('park-car').onclick=()=>{car.reset();needsRender=true;renderer.shadowMap.needsUpdate=true;notify('Parked.');};
 
 // Deliberately small inspection API for performance checks and future tiles.
-window.forestTile={tesla,spec:TILE_SPEC,art:ART,scene,camera,renderer,materials,tile,canopies,refresh:()=>{needsRender=true;renderer.shadowMap.needsUpdate=true;},stats:()=>({drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,footprint:TILE_SPEC.footprint})};
+window.forestTile={car,spec:TILE_SPEC,art:ART,scene,camera,renderer,materials,tile,canopies,refresh:()=>{needsRender=true;renderer.shadowMap.needsUpdate=true;},stats:()=>({drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,footprint:TILE_SPEC.footprint})};
 
 if(import.meta.hot)import.meta.hot.dispose(()=>{
   scene.traverse(o=>{o.geometry?.dispose();});for(const mat of Object.values(materials))mat.dispose();composer.dispose();renderer.dispose();

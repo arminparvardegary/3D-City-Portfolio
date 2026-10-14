@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { ART, TILE_SPEC, seededRandom } from './config.js';
 import { box, mesh, branch, tint, mergeStatic } from './geometry.js';
 import { buildHome, buildTurkishFlag } from './home.js';
-import { buildTeslaModelY, createTeslaControls } from './tesla.js';
+import { buildCar, createCarControls } from './car.js';
 
 function referenceTree(parent,m,rand,x,z,height=2.25){
   const g=new THREE.Group();g.position.set(x,ART.tile.top,z);parent.add(g);
@@ -41,8 +41,7 @@ export function buildTile(m){
   mergeStatic(staticGroup);
   const canopies=[referenceTree(group,m,rand,-3.78,-2.75,2.3),referenceTree(group,m,rand,3.63,-3.45,2.15)];
   const flag=buildTurkishFlag(group,m);
-  // The Tesla is built outside the merged static group so it can drive.
-  const model=buildTeslaModelY(group,m);
-  const tesla=createTeslaControls(model,m);
-  return {group,canopies,animate:flag.animate,tesla,extraMaterials:[flag.material]};
+  // The car is built outside the merged static group so it can drive.
+  const car=createCarControls(buildCar(group,m),m);
+  return {group,canopies,animate:flag.animate,car,extraMaterials:[flag.material]};
 }

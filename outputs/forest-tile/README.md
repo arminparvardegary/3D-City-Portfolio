@@ -1,6 +1,6 @@
 # My House — Block 001
 
-A single minimal isometric 3D tile based on the supplied neighborhood reference: cream house, coral roof, turquoise windows, a smooth flat lawn, a graphite Tesla Model Y that you drive yourself (W A S D or arrow keys, Space handbrake, R or the Park button to put it back; on touch screens use the on screen pad), and a small Turkish flag beside the entrance.
+A single minimal isometric 3D tile based on the supplied neighborhood reference: cream house, coral roof, turquoise windows, a smooth flat lawn, a clean little blue car that you drive yourself (W A S D or arrow keys, Space handbrake, R or the Park button to put it back; on touch screens use the on screen pad), and a small Turkish flag beside the entrance.
 
 ## Run
 
@@ -10,9 +10,9 @@ Use Node.js 20.19+ or 22.12+. Run `npm install`, then `npm run dev -- --port 517
 
 The toolbar offers zoom, breeze on/off, and an art-direction panel. Adjust daylight, tree size, roughness, lawn/tree/roof/car colors, or show the design grid. Save a PNG with “Save a view.” Reset restores defaults. Panel changes last for the current page session.
 
-Defaults are in `src/config.js`: palette, lighting, fixed camera, house dimensions, car placement, and tile footprint. `src/home.js` creates the minimal house and Turkish flag; `src/tesla.js` models the car; `src/tile.js` assembles the lawn, driveway, house, car, trees, and entrance path. `src/main.js` controls rendering and the interface.
+Defaults are in `src/config.js`: palette, lighting, fixed camera, house dimensions, car placement, and tile footprint. `src/home.js` creates the minimal house and Turkish flag; `src/car.js` models the car and its driving; `src/tile.js` assembles the lawn, driveway, house, car, trees, and entrance path. `src/main.js` controls rendering and the interface.
 
-The Tesla Model Y is a 3D model traced from the supplied studio render (Gray_Electric_Vehicle_Hatchback.H03.psd). The render's camera was solved from the two visible wheel rims (least squares, about 3 px error), then the body profile was fitted so that, seen from that camera, it covers the render's silhouette at about 97% IoU. Details (light bar, lamps, vents, seams, handles, camera repeater) were placed by casting the render's pixels onto the fitted body. The fitting tool is `fit.html` (`?fit=N` runs N passes, `?mode=diff|full|solo` shows the comparison); its reference images are in `public/ref/`. It is not manufacturer CAD. All assets are live 3D geometry, with a local canvas texture for the Turkish crescent and star. No remote models or images are required. Interface fonts have sans-serif fallbacks.
+The car is a simple original design in the tile's style: one soft painted body, a tinted glass cabin under a painted roof, dark bumpers and wheel arches, slim lamps. It is not manufacturer CAD. All assets are live 3D geometry, with a local canvas texture for the Turkish crescent and star. No remote models or images are required. Interface fonts have sans-serif fallbacks.
 
 ## Modular footprint
 
@@ -22,4 +22,4 @@ Future tiles snap in 10-unit increments along X/Z. Lawn edges share height 0.12.
 
 Static geometry is batched by material. Pixel ratio is capped at 1.75. Breeze targets 30 FPS; shadows update at 6 Hz. Rendering pauses in hidden tabs and runs on demand with breeze off. Reduced-motion preferences disable breeze by default.
 
-The previous forest study was preserved in the workspace's `work/forest-v1/` directory before this redesign. The active preview uses the Tesla replacement.
+The previous forest study was preserved in the workspace's `work/forest-v1/` directory before this redesign. 
