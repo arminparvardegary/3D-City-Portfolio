@@ -42,7 +42,7 @@ export function buildNYCWorld({prep,materials,player}){
   // Sky dome: deep blue overhead fading to a light horizon, a warm glow round the sun.
   const sunDir=(()=>{const L=THEME.nyc.light.sun,a=THREE.MathUtils.degToRad(L.azimuth),e=THREE.MathUtils.degToRad(L.elevation);return new THREE.Vector3(Math.sin(a)*Math.cos(e),Math.sin(e),Math.cos(a)*Math.cos(e));})();
   const sky=new THREE.Mesh(new THREE.SphereGeometry(600,32,16),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,fog:false,
-    uniforms:{zenith:{value:new THREE.Color('#1f73d6')},horizon:{value:new THREE.Color('#b9e1f6')},ground:{value:new THREE.Color('#9fb3c2')},sun:{value:sunDir},glow:{value:new THREE.Color('#fff1d6')}},
+    uniforms:{zenith:{value:new THREE.Color('#0a0826')},horizon:{value:new THREE.Color('#3b2a8f')},ground:{value:new THREE.Color('#140f38')},sun:{value:sunDir},glow:{value:new THREE.Color('#6d5cff')}},
     vertexShader:'varying vec3 vDir;void main(){vDir=normalize(position);vec4 p=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*p;}',
     fragmentShader:'uniform vec3 zenith,horizon,ground,glow,sun;varying vec3 vDir;void main(){float h=vDir.y;vec3 c=h>0.?mix(horizon,zenith,pow(clamp(h,0.,1.),.55)):mix(horizon,ground,clamp(-h*3.,0.,1.));float s=max(dot(vDir,normalize(sun)),0.);c+=glow*(pow(s,48.)*.6+pow(s,6.)*.12);gl_FragColor=vec4(c,1.);}'}));
   sky.renderOrder=-2;
@@ -53,8 +53,13 @@ export function buildNYCWorld({prep,materials,player}){
       gr.addColorStop(0,'rgba(255,255,255,.95)');gr.addColorStop(.6,'rgba(246,248,252,.6)');gr.addColorStop(1,'rgba(235,240,248,0)');g.fillStyle=gr;g.fillRect(x-rad,y-rad,rad*2,rad*2);}
     const shade=g.createLinearGradient(0,90,0,256);shade.addColorStop(0,'rgba(255,255,255,0)');shade.addColorStop(1,'rgba(196,206,222,.25)');g.globalCompositeOperation='source-atop';g.fillStyle=shade;g.fillRect(0,0,512,256);
     const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;});
+  // Stars: a few hundred points on the dome, twinkle-free and cheap.
+  {const N=700,pos=new Float32Array(N*3);let r=11;const rnd=()=>((r=(r*16807)%2147483647)/2147483647);
+    for(let i=0;i<N;i++){const u=rnd()*Math.PI*2,v=.08+rnd()*.9,R=560;pos.set([Math.cos(u)*Math.cos(v)*R,Math.sin(v)*R,Math.sin(u)*Math.cos(v)*R],i*3);}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    const stars=new THREE.Points(g,new THREE.PointsMaterial({color:'#d8d4ff',size:1.6,sizeAttenuation:false,fog:false,transparent:true,opacity:.85,depthWrite:false}));stars.renderOrder=-2;stars.frustumCulled=false;sky.add(stars);}
   const clouds=[];{let r=5;const rnd=()=>((r=(r*16807)%2147483647)/2147483647);
-    for(let i=0;i<26;i++){const m=new THREE.SpriteMaterial({map:cloudTex[i%3],transparent:true,depthWrite:false,fog:false,opacity:1,color:'#ffffff'});const sp=new THREE.Sprite(m);
+    for(let i=0;i<26;i++){const m=new THREE.SpriteMaterial({map:cloudTex[i%3],transparent:true,depthWrite:false,fog:false,opacity:.35,color:'#7b6cff'});const sp=new THREE.Sprite(m);
       const w=120+rnd()*160;sp.scale.set(w,w*.55,1);sp.position.set(-480+rnd()*960,120+rnd()*80,-480+rnd()*960);sp.renderOrder=-1;group.add(sp);clouds.push(sp);}}
   const steamMat=new THREE.SpriteMaterial({map:puffTex,transparent:true,depthWrite:false,opacity:.5,color:'#f2f3f5'});
   const steam=city.steam.flatMap(p=>Array.from({length:7},(_,i)=>{const sp=new THREE.Sprite(steamMat.clone());sp.userData={x:p.x,z:p.z,age:i/7*3};group.add(sp);return sp;}));

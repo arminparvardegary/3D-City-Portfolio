@@ -111,7 +111,7 @@ const toneMapping=new ToneMappingEffect({mode:ToneMappingMode.NEUTRAL});
 // white; contrast comes from the light instead: strong sun, low fill, deep AO.)
 const saturation=new HueSaturationEffect({saturation:.08});
 // A gentle bloom: only the brightest highlights (lamps, sun glints) glow, as on film.
-const bloom=new BloomEffect({luminanceThreshold:.92,luminanceSmoothing:.2,intensity:.35,mipmapBlur:true,radius:.6});
+const bloom=new BloomEffect({luminanceThreshold:.62,luminanceSmoothing:.25,intensity:.35,mipmapBlur:true,radius:.75});
 composer.addPass(new EffectPass(camera,bloom,toneMapping,saturation));
 const TONE={neutral:ToneMappingMode.NEUTRAL,agx:ToneMappingMode.AGX,aces:ToneMappingMode.ACES_FILMIC};
 function applyArt(){
@@ -256,6 +256,8 @@ addEventListener('keydown',e=>{if(e.key==='Enter'&&!prompt.hidden&&!e.repeat){e.
 
 // Sound: engine, tyres, wind, horn (H), the city round you; M or the button mutes.
 const audio=createAudio({car,world,maxSpeed:()=>FEEL.car.maxSpeed});
+// Night driving: two warm headlight beams that light the road ahead.
+if(CHASE){const beam=new THREE.SpotLight('#ffd7a1',60,38,.42,.55,1.3);beam.position.set(0,.75,1.7);beam.target.position.set(0,0,14);car.rig.add(beam,beam.target);}
 car.onHit=s=>{audio.hit(s);if(!reducedMotion.matches&&s>.2)trauma=Math.min(1,trauma+s*.8);};
 addEventListener('keydown',e=>{if(story?.active&&/^Arrow/.test(e.key))audio.ui.step();});
 

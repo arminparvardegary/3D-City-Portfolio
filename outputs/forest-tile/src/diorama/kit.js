@@ -12,7 +12,7 @@ export function createKit({flat=true}={}){
     if(!mats.has(key))mats.set(key,new THREE.MeshStandardMaterial({color,roughness:.82,metalness:0,flatShading:flat,...extra}));return mats.get(key);};
   const resolve=m=>m?.isMaterial?m:mat(...[].concat(m));
   const put=(g,m)=>{g=g.index?g.toNonIndexed():g;
-    if(m.map){worldUV(g,m.userData.uvSize??1);}else g.deleteAttribute('uv');
+    if(m.map){worldUV(g,m.userData.uvSize??1);}else if(!m.alphaMap)g.deleteAttribute('uv');   // an alpha map keeps the shape's own UVs
     if(!buckets.has(m))buckets.set(m,[]);buckets.get(m).push(g);};
   const m4=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler(),v=new THREE.Vector3(),one=new THREE.Vector3(1,1,1);
   const add=(g,m,[x,y,z]=[0,0,0],[rx=0,ry=0,rz=0]=[],s=one)=>{q.setFromEuler(e.set(rx,ry,rz));put(g.applyMatrix4(m4.compose(v.set(x,y,z),q,s)),resolve(m));};

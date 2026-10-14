@@ -39,15 +39,15 @@ export const THEME=Object.freeze({
     clothes:['#ff6b5e','#4f9fd8','#ffc93a','#5fcf87','#a77be0','#f2f2f2','#2f3650','#ff9f6b','#3fb8a8','#e86fa0']},
   // New York (low poly): teal sky, warm sun from the left, cool sky light, warm bounce.
   nyc:{sky:{top:'#4f9be0',horizon:'#cfe6f4'},light:{
-    // Film render light: a warm sun with soft shadows, a sky fill, stronger sky
-    // reflections, AgX for photographic highlights, a light haze and bloom.
-    sun:{color:'#ffe6c4',intensity:3.6,azimuth:-58,elevation:38,softness:5},
-    sky:{color:'#b8d4f4',ground:'#d8c0a0',intensity:.95},
-    fill:{color:'#ffdcc0',intensity:.3},
-    env:.6,exposure:1.05,toneMapping:'agx',
-    fog:{enabled:true,color:'#bcd6ec',near:150,far:420},
-    ao:{intensity:2.2,radius:1.4,falloff:.6,color:'#3a3440'},
-    grade:{saturation:.3},bloom:.35,
+    // Night, in the style of bruno-simon.com: indigo moonlight from above, a
+    // violet sky fill, deep blue fog; warm lamps, windows and headlights glow.
+    sun:{color:'#9d96ff',intensity:1.0,azimuth:-58,elevation:52,softness:4},
+    sky:{color:'#5a48d8',ground:'#160f33',intensity:.75},
+    fill:{color:'#ff8a5c',intensity:.12},
+    env:.12,exposure:1.1,toneMapping:'agx',
+    fog:{enabled:true,color:'#1b1446',near:70,far:300},
+    ao:{intensity:2.6,radius:1.6,falloff:.6,color:'#0b0820'},
+    grade:{saturation:.12},bloom:1.1,
   }},
   light:{
     sun:{color:'#ffffff',intensity:2.3,azimuth:-38,elevation:52,softness:22},

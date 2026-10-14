@@ -98,3 +98,11 @@ html,body,#app{background:linear-gradient(180deg,var(--sky-top,#bfe3ff) 0%,var(-
 .sound-toggle:active{transform:scale(.92)}.sound-toggle:focus-visible{outline:3px solid #2f6bff66;outline-offset:2px}
 .sound-toggle[aria-pressed="false"]{color:#6e6e73}
 
+
+/* Night UI (bruno-simon.com style): dark violet glass, warm accent, hand-drawn titles. */
+.exp,.exp-card{--ink:#f4f0ff;--gray:#b9b0ef;--fill:#ffffff12;--line:#ffffff1f;--blue:#ff9a4a;--blue-soft:#ff9a4a22}
+.exp-toggle,.exp-panel,.exp-card,.park-prompt,.story-hud,.sound-toggle{background:rgba(22,16,56,.82)!important;color:#f4f0ff!important;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 12px 40px #0006,inset 0 0 0 1px #ffffff14!important}
+.exp-toggle,.exp-panel h2,.exp-card h3,.story-title{font-family:"Amatic SC","Marker Felt",cursive!important;font-weight:700;letter-spacing:.02em}
+.exp-toggle{font-size:26px!important}.exp-card h3{font-size:40px!important}.story-title{font-size:26px!important}
+.park-prompt kbd{background:#ff9a4a!important;color:#1a1035!important;box-shadow:0 0 18px #ff9a4a88}
+.story-hud button{background:#ffffff14!important;color:#f4f0ff!important}

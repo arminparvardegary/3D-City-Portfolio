@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { createKit } from '../../diorama/kit.js';
-import { FACADE, storyFacade, towerFacade } from './facades.js';
+import { FACADE, storyFacade, towerFacade,storyGlow,towerGlow } from './facades.js';
 import { G,CURB,HALF,LANE,EDGE,PARK,WALK,MAN,BKN,NS,AV,BAV,ST,BRIDGE,blocks,network,CORNER_R } from './layout.js';
 
 // The city itself (world units): land and water, sidewalks with curbs, street
@@ -20,8 +20,8 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
   // pastel towers for the skyline. (Keys kept from the realistic set: brick,
   // office, lime, brown, glass.)
   // The painted facade doubles as its bump map: bricks, recesses and sills catch the light.
-  const story=(c,kind)=>{const t=storyFacade(c,kind),m=mat('#ffffff',{map:t,bumpMap:t,bumpScale:1.4,roughness:.85});m.userData.uvSize=2;return m;};
-  const tower=c=>{const t=towerFacade(c),m=mat('#ffffff',{map:t,bumpMap:t,bumpScale:1,roughness:.55,metalness:.1});m.userData.uvSize=2;return m;};
+  const story=(c,kind)=>{const t=storyFacade(c,kind),m=mat('#ffffff',{map:t,bumpMap:t,bumpScale:1.4,roughness:.85,emissiveMap:storyGlow(kind==='brick'?'square':kind),emissive:'#ffffff',emissiveIntensity:1.1});m.userData.uvSize=2;return m;};
+  const tower=c=>{const t=towerFacade(c),m=mat('#ffffff',{map:t,bumpMap:t,bumpScale:1,roughness:.55,metalness:.1,emissiveMap:towerGlow(),emissive:'#ffffff',emissiveIntensity:.8});m.userData.uvSize=2;return m;};
   const WALLS=['#e88fa2','#f0a07a','#7fc8b0','#5aa9a4','#f2cf74','#b7a3d9','#86b9e3','#f3b28c','#e6c9a4','#a8d08d'];
   const PAL={brick:WALLS.map(c=>story(c,'arch')),office:WALLS.map(c=>story(c,'square')),brown:['#c25b45','#b8664a','#a8523e','#c97a5a'].map(c=>story(c,'brick')),
     lime:['#f3dcc0','#f1d2b2','#e8d6c8'].map(tower),glass:['#cfe2f0','#d9cdea','#f6d9c4','#bfd9ee'].map(tower)};
@@ -56,8 +56,8 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
         .replace('#include <begin_vertex>','vec3 transformed=vec3(position);transformed.y+=h*2.2;vWave=h/.3;');
       // Colour from the waves: deep blue troughs, lighter green blue crests, a little foam on the tops.
       sh.fragmentShader='varying float vWave;\n'+sh.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
-        float w=clamp(vWave*.5+.5,0.,1.);diffuseColor.rgb=mix(vec3(.015,.075,.12),vec3(.05,.2,.26),w);
-        diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.85,.92,.95),smoothstep(.9,1.,w)*.3);`);};
+        float w=clamp(vWave*.5+.5,0.,1.);diffuseColor.rgb=mix(vec3(.02,.015,.09),vec3(.09,.07,.3),w);
+        diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.85,.92,.95),smoothstep(.9,1.,w)*.12);`);};
     const near=new THREE.Mesh(new THREE.PlaneGeometry(900,900,200,200).rotateX(-Math.PI/2),mat);
     near.position.set(6,-.9,0);near.receiveShadow=true;root.add(near);
     const far=new THREE.Mesh(new THREE.RingGeometry(440,3000,64,1).rotateX(-Math.PI/2),mat);far.position.set(6,-.96,0);root.add(far);}
@@ -189,11 +189,17 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
     add(new THREE.ExtrudeGeometry(ring,{depth:CURB+.01,bevelEnabled:false,curveSegments:16}).rotateX(-Math.PI/2),granite,[0,G,0]);
     solidBlock(b.x0,b.x1,b.z0,b.z1,r);
   }
-  const lampHead=mat('#fff3d6',{emissive:'#ffe2a8',emissiveIntensity:.5});
+  const lampHead=mat('#fff3d6',{emissive:'#ffb052',emissiveIntensity:4});
   const lamp=(x,z,ox,oz)=>{cyl(.09,.13,5.6,8,x,top,z,dark);add(new THREE.BoxGeometry(.08,.08,1.6).rotateY(Math.atan2(ox,oz)),dark,[x+ox*.8,top+5.5,z+oz*.8]);
     add(new THREE.BoxGeometry(.5,.16,.8).rotateY(Math.atan2(ox,oz)),dark,[x+ox*1.6,top+5.38,z+oz*1.6]);box(.4,.04,.6,x+ox*1.6,top+5.3,z+oz*1.6,lampHead);};
+  // Painterly canopies (as on bruno-simon.com): a blotchy alpha map tears each leaf
+  // ball into ragged dabs, so trees read as brush strokes, not spheres.
+  const LEAF=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');g.fillStyle='#000';g.fillRect(0,0,128,128);
+    let r=9;const rnd=()=>((r=(r*16807)%2147483647)/2147483647);g.fillStyle='#fff';
+    for(let i=0;i<1300;i++){const x=rnd()*128,y=rnd()*128,s=2+rnd()*5;g.fillRect(x,y,s,s);}
+    const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.magFilter=THREE.NearestFilter;return t;})();
   // Fluffy rounded trees: a tapered trunk and a soft cloud of leafy balls, lighter on top.
-  const leafs=['#6aa63f','#79b84a','#8ccf55','#5f9a3a'].map(c=>mat(c,{roughness:.85})),leafTop=mat('#a6dc6a',{roughness:.85}),bark=mat('#7a5236',{roughness:.9});
+  const leafs=['#3f7a5a','#4a6fa8','#5a5ac8','#3c8a6a'].map(c=>mat(c,{roughness:.9,alphaMap:LEAF,alphaTest:.5,side:THREE.DoubleSide})),leafTop=mat('#7a7ae0',{roughness:.9,alphaMap:LEAF,alphaTest:.5,side:THREE.DoubleSide}),bark=mat('#7a5236',{roughness:.9});
   const tree=(x,z,s=1,y=top)=>{cyl(.13*s,.24*s,2.8*s,10,x,y,z,bark);
     for(let k=0;k<4;k++){const a=k/4*Math.PI*2+.4,rr=(1+rand()*.35)*s;add(new THREE.IcosahedronGeometry(rr,1),pick(leafs),[x+Math.cos(a)*.75*s,y+(3.1+rand()*.5)*s,z+Math.sin(a)*.75*s]);}
     add(new THREE.IcosahedronGeometry(1.05*s,1),leafTop,[x,y+4.2*s,z]);};
@@ -317,7 +323,7 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
   for(const r of fills)fill(r,r.zone??'low');
 
   // String lights with glowing bulbs across the streets of Armin's corner.
-  {const bulb=mat('#fff3c4',{emissive:'#ffcf6a',emissiveIntensity:1.4,roughness:.4}),wire=mat('#2b2b2f');
+  {const bulb=mat('#fff3c4',{emissive:'#ffb347',emissiveIntensity:5,roughness:.4}),wire=mat('#2b2b2f');
     for(const [z,x0,x1] of [[ST[5],-106,-40],[ST[4],-106,-40]])for(let x=x0;x<=x1;x+=11){
       if(AV.some(a=>Math.abs(x-a)<HALF+1.5))continue;   // never over an avenue: the posts would stand in the road
       const pts=[];for(let k=0;k<=12;k++){const t=k/12,zz=z-HALF-1+t*(2*HALF+2),y=top+6.2-Math.sin(t*Math.PI)*1.1;pts.push(new THREE.Vector3(x,y,zz));}

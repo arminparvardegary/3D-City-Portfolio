@@ -44,6 +44,17 @@ export function storyFacade(wall,kind='arch'){
     g.fillStyle='#efe2cb';g.fillRect(x-12,y+h+6,w+24,9);g.fillStyle='rgba(0,0,0,.18)';g.fillRect(x-12,y+h+15,w+24,4);
   });
 }
+// Night glow maps: black walls, warm lit glass (most windows on, some cool, some off).
+export function storyGlow(kind='arch'){
+  return tex('glow'+kind,256,(g,s)=>{g.fillStyle='#000';g.fillRect(0,0,s,s);
+    const x=s*.3,w=s*.4,y=s*.2,h=s*.58,arch=kind==='arch';
+    const gl=g.createLinearGradient(0,y,0,y+h);gl.addColorStop(0,'#ffcf7a');gl.addColorStop(1,'#ff8a3c');g.fillStyle=gl;
+    g.beginPath();if(arch){g.moveTo(x,y+h);g.lineTo(x,y+w/2);g.arc(x+w/2,y+w/2,w/2,Math.PI,0);g.lineTo(x+w,y+h);g.closePath();}else g.rect(x,y,w,h);g.fill();
+    g.fillStyle='#000';g.fillRect(x+w/2-2,y,4,h);g.fillRect(x,y+h*.55,w,4);});
+}
+export function towerGlow(){
+  return tex('towerglow',128,(g,s)=>{g.fillStyle='#000';g.fillRect(0,0,s,s);g.fillStyle='#ffc070';g.fillRect(s*.18,s*.2,s*.64,s*.55);g.fillStyle='#000';g.fillRect(s*.49,s*.2,s*.02,s*.55);});
+}
 // Pastel towers for the skyline: soft wall colour with simple light window bands.
 export function towerFacade(wall){
   return tex('tower'+wall,128,(g,s)=>{const c=new THREE.Color(wall);g.fillStyle=wall;g.fillRect(0,0,s,s);
