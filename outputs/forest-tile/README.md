@@ -42,7 +42,7 @@ Stack: Three.js r180 (vanilla, no React), Vite 7, `postprocessing` 6.39.5 (pmndr
 
 ## Driving
 
-W / Up gas, S / Down brake then reverse, A D / Left Right steer, Space handbrake, R back to the parking space. Top speed 12.8 units/s (0 to 6.4 in 0.8 s, to 12 in about 3 s), brakes stop from full speed in about 0.7 s, steering eases in and centres quickly, the car turns tighter than its wheel angle (radius about 3.6 units at 8 units/s, about 5 at full speed), turning is limited by tyre grip, and the handbrake lets the rear slide. The camera follows faster as speed rises.
+W / Up gas, S / Down brake then reverse, A D / Left Right steer, Space handbrake, R back to the parking space. Top speed 9.6 units/s (0 to 4.8 in 0.8 s, to 9 in about 3 s), brakes stop from full speed in about 0.7 s. The car follows its front wheels exactly: tight at low speed (radius about 3 units), wider arcs at speed (about 4.7 at 5 units/s, 7.5 at full speed, where tyre grip caps it and the car runs wide instead of snapping round). Steering eases in and centres quickly; the handbrake lets the rear slide. The camera follows faster as speed rises.
 
 ## Road and traffic (tiles 79 to 87)
 
