@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { TILE } from './units.js';
+import { THEME } from './theme.js';
 
 // The world map: GRID.cols x GRID.rows tiles of 100 x 100 design pixels, numbered
 // 1..N row by row from the north-west corner (row 1 is the northernmost, -z).
@@ -21,7 +22,7 @@ export function buildGrid(prep,{occupied=[]}={}){
   const taken=new Set([HOME_NUMBER,...occupied]);
 
   // Every blank tile is the same grey slab: one instanced draw call for all of them.
-  const slabMat=new THREE.MeshStandardMaterial({color:'#d3d6d4',roughness:.92});prep?.(slabMat);
+  const slabMat=new THREE.MeshStandardMaterial({color:THEME.palette.blank,roughness:.92});prep?.(slabMat);
   const slabs=new THREE.InstancedMesh(new THREE.BoxGeometry(s-gap,TILE.slab,s-gap).translate(0,TILE.slab/2,0),slabMat,n-taken.size);
   const o=new THREE.Object3D();let k=0;
   for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
@@ -36,7 +37,7 @@ export function buildGrid(prep,{occupied=[]}={}){
   const ctx=canvas.getContext('2d');ctx.textAlign='center';ctx.textBaseline='middle';
   for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
     const home=taken.has(tileNumber(c,r));
-    ctx.fillStyle=home?'#6f7f5f':'#8d928f';ctx.font=`600 ${home?18:46}px "DM Sans", Arial, sans-serif`;
+    ctx.fillStyle=home?THEME.palette.tileNumber:THEME.palette.blankNumber;ctx.font=`600 ${home?18:46}px "DM Sans", Arial, sans-serif`;
     const x=(c+(home?.08:.5))*px,y=(r+(home?.92:.5))*px;
     ctx.fillText(String(tileNumber(c,r)),x+(home?6:0),y);
   }

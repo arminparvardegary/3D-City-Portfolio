@@ -53,3 +53,7 @@ Bot cars (`src/world/traffic.js`) use the Intelligent Driver Model: they keep a 
 ## Park (tile 98)
 
 Across the road from the house (`src/world/park.js`): a stone fountain on a circular gravel path, four paths out to the tile edges (the north one meets the road's sidewalk), twelve faceted round trees and pines (three per quarter), four benches facing the fountain, four lamp posts, and a trimmed hedge framing the edges with openings at the paths. The car can drive on the grass and paths but collides with trees, benches, lamps, hedges and the fountain.
+
+## Design system: storybook
+
+All colours, light and surfaces come from one set of tokens in `src/world/theme.js`, so every tile shares the look. Storybook is an original style in the spirit of classic animated films: lush, saturated but soft greens; warm golden sunlight with sky-blue fill light in the shadows; cream walls and coral roofs; a soft sky gradient behind the world with faceted clouds drifting slowly over the map; contact shading tinted violet, never black.

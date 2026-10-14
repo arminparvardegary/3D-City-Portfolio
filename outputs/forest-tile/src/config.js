@@ -1,3 +1,5 @@
+import { THEME } from './world/theme.js';
+
 // All spatial dimensions are in world units. 1 unit = 10 design pixels.
 // Camera is deliberately fixed: no orbit, drag, or perspective controls.
 export const ART = {
@@ -5,12 +7,13 @@ export const ART = {
   tile: { designPixels: 100, worldSize: 10, top: 0.12, depth: 0.12, edgeHeight: 0.12 },
   camera: { azimuth: 45, elevation: 35.264, viewHeight: 13.9, target: [0, 1.05, 0] },
   palette: {
-    background: '#f1f2f1', grass: '#a7ca6e', grassLight: '#b6d782',
-    leaves: '#84b254', leafLight: '#a4c870', bark: '#8d8270',
-    soil: '#a1b77e', plaster: '#f2eddc', timber: '#f5f6ef',
-    roof: '#f06b60', roofLight: '#fb8274', glass: '#6bb9c5', path: '#d8dbd7',
-    car: '#e8574a', parking: '#c7ceca', trim: '#f8faf6',
+    background: THEME.sky.horizon, grass: THEME.palette.grass, grassLight: THEME.palette.grassLight,
+    leaves: THEME.palette.leaves, leafLight: THEME.palette.leafLight, bark: THEME.palette.bark,
+    soil: THEME.palette.soil, plaster: THEME.palette.plaster, timber: THEME.palette.timber,
+    roof: THEME.palette.roof, roofLight: THEME.palette.roofLight, glass: THEME.palette.glass, path: THEME.palette.path,
+    car: '#e8574a', parking: THEME.palette.parking, trim: THEME.palette.trim,
   },
+
   light: { sun: 3.0, fill: 1.8, exposure: 1.05, position: [-3.5, 9, 6], shadowSize: 2048, shadowSoftness: 21 },
   material: { roughness: 0.9, bump: 0.002 },
   vegetation: { canopyScale: 1, grassClumps: 0, breeze: true, sway: 0.004 },

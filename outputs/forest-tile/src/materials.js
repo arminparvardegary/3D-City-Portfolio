@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { ART, seededRandom } from './config.js';
+import { THEME } from './world/theme.js';
 
 function grainTexture(kind, seed = 291) {
   const canvas = document.createElement('canvas');
@@ -31,14 +32,14 @@ export function createMaterials() {
     grass: make(colors.grass, { vertexColors: true, side: THREE.DoubleSide }),
     soil: make(colors.soil, { ...tactile, vertexColors: true, bumpScale: 0.025 }),
     path: make(colors.path, { ...tactile, vertexColors: true }),
-    stone: make('#b1b29b', { ...tactile, vertexColors: true }),
+    stone: make(THEME.palette.stone, { ...tactile, vertexColors: true }),
     plaster: make(colors.plaster, { ...tactile, bumpScale: 0.014 }),
     timber: make(colors.timber, { bumpMap: wood, bumpScale: 0.018, vertexColors: true }),
-    door: make('#81949b', { vertexColors: true }),
+    door: make(THEME.palette.door, { vertexColors: true }),
     roof: make(colors.roof, { ...tactile, bumpScale: 0.018, vertexColors: true }),
-    roofDark: make('#7c5140', { ...tactile }),
+    roofDark: make(THEME.palette.roofDark, { ...tactile }),
     leaves: make(colors.leaves, { ...tactile, bumpScale: 0.006, vertexColors: true, side: THREE.DoubleSide }),
-    pine: make('#5f8f4a', { vertexColors: true }),
+    pine: make(THEME.palette.pine, { vertexColors: true }),
     leafTips: make(colors.leafLight, { vertexColors: true, side: THREE.DoubleSide }),
     bark: make(colors.bark, { bumpMap: wood, bumpScale: 0.075, vertexColors: true }),
     birch: make('#d5d1b2', { ...tactile }),
@@ -47,7 +48,7 @@ export function createMaterials() {
     windowDark: make('#415d52', { roughness: 0.7 }),
     cream: make('#e5e1bd'),
     flower: make('#eee5be', { side: THREE.DoubleSide, vertexColors: true }),
-    gold: make('#c6a45c', { roughness: 0.5, metalness: 0.15 }),
+    gold: make(THEME.palette.gold, { roughness: 0.5, metalness: 0.15 }),
     clay: make('#bc7b54', { ...tactile }),
     mushroom: make('#c78359', { ...tactile }),
     dark: make('#3f4b3e'),

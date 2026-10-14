@@ -33,3 +33,6 @@
 .vehicle-list button{grid-template-columns:22px 60px;width:auto}
 @media(max-width:1000px){.vehicle-list{top:auto;bottom:16px;transform:none}.vehicle-list ol{max-height:none}}
 @media(hover:none){.vehicle-list{bottom:150px}}
+
+/* Storybook sky behind the transparent canvas (colours from the theme). */
+html,body,#app{background:linear-gradient(180deg,var(--sky-top,#bfe3ff) 0%,var(--sky-horizon,#fff4e2) 78%) fixed}

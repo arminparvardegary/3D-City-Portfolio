@@ -3,6 +3,7 @@ import { TILE } from './units.js';
 import { tileCell, tileCenter } from './grid.js';
 import { box, mesh, tint, mergeStatic } from '../geometry.js';
 import { tree } from './vegetation.js';
+import { THEME } from './theme.js';
 
 // A small town park on one tile: a round fountain on a circular gravel path,
 // four paths out to the tile edges (the north one meets the road's sidewalk),
@@ -11,10 +12,11 @@ import { tree } from './vegetation.js';
 const PATH_TOP=.136,SPOKE_TOP=.133;   // the ring sits a hair above the spokes, so their tops never coincide
 
 function parkMaterials(prep){
+  const P=THEME.park;
   const make=(color,extra={})=>{const m=new THREE.MeshStandardMaterial({color,roughness:.9,vertexColors:true,...extra});prep?.(m);return m;};
   return {
-    gravel:make('#e3d9c2'),stone:make('#d8d4c9',{roughness:.8}),water:make('#8ccfe0',{roughness:.12,metalness:.1}),
-    wood:make('#b47c4d',{roughness:.75}),iron:make('#3f464c',{roughness:.6}),lamp:make('#fff1c9',{emissive:'#ffe2a3',emissiveIntensity:.6}),
+    gravel:make(P.gravel),stone:make(P.stone,{roughness:.8}),water:make(P.water,{roughness:.1,metalness:.1}),
+    wood:make(P.wood,{roughness:.75}),iron:make(P.iron,{roughness:.6}),lamp:make(P.lamp,{emissive:P.lampGlow,emissiveIntensity:.7}),
   };
 }
 

@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { THEME } from './theme.js';
 
 // Lighting presets: one object describes the whole look of a time of day, so
 // every tile shares the same light and a new mood is one new entry.
 export const LIGHTING={
+  storybook:THEME.light,
   daylight:{
     sun:{color:'#fffaf1',intensity:2.9,azimuth:-30,elevation:52,softness:21},
     sky:{color:'#f6f8fc',ground:'#bbc6b5',intensity:1.55},

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { TILE } from './units.js';
 import { tileCell, tileCenter } from './grid.js';
 import { box, mesh, mergeStatic } from '../geometry.js';
+import { THEME } from './theme.js';
 
 // An east-west road across a row of tiles: two lanes, dashed centre line,
 // sidewalks, and at the junction tile a crossing for the house driveway with
@@ -23,13 +24,14 @@ export function signalState(t){
 }
 
 function materials(prep){
+  const R=THEME.road;
   const make=(color,extra={})=>{const m=new THREE.MeshStandardMaterial({color,roughness:.9,vertexColors:true,...extra});prep?.(m);return m;};
   const lamp=(color)=>{const m=make('#2a2a2a',{roughness:.4,emissive:color,emissiveIntensity:0});m.userData.on=new THREE.Color(color);return m;};
   return {
-    asphalt:make('#3e444b'),mark:make('#f4f4ef'),walk:make('#d9dcd8'),curb:make('#c3c7c3'),driveway:make('#c7ceca'),
-    pole:make('#4a5157',{roughness:.6}),housing:make('#2b3034',{roughness:.6}),
-    road:{red:lamp('#ff3b30'),yellow:lamp('#ffc21a'),green:lamp('#2fd35c')},
-    side:{red:lamp('#ff3b30'),yellow:lamp('#ffc21a'),green:lamp('#2fd35c')},
+    asphalt:make(R.asphalt),mark:make(R.mark),walk:make(R.walk),curb:make(R.curb),driveway:make(R.driveway),
+    pole:make(R.pole,{roughness:.6}),housing:make(R.housing,{roughness:.6}),
+    road:{red:lamp(R.red),yellow:lamp(R.yellow),green:lamp(R.green)},
+    side:{red:lamp(R.red),yellow:lamp(R.yellow),green:lamp(R.green)},
   };
 }
 

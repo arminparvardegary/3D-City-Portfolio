@@ -12,6 +12,8 @@ import { wind, setDensity } from './world/vegetation.js';
 import { buildGrid, GRID, HOME_NUMBER, tileNumber, tileCenter } from './world/grid.js';
 import { buildRoad } from './world/roads.js';
 import { buildPark } from './world/park.js';
+import { createClouds } from './world/clouds.js';
+import { THEME } from './world/theme.js';
 import { createTraffic } from './world/traffic.js';
 import { VEHICLES } from './vehicles.js';
 
@@ -47,7 +49,7 @@ const CAMERA_DISTANCE=160;
 function placeCamera(){camera.position.copy(target).addScaledVector(viewDir,CAMERA_DISTANCE);camera.lookAt(target);}
 placeCamera();
 
-const art=structuredClone(LIGHTING.daylight);
+const art=structuredClone(LIGHTING.storybook);
 art.fog.enabled=false;   // a 150 tile map: every tile should read the same
 const lights=createLights(scene),{sky,sun,fill}=lights;
 scene.environment=createEnvironment(renderer);
@@ -61,7 +63,10 @@ const road=buildRoad({numbers:ROAD_TILES,junction:83,prep:softenShadows,m:materi
 // Tile 98, across the road from the house: a park with trees.
 const park=buildPark({number:98,m:materials,prep:softenShadows});scene.add(park.group);
 const grid150=buildGrid(softenShadows,{occupied:[...ROAD_TILES,98]});scene.add(grid150.group);
-car.setBounds(grid150.bounds);car.addStatic(road.poles);car.addStatic(park.circles,park.boxes);
+car.setBounds(grid150.bounds);car.addStatic(road.poles);
+const clouds=createClouds({bounds:grid150.bounds,prep:softenShadows});scene.add(clouds.group);
+// The sky behind the world (the canvas is transparent).
+document.documentElement.style.setProperty('--sky-top',THEME.sky.top);document.documentElement.style.setProperty('--sky-horizon',THEME.sky.horizon);car.addStatic(park.circles,park.boxes);
 const traffic=createTraffic({parent:scene,m:materials,prep:softenShadows,lanes:road.lanes,setLights:road.setLights,
   player:()=>{const p=car.pose();return {x:p.x,z:p.z,len:car.length};}});
 car.setObstacles(()=>traffic.obstacles());
@@ -200,6 +205,7 @@ function render(time=0){
   // The car is driven by the visitor, so it keeps running even with the breeze paused.
   if(car.update(time)){animating=true;renderer.shadowMap.needsUpdate=true;}
   if(traffic.update(frameDt/1000)){animating=true;renderer.shadowMap.needsUpdate=true;}
+  if(breeze)clouds.update(frameDt/1000*timeScale);
   if(updateView(frameDt/1000))animating=true;
   if(!animating&&!needsRender)return;
   renderer.info.reset();composer.render();needsRender=false;
