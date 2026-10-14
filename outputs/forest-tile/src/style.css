@@ -77,3 +77,18 @@ html,body,#app{background:linear-gradient(180deg,var(--sky-top,#bfe3ff) 0%,var(-
 }
 @media(hover:none){.exp-card{bottom:150px}}
 @media(prefers-reduced-motion:reduce){.exp-card{animation:none}.exp-panel li button,.exp-nav button{transition:none}}
+
+/* Parking prompt and the experience story controls (bottom centre). */
+.park-prompt,.story-hud{position:absolute;left:50%;bottom:28px;transform:translateX(-50%);z-index:7;display:flex;align-items:center;gap:12px;height:56px;padding:0 24px 0 12px;border:0;border-radius:28px;background:#fff;box-shadow:0 14px 40px #1e284626;font-family:-apple-system,"SF Pro Text",system-ui,sans-serif;font-size:17px;font-weight:600;color:#1d1d1f;cursor:pointer;animation:exp-in .45s cubic-bezier(.28,.11,.32,1)}
+.park-prompt[hidden],.story-hud[hidden]{display:none}
+.park-prompt span{white-space:nowrap}
+.park-prompt kbd{height:36px;padding:0 12px;display:grid;place-items:center;border-radius:18px;background:#2f6bff;color:#fff;font:inherit;font-size:15px}
+.park-prompt:focus-visible,.story-hud button:focus-visible{outline:3px solid #2f6bff66;outline-offset:2px}
+.story-hud{padding:0 8px;cursor:default}
+.story-hud button{width:40px;height:40px;border:0;border-radius:20px;background:#f5f5f7;font-size:22px;line-height:1;color:#1d1d1f;cursor:pointer;transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
+.story-hud button:active:not(:disabled){transform:scale(.94)}.story-hud button:disabled{opacity:.35;cursor:default}
+.story-hud .story-exit{width:auto;padding:0 14px;font-size:13px;font-weight:600;color:#6e6e73}
+.story-title{min-width:220px;text-align:center;white-space:nowrap}
+@media(hover:none){.park-prompt,.story-hud{bottom:150px}}
+@media(max-width:520px){.story-title{min-width:0;font-size:15px}}
+@media(prefers-reduced-motion:reduce){.park-prompt,.story-hud{animation:none}}

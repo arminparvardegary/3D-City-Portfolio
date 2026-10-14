@@ -14,6 +14,9 @@ import { THEME } from './world/theme.js';
 import { createPlayground } from './world/playground.js';
 import { buildCampus } from './world/campus.js';
 import { createExperience } from './ui/experience.js';
+import { buildNYCWorld } from './nyc/world.js';
+import { createStory } from './world/story.js';
+import { JOBS, PROFILE } from './data/profile.js';
 import { VEHICLES } from './vehicles.js';
 import { FEEL, damp, spring } from './motion.js';
 
@@ -34,7 +37,7 @@ renderer.info.autoReset=false;
 // Tone mapping happens once, in the final effect pass (renderer stays linear).
 renderer.toneMapping=THREE.NoToneMapping;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.domElement.setAttribute('aria-label','A white architectural model of a campus with Armin\'s sections (About, Work, Skills, Projects, Contact) and the studios he worked at. Drive the car with the arrow keys or WASD.');
+renderer.domElement.setAttribute('aria-label','A low poly New York you drive through: Armin\'s Experience Row with a parking lot, Skills Street and the city\'s landmarks. Drive with the arrow keys or WASD; park at Experience Row and press Enter.');
 renderer.domElement.setAttribute('role','img');
 viewport.appendChild(renderer.domElement);
 
@@ -49,24 +52,27 @@ const CAMERA_DISTANCE=160;
 function placeCamera(){camera.position.copy(target).addScaledVector(viewDir,CAMERA_DISTANCE);camera.lookAt(target);}
 placeCamera();
 
-const art=structuredClone(LIGHTING.storybook);   // the harbour theme (world/theme.js)
+// The world: low poly New York (default) or the white campus (?world=campus).
+const WORLD=new URLSearchParams(location.search).get('world')==='campus'?'campus':'nyc';
+const art=structuredClone(WORLD==='nyc'?THEME.nyc.light:LIGHTING.storybook);
 art.fog.enabled=false;   // the whole map: every tile should read the same
-const lights=createLights(scene),{sky,sun,fill}=lights;
+const lights=createLights(scene),{sun}=lights;
 scene.environment=createEnvironment(renderer,art);
 const materials=createMaterials();
 Object.values(materials).forEach(softenShadows);
 // --- The map: a square of 9 x 9 numbered tiles (81) ------------------------------
 // The numbered tiles show only with ?tiles; normally the playground floor is the map.
 const tileGrid=buildGrid(softenShadows);if(new URLSearchParams(location.search).has('tiles'))scene.add(tileGrid.group);
-const bounds=tileGrid.bounds;
-document.documentElement.style.setProperty('--sky-top',THEME.sky.top);document.documentElement.style.setProperty('--sky-horizon',THEME.sky.horizon);
-// Your car starts in the middle of the map.
-const car=createCarControls(scene,materials,{prep:softenShadows,index:VEHICLES.findIndex(v=>v.name==='City'),home:{x:0,z:0,h:Math.PI/2}});
-car.setBounds({x0:bounds.x0+.4,x1:bounds.x1-.4,z0:bounds.z0+.4,z1:bounds.z1-.4});
-// The white campus: plinths, buildings, beacons. The car cannot drive onto the plinths.
-const campus=buildCampus({prep:softenShadows});scene.add(campus.group);
-car.addStatic([],campus.solids);car.paint.color.set(THEME.campus.car);
-const playground=createPlayground({scene,prep:softenShadows,car,bounds,solids:campus.solids});
+const world=WORLD==='nyc'?buildNYCWorld({prep:softenShadows}):buildCampus({prep:softenShadows});scene.add(world.group);
+const tb=tileGrid.bounds,bounds=world.bounds??{x0:tb.x0+.4,x1:tb.x1-.4,z0:tb.z0+.4,z1:tb.z1-.4};
+const skyTint=WORLD==='nyc'?THEME.nyc.sky:THEME.sky;
+document.documentElement.style.setProperty('--sky-top',skyTint.top);document.documentElement.style.setProperty('--sky-horizon',skyTint.horizon);
+// Your car: blocked by the world's solids (sidewalks, plinths, the river) and its traffic.
+const car=createCarControls(scene,materials,{prep:softenShadows,index:VEHICLES.findIndex(v=>v.name==='City'),home:world.start??{x:0,z:0,h:Math.PI/2}});
+car.setBounds(bounds);car.addStatic([],world.solids);car.paint.color.set(world.carColor??THEME.campus.car);
+if(world.obstacles)car.setObstacles(world.obstacles);
+// Physics toys belong to the campus only.
+const playground=WORLD==='campus'?createPlayground({scene,prep:softenShadows,car,bounds:tb,solids:world.solids}):null;
 const canopies=[],animateTile=null,meadow={layers:[],grassMaterial:null};
 const grid=new THREE.Group();grid.visible=false;scene.add(grid);
 const gridMat=new THREE.LineBasicMaterial({color:'#738662',transparent:true,opacity:.32,depthTest:false});
@@ -119,7 +125,9 @@ const monitor=new FrameMonitor({
   onScale:s=>{renderScale=s;resize();},
   onPreset:()=>{const i=ORDER.indexOf(qualityName);if(i<ORDER.length-1)setQuality(ORDER[i+1],'auto');},
 });
-let zoom=.55,breeze=ART.vegetation.breeze,needsRender=true,hidden=document.hidden;
+// New York keeps one zoom, close on the car; the campus can be zoomed.
+const FIXED=!!world.fixedZoom;
+let zoom=world.zoom??.55,breeze=ART.vegetation.breeze,needsRender=true,hidden=document.hidden;
 const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
 if(reducedMotion.matches)breeze=false;
 
@@ -145,7 +153,7 @@ new ResizeObserver(resize).observe(viewport);
 // holds the view for a moment before follow resumes. Constants: FEEL.camera.
 const F=FEEL.camera,ZOOM_MIN=.08,ZOOM_MAX=2.2;
 let followHold=0,zoomVel=0,speedZoom=1,trauma=0,shakeClock=0;
-const panVel=new THREE.Vector3(),camX={x:target.x,v:0},camZ={x:target.z,v:0};
+const panVel=new THREE.Vector3(),camX={x:target.x,v:0},camZ={x:target.z,v:0},BASE_Y=target.y,camY={x:target.y,v:0};
 const groundRight=new THREE.Vector3(Math.cos(az),0,-Math.sin(az)),groundUp=new THREE.Vector3(-Math.sin(az),0,-Math.cos(az)).multiplyScalar(1/Math.sin(el));
 const screenUp=new THREE.Vector3().crossVectors(groundRight,viewDir).normalize();
 const pointers=new Map();let lastMove=0;
@@ -157,12 +165,14 @@ canvasEl.addEventListener('pointermove',e=>{
   const p=pointers.get(e.pointerId);if(!p){hover(e);return;}
   const dt=Math.max(.004,(e.timeStamp-p[2])/1000);
   if(pointers.size===2){
+    if(FIXED)return;
     const [a,b]=[...pointers.values()],d0=Math.hypot(a[0]-b[0],a[1]-b[1]);pointers.set(e.pointerId,[e.clientX,e.clientY,e.timeStamp]);
     const [c,d]=[...pointers.values()],d1=Math.hypot(c[0]-d[0],c[1]-d[1]);
     if(d0>0){const k=Math.log(d1/d0);zoom=THREE.MathUtils.clamp(zoom*Math.exp(k),ZOOM_MIN,ZOOM_MAX);zoomVel=damp(zoomVel,k/dt,20,dt);}
     return;
   }
   const dx=e.clientX-p[0],dy=e.clientY-p[1];pointers.set(e.pointerId,[e.clientX,e.clientY,e.timeStamp]);
+  if(FIXED)return;   // the view stays on the car
   const unitsPerPx=(camera.top-camera.bottom)/camera.zoom/canvasEl.clientHeight;
   const wx=(-dx*groundRight.x-dy*groundUp.x)*unitsPerPx,wz=(-dx*groundRight.z-dy*groundUp.z)*unitsPerPx;
   target.x+=wx;target.z+=wz;
@@ -177,21 +187,34 @@ for(const ev of ['pointerup','pointercancel'])canvasEl.addEventListener(ev,e=>{
   if(e.timeStamp-lastMove>80)panVel.set(0,0,0);   // held still before letting go: no glide
   if(pointers.size)panVel.set(0,0,0);
 });
-canvasEl.addEventListener('wheel',e=>{e.preventDefault();zoomVel+=-e.deltaY*.0015*F.zoomGlide;},{passive:false});
+canvasEl.addEventListener('wheel',e=>{e.preventDefault();if(FIXED)return;zoomVel+=-e.deltaY*.0015*F.zoomGlide;},{passive:false});
 // --- Places: click a building or label, or pick from the Experience list ------
 // The camera glides to the place and holds there until you drive again.
 let focus=null;
-const ray=new THREE.Raycaster(),ndc=new THREE.Vector2(),floorPlane=new THREE.Plane(new THREE.Vector3(0,1,0),-.47),hitPoint=new THREE.Vector3();
+const ray=new THREE.Raycaster(),ndc=new THREE.Vector2(),floorPlane=new THREE.Plane(new THREE.Vector3(0,1,0),WORLD==='nyc'?-.78:-.47),hitPoint=new THREE.Vector3();
 function pick(e){
   const r=canvasEl.getBoundingClientRect();ndc.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(ndc,camera);
-  const hit=ray.intersectObjects(campus.labels,false)[0];if(hit)return hit.object.userData.id;
-  return ray.ray.intersectPlane(floorPlane,hitPoint)?campus.placeAt(hitPoint.x,hitPoint.z):null;
+  const hit=ray.intersectObjects(world.labels,false)[0];if(hit)return hit.object.userData.id;
+  return ray.ray.intersectPlane(floorPlane,hitPoint)?world.placeAt(hitPoint.x,hitPoint.z):null;
 }
 function hover(e){if(e.pointerType==='mouse')canvasEl.style.cursor=pick(e)?'pointer':'';}
-function focusOn(id){const q=campus.places[id];if(!q)return;focus={x:q.x,z:q.z,zoom:THREE.MathUtils.clamp(zoom,.5,.75)};followHold=0;needsRender=true;}
+function focusOn(id){const q=world.places[id];if(!q)return;focus={x:q.x,z:q.z,y:q.y??BASE_Y,zoom:FIXED?zoom:THREE.MathUtils.clamp(zoom,.5,.75)};followHold=0;needsRender=true;}
 const experience=createExperience({onSelect:focusOn});
 // The Work tower opens the timeline at the newest job.
 function openPlace(id){experience.open(id==='work'?experience.first:id);}
+
+// --- Experience story: park in a bay at Experience Row and press Enter ------------
+const story=world.lot?createStory({scene,row:world.row,lot:world.lot,jobs:JOBS,profile:PROFILE,
+  onFocus:(x,y,z)=>{focus={x,z,y,zoom};followHold=0;needsRender=true;},
+  onExit:()=>{car.lock(false);focus=null;needsRender=true;}}):null;
+const prompt=document.createElement('button');prompt.className='park-prompt';prompt.hidden=true;
+prompt.innerHTML='<kbd>Enter</kbd><span>See my experience</span>';document.querySelector('.scene').append(prompt);
+let parkedAt=null;
+// The bay the car is stopped in, or null.
+function parkedBay(){const L=world.lot,p=car.pose();if(Math.abs(p.v)>.4||p.z<L.bayZ[0]||p.z>L.bayZ[1])return null;return L.bays.find(b=>p.x>b.x0&&p.x<b.x1)?.id??null;}
+function startStory(){if(!story||story.active||!parkedAt)return;car.lock(true);experience.close();prompt.hidden=true;story.start(parkedAt);}
+prompt.onclick=startStory;
+addEventListener('keydown',e=>{if(e.key==='Enter'&&!prompt.hidden&&!e.repeat){e.preventDefault();startStory();}});
 
 car.onHit=s=>{if(!reducedMotion.matches&&s>.2)trauma=Math.min(1,trauma+s*.8);};
 
@@ -210,7 +233,7 @@ function updateView(dt){
   const p=car.shown;
   if(focus&&p.speed>.6)focus=null;   // driving takes the camera back
   // Pull back a little at speed.
-  const zGoal=1-F.speedZoomOut*Math.min(1,p.speed/FEEL.car.maxSpeed);
+  const zGoal=FIXED?1:1-F.speedZoomOut*Math.min(1,p.speed/FEEL.car.maxSpeed);
   if(Math.abs(zGoal-speedZoom)>1e-4)speedZoom=damp(speedZoom,zGoal,2.2,dt);
   // Spring follow toward the car plus a look-ahead along its velocity.
   if(focus&&Math.abs(zoomVel)<1e-3&&Math.abs(zoom-focus.zoom)>1e-3){zoom=damp(zoom,focus.zoom,3,dt);moved=true;}
@@ -220,6 +243,9 @@ function updateView(dt){
       target.x=spring(camX,gx,F.follow,dt);target.z=spring(camZ,gz,F.follow,dt);moved=true;
     }
   }
+  // Height: up to a place being shown, back down to the street after.
+  const gy=focus?.y??BASE_Y;
+  if(Math.abs(gy-camY.x)>1e-4||Math.abs(camY.v)>1e-4){target.y=spring(camY,gy,F.follow*1.4,dt);moved=true;}
   const zoomNow=zoom*speedZoom;
   if(Math.abs(camera.zoom-zoomNow)>1e-5){camera.zoom=zoomNow;camera.updateProjectionMatrix();fitShadow();moved=true;}
   if(moved){placeCamera();placeSun();}
@@ -238,13 +264,13 @@ function updateView(dt){
 const sunDir=new THREE.Vector3(),sunAt=new THREE.Vector3();
 function fitShadow(){
   const half=THREE.MathUtils.clamp((camera.right-camera.left)/camera.zoom*.6,8,90),cam=sun.shadow.camera;
-  cam.left=-half;cam.right=half;cam.top=half;cam.bottom=-half;cam.near=.5;cam.far=60;cam.updateProjectionMatrix();placeSun();
+  cam.left=-half;cam.right=half;cam.top=half;cam.bottom=-half;cam.near=.5;cam.far=420;cam.updateProjectionMatrix();placeSun();
 }
 function placeSun(){
   const a=THREE.MathUtils.degToRad(art.sun.azimuth),e=THREE.MathUtils.degToRad(art.sun.elevation);sunDir.set(Math.sin(a)*Math.cos(e),Math.sin(e),Math.cos(a)*Math.cos(e));
   const texel=(sun.shadow.camera.right-sun.shadow.camera.left)/sun.shadow.mapSize.x;
   sunAt.set(Math.round(target.x/texel)*texel,0,Math.round(target.z/texel)*texel);
-  sun.target.position.copy(sunAt);sun.position.copy(sunAt).addScaledVector(sunDir,25);sun.target.updateMatrixWorld();
+  sun.target.position.copy(sunAt);sun.position.copy(sunAt).addScaledVector(sunDir,200);sun.target.updateMatrixWorld();
   renderer.shadowMap.needsUpdate=true;
 }
 let timeScale=1,animClock=0,lastFrame=null,worldClock=0;
@@ -260,9 +286,12 @@ function render(time=0){
     animating=true;renderer.shadowMap.needsUpdate=true;
   }
   // The car is driven by the visitor, so it keeps running even with the breeze paused.
-  if(campus.update(time))animating=true;   // beacons pulse; no shadow change
+  // The world animates (beacons, taxis, clouds); 2 means moving shadows too.
+  {const w=world.update(time,frameDt/1000);if(w){animating=true;if(w===2)renderer.shadowMap.needsUpdate=true;}}
+  parkedAt=story&&!story.active?parkedBay():null;if(prompt.hidden===!!parkedAt)prompt.hidden=!parkedAt;
+  if(story?.update(frameDt/1000))animating=true;
   if(car.update(time)){animating=true;renderer.shadowMap.needsUpdate=true;}
-  if(playground.update(frameDt/1000)){animating=true;renderer.shadowMap.needsUpdate=true;}
+  if(playground?.update(frameDt/1000)){animating=true;renderer.shadowMap.needsUpdate=true;}
   if(updateView(frameDt/1000))animating=true;
   if(!animating&&!needsRender)return;
   renderer.info.reset();composer.render();needsRender=false;
@@ -276,7 +305,7 @@ setQuality(detected.preset,detected.reason==='url'?'manual':'auto');monitor.auto
 applyArt();renderer.shadowMap.needsUpdate=true;
 renderer.compile(scene,camera);$('loading').remove();requestAnimationFrame(render);
 // Back from a hidden tab: drop the missed time so nothing jumps.
-document.addEventListener('visibilitychange',()=>{hidden=document.hidden;lastFrame=null;playground.resync();panVel.set(0,0,0);zoomVel=0;needsRender=true;});
+document.addEventListener('visibilitychange',()=>{hidden=document.hidden;lastFrame=null;playground?.resync();panVel.set(0,0,0);zoomVel=0;needsRender=true;});
 
 // The page shows only the scene and the vehicle concepts: no toolbar, Workbench
 // or captions. The breeze stays on (unless reduced motion is requested).
@@ -288,9 +317,14 @@ for(const b of document.querySelectorAll('[data-drive]')){
 
 // The vehicle is hardcoded: the City car.
 car.select(VEHICLES.findIndex(v=>v.name==='City'));
+// X-ray: where a building hides the car, its outline shows through in its colour
+// (drawn only where something is in front of it).
+{const ghost=new THREE.MeshBasicMaterial({color:world.carColor??'#ff6b5e',transparent:true,opacity:.55,depthWrite:false,depthFunc:THREE.GreaterDepth});
+  const meshes=[];car.rig.traverse(o=>{if(o.isMesh)meshes.push(o);});
+  for(const o of meshes){const g=new THREE.Mesh(o.geometry,ghost);g.renderOrder=40;g.castShadow=g.receiveShadow=false;o.add(g);}}
 
 // Deliberately small inspection API for performance checks and future tiles.
-window.forestTile={car,playground,campus,grid:{GRID,HOME_NUMBER,tileNumber,tileCenter},composer,ao,art,applyArt,setQuality,get quality(){return {name:qualityName,mode:qualityMode,scale:renderScale,pixelRatio:renderer.getPixelRatio()};},spec:TILE_SPEC,art:ART,scene,camera,renderer,materials,canopies,refresh:()=>{needsRender=true;renderer.shadowMap.needsUpdate=true;},stats:()=>({drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,footprint:TILE_SPEC.footprint})};
+window.forestTile={car,playground,world,get story(){return story;},grid:{GRID,HOME_NUMBER,tileNumber,tileCenter},composer,ao,art,applyArt,setQuality,get quality(){return {name:qualityName,mode:qualityMode,scale:renderScale,pixelRatio:renderer.getPixelRatio()};},spec:TILE_SPEC,art:ART,scene,camera,renderer,materials,canopies,refresh:()=>{needsRender=true;renderer.shadowMap.needsUpdate=true;},stats:()=>({drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,footprint:TILE_SPEC.footprint})};
 
 // Development benchmark: runs n full animated frames (breeze, car, shadows,
 // composer) back to back, each synced with a 1 px read so GPU time is included.
@@ -302,7 +336,7 @@ if(import.meta.env.DEV){
     for(let i=0;i<n;i++){
       const t0=performance.now();t+=1000/60;
       animateTile?.(t);for(const c of canopies){const ph=c.userData.phase;c.rotation.z=Math.sin(t*.00065+ph)*ART.vegetation.sway;}
-      car.update(t);playground.update(1/60);updateView(1/60);renderer.shadowMap.needsUpdate=true;renderer.info.reset();composer.render();
+      car.update(t);playground?.update(1/60);updateView(1/60);renderer.shadowMap.needsUpdate=true;renderer.info.reset();composer.render();
       gl.readPixels(0,0,1,1,gl.RGBA,gl.UNSIGNED_BYTE,px);times.push(performance.now()-t0);
     }
     times.sort((a,b)=>a-b);const mean=times.reduce((a,b)=>a+b,0)/n;

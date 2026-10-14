@@ -41,11 +41,11 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
     }
     return false;
   }
-  const down=new Set();
+  const down=new Set();let locked=false;
   m.headlight.emissive.set('#fff6e0');m.tailLight.emissive.set('#ff2a22');
   const typing=t=>t&&(t.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
   addEventListener('keydown',e=>{
-    if(typing(e.target)||e.metaKey||e.ctrlKey||e.altKey)return;
+    if(locked||typing(e.target)||e.metaKey||e.ctrlKey||e.altKey)return;
     if(e.code==='KeyR'){api.reset();return;}
     const k=KEYS[e.code];if(!k)return;down.add(k);e.preventDefault();
   });
@@ -72,7 +72,9 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
   const hit=s=>{s=Math.min(1,Math.max(0,s));if(s<.02)return;heaveV-=S.bump*30*s;pitchV+=(Math.random()-.5)*s*1.2;rollV+=(Math.random()-.5)*s*1.2;onHit?.(s);};
 
   const api={
-    press(k,on){on?down.add(k):down.delete(k);},
+    press(k,on){if(locked)return;on?down.add(k):down.delete(k);},
+    // While locked (the experience story), keys do not drive the car.
+    lock(on){locked=on;down.clear();},
     reset(){x=home.x;z=home.z;h=home.h;v=0;vy=0;yaw=0;steer=0;pitch=pitchV=roll=rollV=heave=heaveV=0;snapshot();place();},
     resync,
     // Put the car somewhere, at rest (for tests and future spawn points).
@@ -80,6 +82,7 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
     get speed(){return v;},
     get index(){return current;},
     get paint(){return parts.paint;},
+    get rig(){return parts.rig;},
     get color(){return parts.color;},
     // The simulated state (for physics and traffic).
     pose(){return {x,z,h,steer,v,vy,length:parts.length,width:parts.width};},

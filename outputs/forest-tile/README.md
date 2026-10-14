@@ -2,6 +2,14 @@
 
 A single minimal isometric 3D tile based on the supplied neighborhood reference: cream house, coral roof, turquoise windows, a smooth flat lawn, the City car, which you drive yourself (W A S D or arrow keys, Space handbrake, R or the Park button to put it back; on touch screens use the on screen pad), and a small Turkish flag beside the entrance.
 
+## Drive New York (the main page)
+
+The main page is the low poly New York at three times the diorama size (`src/nyc/world.js`), driven with your car (coral). The camera stays close on the car at one fixed zoom (no zoom or pan); where a building hides the car, its outline shows through. Traffic is light (four taxis) and the car bumps into them; sidewalks and the river are solid. The white campus is still at `?world=campus`.
+- **Experience Row** (`src/nyc/district.js`): Armin's four companies side by side, oldest to newest and taller as the career grows, each with its name, years and a canopy in its colour. In front: Experience Parking, one bay per company.
+- **Park and press Enter**: stopping in a bay shows "Enter · See my experience". The story (`src/world/story.js`) walks oldest to newest, then About: a column rises in each bay sized by the time worked, a card floats in front of each building (role, dates, place, what he did), a 2019 to 2026 timeline fills in on the lot, and the About card shows who he is. Arrow keys or the buttons step; Esc leaves. The car does not move during the story.
+- **Skills Street**: twelve small places named after his tools and skills (Figma Café, Behance Restaurant, Photoshop Bakery, React Pizza, Three.js Arcade and more), along the riverside and on the north avenue.
+- All facts come from `src/data/profile.js` (his CVs); nothing is invented.
+
 ## The corner block (block.html)
 
 A single low poly block on its own page (`/block.html`, `src/block/`): a two storey corner restaurant with striped awnings, glowing shop windows, a sign, café tables, a rooftop terrace with umbrellas and a flat roof with AC units; a road with three vintage cars and four figures in coats and hats; a utility pole, hydrant, lantern, faceted tree, hedge, scooter and manhole. The base shows a dark asphalt layer over pale stone with a wavy line between them. Flat shaded, pastel, ambient occlusion, a soft shadow on a teal backdrop. Drag turns it a little (it eases back), the wheel zooms.

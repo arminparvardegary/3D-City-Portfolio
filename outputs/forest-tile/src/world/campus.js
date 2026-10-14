@@ -3,7 +3,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { mergeStatic } from '../geometry.js';
 import { THEME } from './theme.js';
 import { TILE } from './units.js';
-import { STUDIOS } from './district.js';
+import { JOBS, SHOPS } from '../data/profile.js';
 
 // The white campus: the whole map as one architectural white model. Raised
 // plinths sit between floor level roads; on them, a small kit of white
@@ -202,14 +202,62 @@ export function buildCampus({prep}){
     slabBlock(p.x+7,p.z+3,4.4,4,1);B(2.2,1.6,.1,p.x+7,FLOOR+.8,p.z+5.05,M.groove);
     parking(p.x-7,p.z+7.5,6,0);}
 
-  // Studio campuses: the places Armin worked (the slim blocks at the north and south edges, and west).
-  {const p=block(0,0),s=STUDIOS[0];const t=finTower(p.x-6,p.z,6,6,13,{gap:.36});slabBlock(p.x+4.5,p.z+.4,8,5,3);beacon(p.x-6,p.z,t,s.name,{sub:s.years,id:s.id,zone:p});}
-  {const p=block(2,0),s=STUDIOS[1];const t=slabBlock(p.x-3,p.z,10,6,5);beacon(p.x-3,p.z,t,s.name,{sub:s.years,id:s.id,zone:p});truck(p.x+8.5,p.z,0);}
-  {const p=block(0,2),s=STUDIOS[2];const t=stepped(p.x+2,p.z,9,8);beacon(p.x+1.4,p.z-.6,t,s.name,{sub:s.years,id:s.id,zone:p});gate(p.x-7,p.z+5,5,3.4);parking(p.x-8,p.z-6,4,0);}
-  {const p=block(0,3),s=STUDIOS[3];const t=warehouse(p.x-3,p.z,9,6,2.6);beacon(p.x-3,p.z,t,s.name,{sub:s.years,id:s.id,zone:p});truck(p.x+7,p.z,0);}
+  // --- Experience Row: the four companies side by side, oldest to newest -------------
+  // They stand on a plinth along the back of the block, growing taller with the
+  // career; the front half is a parking lot at street level, one bay per company.
+  // Parking in a bay is how the experience story starts (see main.js).
+  const row=[],lot={x0:COLS[0][0]+edge,x1:COLS[0][1]-inset,z0:13.4+inset,z1:ROWS[2][1]+inset-.01,bayZ:[16.2,22.2],bays:[]};
+  {const x0=lot.x0,x1=lot.x1,z0=ROWS[2][0]+inset,z1=13.4,p=plinth(x0,x1,z0,z1),gap=(x1-x0)/JOBS.length,blue=std(C.blue,{roughness:.6});
+    [...JOBS].reverse().forEach((j,i)=>{
+      const x=x0+gap*(i+.5),w=gap-1.4,d=z1-z0-2.6,z=z0+1.1+d/2;
+      const top=i===JOBS.length-1?finTower(x,z,w,d,10.5,{gap:.36}):slabBlock(x,z,w,d,3+i);
+      // Entrance on the lot side: glass doors under a canopy in the company colour.
+      B(w*.42,1.8,.08,x,FLOOR+.9,z+d/2+.04,M.glass);B(w*.62,.16,1.3,x,FLOOR+2.05,z+d/2+.62,std(j.accent,{roughness:.6}));
+      beacon(x,z,top,j.name,{sub:`${j.start[0]} – ${j.end[0]}`,id:j.id,zone:{x0:x-w/2,x1:x+w/2,z0,z1}});
+      row.push({id:j.id,x,z,top,w,front:z+d/2});
+      lot.bays.push({id:j.id,x,x0:x-gap/2+.25,x1:x+gap/2-.25});
+      // Bay lines in blue, and the company colour painted at the head of the bay.
+      B(.12,.012,lot.bayZ[1]-lot.bayZ[0],x-gap/2,G+.006,(lot.bayZ[0]+lot.bayZ[1])/2,blue);
+      if(i===JOBS.length-1)B(.12,.012,lot.bayZ[1]-lot.bayZ[0],x+gap/2,G+.006,(lot.bayZ[0]+lot.bayZ[1])/2,blue);
+      B(gap-1,.012,.5,x,G+.006,lot.bayZ[0]+.4,std(j.accent,{roughness:.6}));
+    });
+    strip(lot.x0,lot.x1,lot.z0,lot.z1);
+    // The lot's name painted on the ground, and a P sign.
+    {const c=document.createElement('canvas');c.width=1024;c.height=128;const g=c.getContext('2d');g.fillStyle=C.blue;g.font='700 72px -apple-system, "SF Pro Display", Arial, sans-serif';g.textAlign='center';g.textBaseline='middle';
+      g.fillText('P   EXPERIENCE PARKING',512,68);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;
+      const decal=new THREE.Mesh(new THREE.PlaneGeometry(lot.x1-lot.x0-3,(lot.x1-lot.x0-3)/8).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({map:t,transparent:true,roughness:.9,depthWrite:false}));
+      decal.position.set((lot.x0+lot.x1)/2,G+.01,lot.bayZ[1]+1.9);decal.userData.keep=true;decal.receiveShadow=true;group.add(decal);}
+    B(.14,2.6,.14,lot.x1-.8,G,lot.z1-1,M.dark).position.y=G+1.3;B(1.1,1.1,.12,lot.x1-.8,G+2.9,lot.z1-1,blue);
+  }
+
+  // --- Skills Street: small places named after his tools and skills ---------------
+  const shopWalls=['#f6d6c8','#cfe6d8','#d9e4f6','#f7e7b8','#e9d5f0','#f3d0d6'].map(c=>std(c,{roughness:.8})),shopAccents=['#ff6b5e','#5ab4f0','#3fb8a8','#f2b705','#a77be0','#ff8a4c'];
+  const awningWhite=std('#ffffff',{roughness:.7}),glow=std('#ffb36b',{emissive:'#ff9a3c',emissiveIntensity:.7}),accentMats=shopAccents.map(c=>std(c,{roughness:.6}));
+  function shop(x,z,w,d,name,kind,i){
+    const h=3.2,front=z+d/2,wall=shopWalls[i%6],accent=accentMats[i%6];
+    B(w,h,d,x,FLOOR+h/2,z,wall);B(w+.18,.22,d+.18,x,FLOOR+h+.11,z,M.white);
+    B(w*.78,1.35,.08,x-w*.06,FLOOR+.45+.68,front+.04,glow);B(.9,1.9,.1,x+w*.36,FLOOR+.95,front+.05,M.dark);
+    // Striped awning sloping out over the window.
+    const n=Math.max(4,Math.round(w*.78/.42)),sw=w*.82/n,depth=1.1,drop=.45,slope=Math.atan2(drop,depth),hyp=Math.hypot(depth,drop);
+    for(let k=0;k<n;k++){const sx=x-w*.47+sw*(k+.5),m=k%2?accent:awningWhite,o=B(sw,.06,hyp,sx,FLOOR+2.2,front+depth/2,m);o.rotation.x=slope;B(sw,.26,.05,sx,FLOOR+2.2-drop/2-.12,front+depth,m);}
+    // The sign on the roof: the tool's name big, the kind of place in its colour.
+    const c=document.createElement('canvas');c.width=512;c.height=176;const g=c.getContext('2d');
+    g.fillStyle='#ffffff';g.beginPath();g.roundRect(4,4,504,168,26);g.fill();g.strokeStyle=shopAccents[i%6];g.lineWidth=8;g.stroke();
+    g.textAlign='center';g.textBaseline='middle';g.fillStyle=C.label;g.font='700 78px -apple-system, "SF Pro Display", Arial, sans-serif';g.fillText(name,256,70);
+    g.fillStyle=shopAccents[i%6];g.font='600 44px -apple-system, "SF Pro Text", Arial, sans-serif';g.fillText(kind,256,136);
+    const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;
+    const sign=new THREE.Mesh(new THREE.BoxGeometry(w*.92,w*.92*176/512,.12),[M.white,M.white,M.white,M.white,std('#ffffff',{map:t,roughness:.6}),M.white]);
+    sign.position.set(x,FLOOR+h+.22+w*.92*176/512/2+.15,front-.35);sign.castShadow=sign.receiveShadow=true;sign.userData.keep=true;group.add(sign);
+    B(.08,.4,.08,x-w*.3,FLOOR+h+.4,front-.4,M.dark);B(.08,.4,.08,x+w*.3,FLOOR+h+.4,front-.4,M.dark);
+    // A small table outside.
+    cyl(.35,.06,x-w*.2,FLOOR+.75,front+1.7,M.dark,10);cyl(.05,.75,x-w*.2,FLOOR+.375,front+1.7,M.dark,6);
+    for(const s of [-1,1])cyl(.18,.45,x-w*.2+s*.6,FLOOR+.225,front+1.7,accent,8);
+  }
+  {let si=0;for(const ci of [0,1,2]){const p=block(ci,0),n=4,w=(p.w-1)/n;
+    for(let k=0;k<n;k++,si++){const [name,kind]=SHOPS[si];shop(p.x0+.5+w*(k+.5),p.z0+.5+2.5,w-.7,5,name,kind,si);}}}
 
   // Quiet blocks: solar rows, an office with parking, sheds.
-  const fill=[[1,0,'solar'],[1,3,'office'],[2,3,'shed']];
+  const fill=[[0,3,'solar'],[1,3,'office'],[2,3,'shed']];
   for(const [ci,ri,kind] of fill){
     const p=block(ci,ri);
     if(kind==='solar'){solar(p.x,p.z,p.w-3,p.d-2);}
@@ -223,7 +271,7 @@ export function buildCampus({prep}){
 
   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
   return {
-    group,solids,places,labels,
+    group,solids,places,labels,row,lot,
     // Which clickable place covers this ground point (null if none).
     placeAt(x,z){for(const q of zones)if(x>=q.x0&&x<=q.x1&&z>=q.z0&&z<=q.z1)return q.id;return null;},
     // Beacons pulse gently; returns true while animating.

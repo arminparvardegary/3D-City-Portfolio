@@ -1,4 +1,4 @@
-import { STUDIOS } from '../world/district.js';
+import { STUDIOS } from '../data/profile.js';
 
 // Experience, made easy to find: an always visible list (newest first) and one
 // card. Picking a job in the list, clicking its building or label, or clicking

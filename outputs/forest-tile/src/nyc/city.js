@@ -19,8 +19,13 @@ const S=20,DEPTH=4,WALK=.22;
 const COLS={A:[-19,-7.4],B:[-4.6,4.6],C:[7.4,12.6]},ROWS={R0:[-19,-7.4],R1:[-4.6,4.6],R2:[7.4,19]};
 const AVENUE=[12.6,15],RIVER=[15,S],BRIDGE_X=17.5,DECK_Y=1.7;
 
-export function buildCity(){
+// drive: the version you drive through. Two blocks are left free (the Experience
+// Row and part of Skills Street are built there at full size), traffic is light
+// and nothing stands on the roads.
+export const LAYOUT={S,COLS,ROWS,AVENUE,RIVER,BRIDGE_X,DECK_Y,WALK};
+export function buildCity({drive=false}={}){
   const root=new THREE.Group(),K=createKit(),{box,cyl,add,part,B,mat}=K;
+  const skip=k=>drive&&(k==='A,R2'||k==='C,R2');
   const F={stone:facade('stone'),brick:facade('brick'),deco:facade('deco'),glass:facade('glass')};
   const skin=(color,kind,size=.8,extra={})=>{const m=mat(color,{map:F[kind],...extra});m.userData.uvSize=size;return m;};
   const M={limestone:skin(NYC.limestone,'deco',.7),sand:skin(NYC.sand,'deco',.7),brick:skin(NYC.brick,'brick',1),brickDark:skin(NYC.brickDark,'brick',1),
@@ -81,9 +86,9 @@ export function buildCity(){
     cyl(1.45,1.45,1.3,8,x,y,z,NYC.limestone);add(new THREE.SphereGeometry(1.45,8,4,0,Math.PI*2,0,Math.PI/2),NYC.copper,[x,y+1.3,z]);
     cyl(.3,.3,.6,6,x,y+2.7,z,NYC.copper);add(new THREE.ConeGeometry(.3,.9,6).translate(0,.45,0),NYC.copper,[x,y+3.3,z]);}
   // Left edge: brick and stone towers.
-  {const b=block('A','R0');let y=tower(b.x-2.4,b.z+1,4,4,18,M.brick);waterTank(b.x-2.4,y,b.z+1);
-    tower(b.x+3,b.z-1.8,3.6,3.2,12,M.grey);y=tower(b.x+3,b.z+3,3.4,2.8,8,M.brickDark);roofBits(b.x+3,y,b.z+3,3);}
-  {const b=block('A','R2');let y=tower(b.x-2.6,b.z-1.6,3.6,3.6,22,M.limestone,{cap:NYC.limestone});cyl(.5,.8,1.4,4,b.x-2.6,y,b.z-1.6,NYC.limestone,[0,Math.PI/4,0]);
+  {const b=block('A','R0');let y=tower(b.x-2.4,b.z-1,4,4,18,M.brick);waterTank(b.x-2.4,y,b.z-1);
+    tower(b.x+3,b.z-2.4,3.6,3.2,12,M.grey);if(!drive){y=tower(b.x+3,b.z+3,3.4,2.8,8,M.brickDark);roofBits(b.x+3,y,b.z+3,3);}}
+  if(!skip('A,R2')){const b=block('A','R2');let y=tower(b.x-2.6,b.z-1.6,3.6,3.6,22,M.limestone,{cap:NYC.limestone});cyl(.5,.8,1.4,4,b.x-2.6,y,b.z-1.6,NYC.limestone,[0,Math.PI/4,0]);
     y=tower(b.x+2.8,b.z-2.2,3.6,4,10,M.brick);waterTank(b.x+2.8,y,b.z-2.2);tower(b.x+.4,b.z+4.6,6,2.4,5,M.brickDark);}
   // Liberty Island: a lawn, the star fort, the pedestal and the statue.
   {const b=block('B','R2',NYC.grass),x=b.x+.2,z=b.z-.4;
@@ -100,15 +105,17 @@ export function buildCity(){
       P(new THREE.BoxGeometry(.4,.55,.12),NYC.copper,[-.48,2.9,.15],[0,0,.3]);                                    // tablet
     },1.25);}
   // A small park with a low brick building by the river.
-  {const b=block('C','R2',NYC.grass);tower(b.x,b.z1-1.8,4,2.6,3.2,M.brick);}
+  if(!skip('C,R2')){const b=block('C','R2',NYC.grass);tower(b.x,b.z1-1.8,4,2.6,3.2,M.brick);}
 
   // --- Trees: faceted crowns along the sidewalks and in the parks ------------------
   const tree=(x,z,s=1,y=WALK)=>{cyl(.08*s,.11*s,.8*s,5,x,y,z,NYC.trunk);add(new THREE.IcosahedronGeometry(.55*s,0),(x*7+z)%2>1?NYC.grass:NYC.grassLight,[x,y+1*s,z],[x,z,0]);};
+  // Trees stand only on sidewalks and lawns, never on a road.
+  const onBlock=(x,z)=>Object.entries(COLS).some(([c,[x0,x1]])=>Object.entries(ROWS).some(([r,[z0,z1]])=>!skip(c+','+r)&&x>x0+.3&&x<x1-.3&&z>z0+.3&&z<z1-.3));
   for(const [x,z,s] of [[-4.2,9,1],[-4.2,12,1.1],[-4,16.5,1],[4.1,8.6,1],[4.2,17.6,1.2],[-2,17.8,.9],[2.5,18,1],
     [8.4,8.6,1],[11.4,8.6,1.1],[8.4,11.6,1.2],[11.6,11.2,1],[9.8,10,.9],
-    [-18.3,-5.6,.9],[-8.2,-5.6,.9],[-18.3,6.1,.9],[-12,6.1,1],[-8.2,6.1,.9],[-3.8,-6.2,.8],[3.8,-6.2,.8],[8.2,-5.6,.9],[12,-5.6,.9],[8.2,5.7,.8]])tree(x,z,s);
+    [-18.3,-4.2,.9],[-8.2,-4.2,.9],[-18.3,7.8,.9],[-8.2,7.8,.9],[-3.8,-7.8,.8],[3.8,-7.8,.8],[8.2,-4.2,.9],[12,-4.2,.9],[8.2,4.2,.8]])if(onBlock(x,z))tree(x,z,s);
   // A strip of lawn and trees between the riverside road and the water.
-  for(let t=-17;t<=17;t+=4.2)tree(14.6,t+1,.7,0);
+  if(!drive)for(let t=-17;t<=17;t+=4.2)tree(14.6,t+1,.7,0);
 
   // --- Brooklyn Bridge: gothic towers, deck, main cables, suspenders, stays ---------
   const towerZ=[-8,8],TH=7.4;
@@ -139,7 +146,9 @@ export function buildCity(){
   // Lanes: [axis, fixed coordinate, direction, height, count, speed].
   const lanes=[['z',-6.55,1,0,3,2.4],['z',-5.45,-1,0,3,2.1],['z',5.45,1,0,3,2.3],['z',6.55,-1,0,2,2.6],['x',-6.55,-1,0,3,2.2],['x',-5.45,1,0,2,2.5],['x',5.45,-1,0,3,2.4],['x',6.55,1,0,3,2],
     ['z',13.3,1,0,4,3],['z',14.3,-1,0,4,3.2],['z',BRIDGE_X-.55,1,DECK_Y,3,2.8],['z',BRIDGE_X+.55,-1,DECK_Y,3,2.6]];
-  const cars=[];lanes.forEach(([axis,fixed,dir,y,n,v],li)=>{for(let i=0;i<n;i++)cars.push({axis,fixed,dir,y,v,s:-S+(2*S)*(i+li*.37%1)/n});});
+  // Driving: about one taxi in ten, on four lanes.
+  const used=drive?lanes.filter((_,i)=>[0,6,9,10].includes(i)).map(l=>[...l.slice(0,4),1,l[5]]):lanes;
+  const cars=[];used.forEach(([axis,fixed,dir,y,n,v],li)=>{for(let i=0;i<n;i++)cars.push({axis,fixed,dir,y,v,s:-S+(2*S)*(i+li*.37%1)/n});});
   const taxis=new THREE.InstancedMesh(taxiGeo,mat('#ffffff',{vertexColors:true}),cars.length);taxis.castShadow=taxis.receiveShadow=true;taxis.frustumCulled=false;root.add(taxis);
   const o=new THREE.Object3D(),END=S-.5;
   function updateTaxis(dt){
@@ -163,5 +172,8 @@ export function buildCity(){
   sun.position.set(9,31,-5);sky.add(sun);floaters.push({o:sun,y:31,phase:2});
 
   let time=0;
-  return {root,update(dt){time+=dt;updateTaxis(dt);for(const f of floaters)f.o.position.y=f.y+Math.sin(time*.6+f.phase)*.35;sun.rotation.y+=dt*.15;return true;}};
+  // Taxis on the ground as circles the player's car bumps into (city units).
+  const circles=cars.filter(c=>c.y===0).map(()=>[0,0,.75]);
+  function obstacles(){let k=0;for(const c of cars)if(c.y===0){const q=circles[k++];if(c.axis==='z'){q[0]=c.fixed;q[1]=c.s;}else{q[0]=c.s;q[1]=c.fixed;}}return circles;}
+  return {root,obstacles,update(dt){time+=dt;updateTaxis(dt);for(const f of floaters)f.o.position.y=f.y+Math.sin(time*.6+f.phase)*.35;sun.rotation.y+=dt*.15;return true;}};
 }
