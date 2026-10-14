@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { createKit } from '../../diorama/kit.js';
 import { FACADE } from './facades.js';
-import { G,HALF,BRIDGE,bridgeHeight } from './layout.js';
+import { G,HALF,BRIDGE,DECK_HALF,bridgeHeight } from './layout.js';
 
 // The Brooklyn Bridge (world units), along street z = 2. From the Manhattan
 // avenue the road climbs on a stone viaduct with arches, crosses FDR Drive on a
@@ -50,14 +50,14 @@ export function buildBridge({prep}={}){
   // Big stone blocks under the road (it runs over them); wider than the road, so the cables come down on their shoulders.
   for(const [a,b] of ANCH){const h=Math.min(y(a),y(b))-G-.6;if(h<=0)continue;box(b-a,h,W+5,(a+b)/2,G,Z,stoneM);
     for(const s of [-1,1])box(b-a,1.4,2.2,(a+b)/2,G+h,Z+s*(W/2+1.4),stoneM);}
-  // Towers: gothic stone, two pointed arches the lanes pass through (the openings
+  // Towers: gothic stone, one wide pointed arch the whole road passes through (the openings
   // start under the deck, so the road runs cleanly through them).
   const deck=y(68),TH=deck+23;
   {const face=new THREE.Shape([new THREE.Vector2(-8.5,0),new THREE.Vector2(8.5,0),new THREE.Vector2(8,TH+1),new THREE.Vector2(-8,TH+1)]);
-    for(const c of [-2.7,2.7]){const h=new THREE.Path(),y0=deck-.2;h.moveTo(c-2.3,y0);h.lineTo(c+2.3,y0);h.lineTo(c+2.3,deck+10);h.quadraticCurveTo(c+2.3,deck+12.6,c,deck+14);h.quadraticCurveTo(c-2.3,deck+12.6,c-2.3,deck+10);h.closePath();face.holes.push(h);}
+    {const h=new THREE.Path(),y0=deck-.2,a=DECK_HALF+.5;h.moveTo(-a,y0);h.lineTo(a,y0);h.lineTo(a,deck+10);h.quadraticCurveTo(a,deck+14.5,0,deck+16.5);h.quadraticCurveTo(-a,deck+14.5,-a,deck+10);h.closePath();face.holes.push(h);}
     for(const tx of TOWERS){
       add(new THREE.ExtrudeGeometry(face,{depth:4.6,bevelEnabled:false,curveSegments:12}).translate(0,0,-2.3).rotateY(-Math.PI/2),stoneM,[tx,-1,Z]);
-      box(5.2,1,17.6,tx,TH-.2,Z,stoneM);box(4.8,.4,17,tx,deck+16.5,Z,stoneM);box(6,2,18,tx,-1.2,Z,stoneM);
+      box(5.2,1,17.6,tx,TH-.2,Z,stoneM);box(4.8,.4,17,tx,deck+18,Z,stoneM);box(6,2,18,tx,-1.2,Z,stoneM);
       occluders.push(new THREE.Box3(new THREE.Vector3(tx-2.3,-1,Z-8.5),new THREE.Vector3(tx+2.3,TH+1,Z+8.5)));
     }}
   // Cables: two on each side; down to the anchorages, over the towers, sagging between.
@@ -70,6 +70,14 @@ export function buildBridge({prep}={}){
     const cz=Z+s*(W/2+.6)+o,pts=[];for(let x=33;x<=103;x+=1)pts.push(new THREE.Vector3(x,cableY(x),cz));
     add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),180,.2,6),cable);
   }
+  // Stiffening girders in the cable planes, braced to the deck: every suspender and
+  // stay lands on steel, never in the air.
+  for(const s of [-1,1]){const cz=Z+s*(W/2+.6);for(let x=33;x<103;x+=1.5){if(Math.abs(x+.75-TOWERS[0])<2.4||Math.abs(x+.75-TOWERS[1])<2.4)continue;
+    const x1=x+1.5,y0=y(x)+.15,y1=y(x1)+.15,len=Math.hypot(1.5,y1-y0),ang=Math.atan2(y1-y0,1.5);
+    add(new THREE.BoxGeometry(len+.04,.7,.3),steel,[(x+x1)/2,(y0+y1)/2,cz],[0,0,ang]);
+    if(Math.round(x/1.5)%2===0)box(.18,.18,.75,x,y(x)-.15,Z+s*(W/2+.28),steel);}}
+  // Stone end pillars where the steel railings meet the stone parapets.
+  for(const x of [fdr[0]-1,fdr[1]+1,54,82,brr[0]-1,brr[1]+1])for(const s of [-1,1])box(.9,1.6,.9,x,y(x)-.05,Z+s*(W/2-.2),stoneM);
   // Suspenders: thin verticals from the cables to the deck edge.
   for(const s of [-1,1]){const cz=Z+s*(W/2+.6);for(let x=34;x<103;x+=1.6){if(Math.abs(x-TOWERS[0])<3||Math.abs(x-TOWERS[1])<3)continue;const yb=y(x)+.4,h=cableY(x)-yb;if(h>.6)box(.06,h,.06,x,yb,cz,cable);}}
   // Diagonal stays: from each tower top, fanning down to the deck both ways.
@@ -80,7 +88,7 @@ export function buildBridge({prep}={}){
   for(let x=landM+6;x<landB-6;x+=12){if(Math.abs(x-TOWERS[0])<4||Math.abs(x-TOWERS[1])<4)continue;for(const s of [-1,1]){const z=Z+s*(W/2-.3),yb=y(x)+1;cyl(.08,.1,4,8,x,yb,z,steel);add(new THREE.SphereGeometry(.3,12,8),lampHead,[x,yb+4.1,z]);}}
   K.finish(root);
   root.traverse(o=>{if(o.isMesh){o.castShadow=o.receiveShadow=true;[].concat(o.material).forEach(m=>prep?.(m));}});
-  // The towers' middle piers stand between the lanes: the car drives through the arches.
-  const circles=TOWERS.map(tx=>[tx,Z,.7]);
+  // One open arch per tower: nothing stands in the road.
+  const circles=[];
   return {root,occluders,circles};
 }

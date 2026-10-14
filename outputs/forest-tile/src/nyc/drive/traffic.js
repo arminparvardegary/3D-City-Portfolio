@@ -11,14 +11,14 @@ import { dampAngle } from '../../motion.js';
 // red lights and keeps its distance from the car ahead (yours too). Cars never
 // appear or vanish.
 const STOP=HALF+6.1,ACCEL=3,BRAKE=7.5,TURN_SPEED=3.6;
-const MIX=['sedan','sedan','taxi','taxi','taxi','suv','suv','hatch','hatch','city','wagon','van','pickup','pickup','coupe','sports','police','sedan','suv','taxi'];
+const MIX=['sedan','taxi','suv','bus','hatch','taxi','truck','jeep','sedan','convertible','taxi','beetle','pickup','muscle','suv','van','taxi','coupe','wagon','police','sports','city'];
 
 export function createTraffic({phase,player,prep,count=MIX.length,parked=[],seed=3}){
   const {edges}=network();
   let r=seed;const rand=()=>((r=(r*16807)%2147483647)/2147483647);
   const cars=Array.from({length:count},(_,i)=>{const type=MIX[i%MIX.length],T=TYPES[type];return {type,color:T.colors[Math.floor(rand()*T.colors.length)],cruise:T.speed*(.9+rand()*.2),len:T.L};});
   // Parked cars along the curbs: the same family, drawn in the same batches, never moving.
-  const PARKED=['sedan','suv','hatch','city','wagon','coupe','van','pickup','sedan','taxi','suv'];
+  const PARKED=['sedan','suv','hatch','city','wagon','coupe','van','pickup','beetle','jeep','muscle','convertible','sedan','taxi','suv'];
   const still=parked.map((p,i)=>{const type=PARKED[Math.floor(rand()*PARKED.length)],T=TYPES[type];return {...p,type,color:T.colors[Math.floor(rand()*T.colors.length)],len:T.L};});
   const fleet=createFleet({cars:[...cars,...still],prep});
   still.forEach((p,i)=>fleet.set(count+i,p.x,G,p.z,p.h));
