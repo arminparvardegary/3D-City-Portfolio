@@ -15,4 +15,4 @@ const parts=buildTeslaModelY(scene,m);parts.rig.position.set(0,0,0);
 const a=THREE.MathUtils.degToRad(+(q.get('a')??35)),e=THREE.MathUtils.degToRad(+(q.get('e')??18)),d=+(q.get('d')??7);
 const cam=new THREE.PerspectiveCamera(30,innerWidth/innerHeight,.1,100);
 cam.position.set(Math.sin(a)*Math.cos(e)*d,Math.sin(e)*d+.5,Math.cos(a)*Math.cos(e)*d);cam.lookAt(0,.6,0);
-renderer.render(scene,cam);window.__ready=true;
+renderer.render(scene,cam);window.__ready=true;window.__scene=scene;window.__draw=()=>renderer.render(scene,cam);window.__m=m;

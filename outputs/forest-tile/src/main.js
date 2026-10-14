@@ -8,7 +8,6 @@ import { ART, TILE_SPEC } from './config.js';
 import { createMaterials } from './materials.js';
 import { buildTile } from './tile.js';
 import { softenShadows } from './shadows.js';
-import { createCarSprite } from './car-sprite.js';
 
 const viewport=document.querySelector('#viewport');
 const $=id=>document.getElementById(id);
@@ -51,7 +50,6 @@ const materials=createMaterials();
 Object.values(materials).forEach(softenShadows);
 const {group:tile,canopies,animate:animateTile,tesla,extraMaterials=[]}=buildTile(materials);scene.add(tile);
 extraMaterials.forEach(softenShadows);
-const carSprite=createCarSprite(viewport,camera,()=>tesla.pose());
 const floor=new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.ShadowMaterial({color:'#76806a',opacity:.21}));
 floor.rotation.x=-Math.PI/2;floor.position.y=-.012;floor.receiveShadow=true;scene.add(floor);
 softenShadows(floor.material);
@@ -89,7 +87,7 @@ function resize(){
   camera.updateProjectionMatrix();renderer.setSize(width,height);composer.setSize(width,height);
   ao.ssaoMaterial.uniforms.cameraProjectionMatrix.value.copy(camera.projectionMatrix);
   ao.ssaoMaterial.uniforms.cameraInverseProjectionMatrix.value.copy(camera.projectionMatrixInverse);
-  renderer.shadowMap.needsUpdate=true;needsRender=true;carSprite();
+  renderer.shadowMap.needsUpdate=true;needsRender=true;
 }
 new ResizeObserver(resize).observe(viewport);
 function render(time=0){
@@ -104,7 +102,6 @@ function render(time=0){
   }
   // The car is driven by the visitor, so it keeps running even with the breeze paused.
   if(tesla.update(time)){needsRender=true;renderer.shadowMap.needsUpdate=true;}
-  carSprite();
   if(!needsRender)return;
   renderer.info.reset();composer.render();lastTime=time;needsRender=false;
   renderer.domElement.dataset.ready='true';

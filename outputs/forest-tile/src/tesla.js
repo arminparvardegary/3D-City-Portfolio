@@ -5,7 +5,7 @@ import { box, mesh, branch, tint, mergeStatic } from './geometry.js';
 const sgn=Math.sign;
 // Lower body: superellipse cross sections (flat sides, soft shoulders) lofted
 // from tail to nose. Each section is [z, halfWidth, bottomY, topY].
-function bodyLoft(sections,n=3.4,tumble=.9,segments=28){
+export function bodyLoft(sections,n=3.4,tumble=.9,segments=28){
   const p=[],uv=[],index=[],e=2/n;
   sections.forEach(([z,w,lo,hi],i)=>{
     for(let j=0;j<=segments;j++){
@@ -24,7 +24,7 @@ function bodyLoft(sections,n=3.4,tumble=.9,segments=28){
 
 // Glass greenhouse: only the upper half of each section, so it sits on the
 // body like the continuous glass roof of a Model 3 / S. [z, halfWidth, baseY, roofY]
-function glassLoft(sections,n=2.6,segments=22){
+export function glassLoft(sections,n=2.6,segments=22){
   const p=[],uv=[],index=[],e=2/n;
   sections.forEach(([z,w,base,top],i)=>{
     for(let j=0;j<=segments;j++){
@@ -62,70 +62,180 @@ function teslaBadge(){
   return new THREE.MeshStandardMaterial({map,transparent:true,roughness:.35,metalness:.4,depthWrite:false,side:THREE.DoubleSide});
 }
 
-const WHEEL_R=.3,WHEEL_Y=.3,WHEEL_Z=1.2,BODY_W=.79;
+// ---- Tesla Model Y (2025), modelled in real metres and scaled into the tile. ----
+// Length 4.80, width 1.92 (without mirrors), height 1.62, wheelbase 2.89.
+const WHEEL_R=.349,WHEEL_Y=.349,WHEEL_ZF=1.43,WHEEL_ZR=-1.444,TRACK=.8,BODY_W=.989;
+export const MODEL_Y_SCALE=.8316; // tile units per metre: 4.80 m becomes 3.99 units
 
-// Tesla Model Y (2025): a tall, smooth crossover with a low blunt nose, one
-// thin LED bar across the full width of the front, a glass roof that slopes
-// into a short hatch, a red light bar across the tail, and turbine wheels.
+// Fitted to the supplied studio render: from the render's own camera (solved
+// from the wheel rims) this body covers the render's silhouette at 96.8% IoU.
+export const BODY_SECTIONS=[[-2.4,0.701,0.398,1.09],[-2.178,0.836,0.313,1.096],[-1.953,0.952,0.222,1.097],[-1.804,0.989,0.15,1.086],[-0.996,0.989,0.13,1.062],[0.127,0.986,0.13,1.042],[0.846,0.989,0.13,1.026],[1.387,0.955,0.15,0.93],[1.95,0.958,0.18,0.663],[2.138,0.886,0.254,0.6],[2.36,0.76,0.349,0.536],[2.4,0.62,0.442,0.471]];
+export const GLASS_SECTIONS=[[0.92,0.798,0.984,0.985],[0.65,0.779,0.966,1.12],[0.334,0.745,0.882,1.341],[0.023,0.732,0.943,1.457],[-0.306,0.719,0.954,1.481],[-0.684,0.704,0.945,1.474],[-1.293,0.768,0.982,1.414],[-1.752,0.741,0.973,1.318],[-2.027,0.745,1.029,1.186],[-2.176,0.666,1.046,1.055]];
+
+// Features traced on the render: each pixel was cast from the render's camera onto
+// the fitted body, giving these surface positions in metres. The near (left)
+// side is traced; the right side mirrors it, as on the real car.
+const TRACE={
+  // front: [x, y]
+  bar:[[0,.597],[.18,.598],[.31,.602]],
+  lamp:[[.31,.602],[.434,.625],[.54,.648],[.62,.665],[.675,.682],[.70,.704]],
+  fog:[[.508,.537],[.826,.576],[.839,.527],[.618,.513]],
+  intake:[[-.62,.415],[-.46,.43],[0,.445],[.46,.43],[.62,.415],[.66,.396],[.5,.385],[0,.38],[-.5,.385],[-.66,.396]],
+  lip:[[-.72,.372],[.72,.372],[.70,.352],[-.70,.352]],
+  // side: [z, y]
+  seamFront:[[.877,.929],[.967,.835],[1.009,.645],[1.031,.304]],
+  seamMiddle:[[-.30,.93],[-.174,.813],[-.148,.577],[-.111,.356]],
+  seamRear:[[-1.22,.99],[-1.16,.86],[-1.06,.76],[-1.0,.62]],
+  handleFront:[[.05,.865],[-.139,.891]],
+  handleRear:[[-.993,.909],[-1.204,.937]],
+  repeater:[[1.135,.77],[1.01,.773],[1.099,.715]],
+  // rear: [x, y]
+  tailBar:[[-.74,.95],[-.5,.955],[-.25,.958],[0,.96],[.25,.958],[.5,.955],[.74,.95]],
+  tailLamp:[[.5,.985],[.8,.975],[.8,.915],[.5,.925]],
+  diffuser:[[-.72,.47],[.72,.47],[.66,.40],[-.66,.40]],
+};
+
+// Ray casting onto the bare body (in metres) places every detail flush on it.
+function surface(geometry){
+  const probe=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({side:THREE.DoubleSide}));probe.updateMatrixWorld(true);
+  const ray=new THREE.Raycaster(),o=new THREE.Vector3(),d=new THREE.Vector3();
+  const cast=(off)=>{ray.set(o,d);const h=ray.intersectObject(probe)[0];return h?h.point.clone().addScaledVector(d,-off):null;};
+  return {
+    front:(x,y,off=.004)=>{o.set(x,y,6);d.set(0,0,-1);return cast(off);},
+    rear:(x,y,off=.004)=>{o.set(x,y,-6);d.set(0,0,1);return cast(off);},
+    side:(z,y,off=.004,sx=1)=>{o.set(sx*3,y,z);d.set(-sx,0,0);return cast(off);},
+  };
+}
+// A thin painted shape that follows the body: sampled on a grid, kept inside the outline.
+function decal(parent,sample,poly,material,step=.012){
+  const xs=poly.map(p=>p[0]),ys=poly.map(p=>p[1]);
+  const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+  const nx=Math.max(1,Math.ceil((x1-x0)/step)),ny=Math.max(1,Math.ceil((y1-y0)/step));
+  const inside=(x,y)=>{let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const [xi,yi]=poly[i],[xj,yj]=poly[j];if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)c=!c;}return c;};
+  const grid=[];for(let j=0;j<=ny;j++)for(let i=0;i<=nx;i++)grid.push(sample(x0+(x1-x0)*i/nx,y0+(y1-y0)*j/ny));
+  const pos=[],idx=[],at=new Map();
+  const vid=k=>{if(!at.has(k)){at.set(k,pos.length/3);pos.push(grid[k].x,grid[k].y,grid[k].z);}return at.get(k);};
+  for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){
+    const a=j*(nx+1)+i,b=a+1,c=a+nx+1,dd=c+1;
+    if(!grid[a]||!grid[b]||!grid[c]||!grid[dd])continue;
+    if(!inside(x0+(x1-x0)*(i+.5)/nx,y0+(y1-y0)*(j+.5)/ny))continue;
+    idx.push(vid(a),vid(b),vid(dd),vid(a),vid(dd),vid(c));
+  }
+  if(!idx.length)return null;
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();
+  const o=mesh(parent,tint(g),material);o.castShadow=false;return o;
+}
+function line(parent,points,radius,material){
+  const pts=points.filter(Boolean);if(pts.length<2)return null;
+  const o=mesh(parent,new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),Math.max(8,pts.length*6),radius,6,false),material);o.castShadow=false;return o;
+}
+
+// Finer sections (smooth interpolation of the fitted ones) so wheel arches can be cut.
+function resample(sections,n){
+  const out=[],z0=sections[0][0],z1=sections.at(-1)[0];
+  const col=(i,j)=>sections[Math.max(0,Math.min(sections.length-1,i))][j];
+  for(let k=0;k<n;k++){
+    const z=z0+(z1-z0)*k/(n-1);let i=0;while(i<sections.length-2&&sections[i+1][0]<z)i++;
+    const t=(z-col(i,0))/(col(i+1,0)-col(i,0)),row=[z];
+    for(let j=1;j<4;j++){const p0=col(i-1,j),p1=col(i,j),p2=col(i+1,j),p3=col(i+2,j);
+      row.push(.5*((2*p1)+(-p0+p2)*t+(2*p0-5*p1+4*p2-p3)*t*t+(-p0+3*p1-3*p2+p3)*t*t*t));}
+    out.push(row);
+  }
+  return out;
+}
+// The body with real wheel openings: around each wheel the side is pushed in
+// behind the tyre and shaded dark, like the fender liner on the render.
+function carvedBody(){
+  const g=bodyLoft(resample(BODY_SECTIONS,170),3.4,.92,128);
+  const p=g.attributes.position,c=g.attributes.color,OPEN=WHEEL_R+.075;
+  const smooth=(a,b,x)=>{const t=Math.min(1,Math.max(0,(x-a)/(b-a)));return t*t*(3-2*t);};
+  for(let i=0;i<p.count;i++){
+    const x=p.getX(i),y=p.getY(i),z=p.getZ(i);if(Math.abs(x)<.55)continue;
+    for(const wz of [WHEEL_ZF,WHEEL_ZR]){
+      const r=Math.hypot(z-wz,y-WHEEL_Y);
+      const k=1-smooth(OPEN-.012,OPEN+.012,r);   // 1 inside the opening, 0 outside
+      if(k>0){const inner=Math.sign(x)*Math.min(Math.abs(x),.62);p.setX(i,x+(inner-x)*k);const v=1-.82*k;c.setXYZ(i,v,v,v*1.02);}
+    }
+  }
+  g.computeVertexNormals();return g;
+}
+// Ten swept blades of the turbine wheel, drawn once and reused.
+let bladeGeo=null;
+function turbineBlade(){
+  if(bladeGeo)return bladeGeo;
+  const sh=new THREE.Shape(),pt=(r,a)=>[Math.cos(a)*r,Math.sin(a)*r];
+  sh.moveTo(...pt(.06,-.06));sh.lineTo(...pt(.225,.08));sh.lineTo(...pt(.225,.36));sh.lineTo(...pt(.06,.1));sh.closePath();
+  bladeGeo=tint(new THREE.ExtrudeGeometry(sh,{depth:.016,bevelEnabled:false}).rotateY(Math.PI/2));
+  return bladeGeo;
+}
+
 export function buildTeslaModelY(parent,m){
   const rig=new THREE.Group();rig.name='tesla-model-y';rig.position.set(...ART.car.position);rig.rotation.y=ART.car.rotation;rig.scale.setScalar(ART.car.scale);parent.add(rig);
   // `car` is the sprung body (pitches and bobs while driving); wheels hang off
   // the rig so they stay planted and only spin.
   const car=new THREE.Group();rig.add(car);
+  const bodyGeo=carvedBody();
+  mesh(car,bodyGeo,m.carBody);
+  const S=surface(bodyLoft(resample(BODY_SECTIONS,90),3.4,.92,40));
+  const cabin=mesh(car,glassLoft(GLASS_SECTIONS),m.carGlass);cabin.castShadow=true;
+  // Tinted glass roof: dark from above, so the cabin shows only through the windows.
+  mesh(car,glassLoft(GLASS_SECTIONS.filter(([z])=>z<.6&&z>-1.9).map(([z,w,base,top])=>{
+    // width of the glass (a superellipse, n = 2.6) at the panel's lower edge, so it stays inside
+    const y=top-.13,e=2/2.6,c=Math.max(0,(y-base)/(top-base))**(1/e),half=w*Math.sqrt(1-c*c)**e;
+    return [z,half*.96,y,top-.006];
+  })),m.roofGlass);
+  box(car,[1.4,.06,3.4],[0,.17,0],m.truckDark,.03);
 
-  mesh(car,bodyLoft([
-    [-1.99,.54,.42,.80],[-1.92,.72,.32,.94],[-1.7,.785,.23,.96],[-1.3,.79,.21,.93],[-.6,.79,.21,.90],[.4,.79,.21,.88],[.95,.79,.21,.87],
-    [1.35,.78,.23,.80],[1.72,.75,.26,.68],[1.93,.66,.30,.58],[1.99,.52,.35,.52],
-  ]),m.carBody);
-  const cabin=mesh(car,glassLoft([
-    [1.12,.71,.87,.89],[.85,.70,.88,1.08],[.5,.69,.88,1.25],[.1,.68,.88,1.34],[-.4,.68,.9,1.345],[-.9,.69,.92,1.3],[-1.35,.71,.94,1.17],[-1.7,.7,.95,1.02],[-1.88,.65,.96,.97],
-  ]),m.carGlass);cabin.material.side=THREE.DoubleSide;
-  // Dark under tray, front splitter and rear diffuser.
-  box(car,[1.38,.07,3.6],[0,.22,0],m.truckDark,.03);
-  box(car,[1.05,.045,.09],[0,.31,1.93],m.truckDark,.02);
-  box(car,[1.1,.05,.1],[0,.33,-1.93],m.truckDark,.02);
+  // Front: the full width light bar, its brighter lamp ends, fog vents, intake, lip, T.
+  const mir=a=>a.map(([x,y])=>[-x,y]);
+  line(car,[...mir(TRACE.bar).reverse(),...TRACE.bar.slice(1)].map(([x,y])=>S.front(x,y,.006)),.008,m.headlight);
+  for(const f of [TRACE.lamp,mir(TRACE.lamp)])line(car,f.map(([x,y])=>S.front(x,y,.007)),.014,m.headlight);
+  for(const f of [TRACE.fog,mir(TRACE.fog)])decal(car,(x,y)=>S.front(x,y,.004),f,m.cabinDark,.005);
+  decal(car,(x,y)=>S.front(x,y,.004),TRACE.intake,m.cabinDark,.007);
+  decal(car,(x,y)=>S.front(x,y,.004),TRACE.lip,m.truckDark,.02);
+  const emblem=S.front(0,.52,.006);if(emblem)mesh(car,new THREE.PlaneGeometry(.075,.09),teslaBadge(),emblem.toArray(),[-.25,0,0]).castShadow=false;
 
-  // The signature: one slim light bar across the whole nose, swept back at the ends.
-  curve(car,[[-.66,.61,1.76],[-.5,.595,1.89],[-.2,.586,1.95],[.2,.586,1.95],[.5,.595,1.89],[.66,.61,1.76]],.014,m.headlight);
-  // Dark lower fascia with a wide air intake and small corner vents.
-  box(car,[.86,.05,.03],[0,.42,1.985],m.truckDark,.015);
-  for(const side of [-1,1])box(car,[.2,.035,.03],[side*.5,.455,1.93],m.truckDark,.012,[0,side*.45,0]);
-  // Tail: a full width red light bar and the lamps that wrap the corners.
-  curve(car,[[-.7,.87,-1.8],[-.5,.865,-1.925],[0,.862,-1.945],[.5,.865,-1.925],[.7,.87,-1.8]],.014,m.tailLight);
-
-  for(const side of [-1,1]){
-    box(car,[.3,.05,.06],[side*.5,.77,-1.905],m.tailLight,.016,[0,-side*.5,0]);
-    // Frameless handles, panel seams, sill.
-    for(const z of [.42,-.5])box(car,[.016,.022,.14],[side*.79,.77,z],m.carBody,.007);
-    for(const z of [-.17,-1.04])curve(car,[[side*.785,.8,z],[side*.795,.56,z],[side*.775,.3,z]],.0035,m.truckDark);
-    box(car,[.06,.045,1.7],[side*.785,.28,0],m.truckDark,.015);
-    // Squarish body colored mirror on a short black arm, by the A pillar.
-    box(car,[.1,.03,.05],[side*.77,.865,.9],m.truckDark,.01);
-    box(car,[.13,.075,.1],[side*.86,.895,.9],m.carBody,.03,[0,side*.12,0]);
+  // Sides: door seams, flush handles, the camera repeater, mirrors.
+  for(const sx of [1,-1]){
+    for(const seam of [TRACE.seamFront,TRACE.seamMiddle,TRACE.seamRear])line(car,seam.map(([z,y])=>S.side(z,y,.002,sx)),.0028,m.cabinDark);
+    for(const h of [TRACE.handleFront,TRACE.handleRear])line(car,h.map(([z,y])=>S.side(z,y,.004,sx)),.009,m.cabinDark);
+    decal(car,(z,y)=>S.side(z,y,.004,sx),TRACE.repeater,m.cabinDark,.008);
+    // Mirror: body coloured shell on a short black arm.
+    box(car,[.12,.05,.08],[sx*.84,.94,.62],m.cabinDark,.02);
+    mesh(car,new THREE.SphereGeometry(1,20,14),m.carBody,[sx*.93,.975,.63],[0,sx*.18,0],[.1,.055,.072]);
   }
-  mesh(car,new THREE.PlaneGeometry(.095,.12),teslaBadge(),[0,.62,1.97],[-1.4,0,0]).castShadow=false;
-  const plate=label('MODEL Y',.34,.075);mesh(car,plate.geometry,plate.material,[0,.52,1.995]);
-  const rear=label('T E S L A',.46,.07,'#8a969c','#c9cfcd');mesh(car,rear.geometry,rear.material,[0,.56,-1.985],[0,Math.PI,0]);
-  mesh(car,new THREE.PlaneGeometry(.09,.11),teslaBadge(),[0,.76,-1.94],[0,Math.PI,0]).castShadow=false;
+
+  // Rear: full width red light bar, corner lamps, dark diffuser, T badge.
+  line(car,TRACE.tailBar.map(([x,y])=>S.rear(x,y,.006)),.011,m.tailLight);
+  for(const f of [TRACE.tailLamp,mir(TRACE.tailLamp)])decal(car,(x,y)=>S.rear(x,y,.005),f,m.tailLight,.012);
+  decal(car,(x,y)=>S.rear(x,y,.004),TRACE.diffuser,m.truckDark,.02);
+  const rearT=S.rear(0,.83,.006);if(rearT)mesh(car,new THREE.PlaneGeometry(.075,.09),teslaBadge(),rearT.toArray(),[0,Math.PI,0]).castShadow=false;
+
+  // Cabin seen through the glass: pale seats, dark dash and floor.
+  box(car,[1.66,.05,3.3],[0,.46,-.25],m.cabinDark,.02);
+  box(car,[1.55,.2,.42],[0,.86,.78],m.cabinDark,.05);
+  for(const sx of [-1,1]){
+    box(car,[.5,.12,.5],[sx*.38,.55,.12],m.seat,.05);
+    box(car,[.48,.56,.13],[sx*.38,.86,-.15],m.seat,.05,[-.16,0,0]);
+    box(car,[.24,.15,.09],[sx*.38,1.2,-.2],m.seat,.04,[-.16,0,0]);
+  }
+  box(car,[1.36,.12,.5],[0,.57,-.86],m.seat,.05);
+  box(car,[1.36,.5,.13],[0,.86,-1.12],m.seat,.05,[-.2,0,0]);
 
   mergeStatic(car);
 
-  // Dark wheel arches stay with the rig, so they do not spin.
-  for(const side of [-1,1])for(const z of [-WHEEL_Z,WHEEL_Z])
-    mesh(rig,new THREE.CylinderGeometry(WHEEL_R+.075,WHEEL_R+.075,.03,30),m.truckDark,[side*(BODY_W-.012),WHEEL_Y,z],[0,0,Math.PI/2]);
-  // Turbine aero wheels: a swirl of slanted blades on a low profile tire.
   const wheels=[];
-  for(const side of [-1,1])for(const z of [-WHEEL_Z,WHEEL_Z]){
-    const w=new THREE.Group();w.position.set(side*.685,WHEEL_Y,z);rig.add(w);
+  for(const side of [-1,1])for(const z of [WHEEL_ZR,WHEEL_ZF]){
+    const w=new THREE.Group();w.position.set(side*TRACK,WHEEL_Y,z);rig.add(w);
     const spin=new THREE.Group();w.add(spin);spin.userData.steer=w;spin.userData.front=z>0;
-    mesh(spin,new THREE.CylinderGeometry(WHEEL_R,WHEEL_R,.21,34),m.rubber,[0,0,0],[0,0,Math.PI/2]);
-    mesh(spin,new THREE.CylinderGeometry(.225,.225,.02,30),m.rim,[side*.108,0,0],[0,0,Math.PI/2]);
-    mesh(spin,new THREE.TorusGeometry(.225,.012,6,30),m.truckDark,[side*.116,0,0],[0,Math.PI/2,0]);
-    for(let i=0;i<9;i++){
-      const a=i*Math.PI*2/9;
-      box(spin,[.012,.12,.045],[side*.12,Math.sin(a)*.135,Math.cos(a)*.135],m.truckDark,.004,[a+.7,0,0]);
+    mesh(spin,new THREE.CylinderGeometry(WHEEL_R,WHEEL_R,.255,40),m.rubber,[0,0,0],[0,0,Math.PI/2]);
+    // Turbine wheel as on the render: ten swept light blades on a dark face.
+    mesh(spin,new THREE.CylinderGeometry(.235,.235,.02,36),m.cabinDark,[side*.122,0,0],[0,0,Math.PI/2]);
+    mesh(spin,new THREE.TorusGeometry(.236,.011,6,40),m.rim,[side*.126,0,0],[0,Math.PI/2,0]);
+    for(let i=0;i<10;i++){
+      const b=mesh(spin,turbineBlade(),m.rim,[side*.122+(side>0?0:-.016),0,0],[i*Math.PI/5,0,0]);b.castShadow=false;
     }
-    mesh(spin,new THREE.CylinderGeometry(.04,.04,.02,14),m.truckDark,[side*.124,0,0],[0,0,Math.PI/2]);
+    mesh(spin,new THREE.CylinderGeometry(.055,.055,.024,18),m.cabinDark,[side*.134,0,0],[0,0,Math.PI/2]);
     wheels.push(spin);
   }
   return {rig,car,wheels};
@@ -142,11 +252,10 @@ const WHEELBASE=2.4,MAX_SPEED=3.2,MAX_REVERSE=1.4;
 const BOXES=[[-1.5,-.7,1.5,1.6],[-1.4,-2.71,1.2,.26]];
 const CIRCLES=[[-3.78,-2.75,.4],[3.63,-3.45,.4],[-.45,2.62,.14]];
 const BOUND=4.95;
-const HEADING_MIN=-.5,HEADING_MAX=1.9;
 function blocked(x,z,h){
   const fx=Math.sin(h),fz=Math.cos(h);
   for(const o of [-1.15,0,1.15]){
-    const cx=x+fx*o,cz=z+fz*o,r=.8;
+    const cx=x+fx*o,cz=z+fz*o,r=.83;
     if(Math.abs(cx)>BOUND-r||Math.abs(cz)>BOUND-r)return true;
     for(const [bx,bz,hw,hd] of BOXES){
       const dx=cx-Math.max(bx-hw,Math.min(cx,bx+hw)),dz=cz-Math.max(bz-hd,Math.min(cz,bz+hd));
@@ -195,9 +304,7 @@ export function createTeslaControls({rig,car,wheels},m,{radius=.29}={}){
     const target=((down.has('left')?1:0)-(down.has('right')?1:0))*THREE.MathUtils.lerp(.62,.28,Math.min(1,Math.abs(v)/MAX_SPEED));
     steer+=(target-steer)*Math.min(1,dt*7);
     const rate=v/WHEELBASE*Math.tan(steer);
-    // The supplied render shows the car from one side only (and its mirror), so
-    // the heading stays within the arc where one of those two views is right.
-    const nh=THREE.MathUtils.clamp(h+rate*dt,HEADING_MIN,HEADING_MAX),nx=x+Math.sin(nh)*v*dt,nz=z+Math.cos(nh)*v*dt;
+    const nh=h+rate*dt,nx=x+Math.sin(nh)*v*dt,nz=z+Math.cos(nh)*v*dt;
     if(!blocked(nx,nz,nh)){h=nh;x=nx;z=nz;lat=rate*v;}
     else{v=0;a=0;lat=0;}
     rig.position.x=x;rig.position.z=z;rig.rotation.y=h;

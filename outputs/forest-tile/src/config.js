@@ -9,13 +9,13 @@ export const ART = {
     leaves: '#84b254', leafLight: '#a4c870', bark: '#8d8270',
     soil: '#a1b77e', plaster: '#f2eddc', timber: '#f5f6ef',
     roof: '#f06b60', roofLight: '#fb8274', glass: '#6bb9c5', path: '#d8dbd7',
-    car: '#4a4d53', parking: '#c7ceca', trim: '#f8faf6',
+    car: '#55575c', parking: '#c7ceca', trim: '#f8faf6',
   },
   light: { sun: 3.0, fill: 1.8, exposure: 1.05, position: [-3.5, 9, 6], shadowSize: 2048, shadowSoftness: 21 },
   material: { roughness: 0.9, bump: 0.002 },
   vegetation: { canopyScale: 1, grassClumps: 0, breeze: true, sway: 0.004 },
   house: { position: [-1.5, 0.12, -0.7], width: 2.9, depth: 3.1, wallHeight: 2.12, roofRise: 1.17 },
-  car: { position: [2.2, 0.15, 0.95], rotation: 0, scale: 1 },
+  car: { position: [2.2, 0.15, 0.95], rotation: 0, scale: 0.8316 },
   rendering: { maxPixelRatio: 1.75, targetFPS: 30, ao: true },
 };
 
