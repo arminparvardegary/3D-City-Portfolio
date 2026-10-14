@@ -17,7 +17,7 @@ const AMBULANCE=VEHICLES.findIndex(q=>q.name==='Ambulance');
 
 export function createCarControls(parent,m,{prep,index=0}={}){
   const home={x:ART.car.position[0],z:ART.car.position[2],h:ART.car.rotation};
-  let x=home.x,z=home.z,h=home.h,v=0,steer=0,a=0,lat=0,pitch=0,roll=0,head=.55,tail=.45;
+  let x=home.x,z=home.z,h=home.h,v=0,steer=0,a=0,lat=0,pitch=0,head=.55,tail=.45;
   let parts=buildVehicle(index,parent,m,prep),current=index;
   // The footprint as a row of circles along the car.
   let probes=[],r=1;
@@ -46,7 +46,7 @@ export function createCarControls(parent,m,{prep,index=0}={}){
   const place=()=>{parts.rig.position.x=x;parts.rig.position.z=z;parts.rig.rotation.y=h;};
   const api={
     press(k,on){on?down.add(k):down.delete(k);},
-    reset(){x=home.x;z=home.z;h=home.h;v=0;steer=0;place();},
+    reset(){x=home.x;z=home.z;h=home.h;v=0;steer=0;snapshot();place();},
     get speed(){return v;},
     get index(){return current;},
     get paint(){return parts.paint;},
@@ -56,47 +56,57 @@ export function createCarControls(parent,m,{prep,index=0}={}){
     select(i){
       if(i===current)return;
       disposeVehicle(parts,m);parts=buildVehicle(i,parent,m,prep);current=i;footprint();
-      v=0;if(blocked(x,z,h)){x=home.x;z=home.z;h=home.h;}place();
+      v=0;if(blocked(x,z,h)){x=home.x;z=home.z;h=home.h;}snapshot();rollAngle=prevRoll=0;place();
     },
   };
-  let last=null;
-  // time in ms. Returns true while anything is moving so the caller can keep
-  // rendering and refresh the moving shadow.
-  api.update=function(time){
-    // Clamp the step: never negative (a clock reset) and never huge (a tab coming back).
-    const dt=last===null?0:THREE.MathUtils.clamp((time-last)/1000,0,.05);last=time;
+  // Fixed timestep: the simulation always advances in 1/120 s steps, whatever the
+  // display rate, so speed, steering and braking feel the same at 60 or 144 Hz.
+  // The drawn car is interpolated between the last two steps, so it never stutters.
+  const STEP=1/120;
+  let last=null,acc=0,roll=0,prev={x,z,h,steer,roll:0},rollAngle=0,prevRoll=0;
+  const snapshot=()=>{prev.x=x;prev.z=z;prev.h=h;prev.steer=steer;prevRoll=rollAngle;};
+  function step(dt){
     const gas=down.has('gas'),brake=down.has('brake'),hand=down.has('hand');
     let acc=0;
     if(gas)acc=v<0?5:2.6;
     else if(brake)acc=v>.05?-5.2:-2.2;
-    else acc=dt>0?-Math.sign(v)*Math.min(Math.abs(v)/dt,.9):0;
-    if(hand)acc=-Math.sign(v)*Math.min(Math.abs(v)/Math.max(dt,.001),7);
-    const prev=v;v=THREE.MathUtils.clamp(v+acc*dt,-MAX_REVERSE,MAX_SPEED);
+    else acc=-Math.sign(v)*Math.min(Math.abs(v)/dt,.9);
+    if(hand)acc=-Math.sign(v)*Math.min(Math.abs(v)/dt,7);
+    const prevV=v;v=THREE.MathUtils.clamp(v+acc*dt,-MAX_REVERSE,MAX_SPEED);
     if(!gas&&!brake&&!hand&&Math.abs(v)<.03)v=0;
-    a=dt?(v-prev)/dt:0;
+    a=(v-prevV)/dt;
+    // Steering follows the keys quickly (about 70 ms), with less lock at speed.
     const target=((down.has('left')?1:0)-(down.has('right')?1:0))*THREE.MathUtils.lerp(MAX_STEER,.28,Math.min(1,Math.abs(v)/MAX_SPEED));
-    steer+=(target-steer)*Math.min(1,dt*7);
+    steer+=(target-steer)*(1-Math.exp(-dt*14));
     const rate=v/parts.wheelbase*Math.tan(steer);
     const nh=h+rate*dt,nx=x+Math.sin(nh)*v*dt,nz=z+Math.cos(nh)*v*dt;
-    if(!blocked(nx,nz,nh)){h=nh;x=nx;z=nz;lat=rate*v;}
-    else{v=0;a=0;lat=0;}
-    place();
-    for(const w of parts.wheels){w.rotation.x+=v*dt/parts.wheelR;if(w.userData.front)w.userData.steer.rotation.y=steer;}
-    const moving=Math.abs(v)>.02;
-    // Body pitch and roll ease toward their targets instead of snapping each frame.
-    const ease=Math.min(1,dt*8);
-    pitch+=(-THREE.MathUtils.clamp(a*.012,-.035,.035)-pitch)*ease;
-    roll+=(-THREE.MathUtils.clamp(lat*.006,-.04,.04)-roll)*ease;
+    if(!blocked(nx,nz,nh)){h=nh;x=nx;z=nz;lat=rate*v;}else{v=0;a=0;lat=0;}
+    rollAngle+=v*dt/parts.wheelR;
+    // Body pitch and roll settle like a soft suspension, independent of frame rate.
+    const k=1-Math.exp(-dt*9);
+    pitch+=(-THREE.MathUtils.clamp(a*.012,-.035,.035)-pitch)*k;
+    roll+=(-THREE.MathUtils.clamp(lat*.006,-.04,.04)-roll)*k;
+    const moving=Math.abs(v)>.02,braking=brake&&v>.05||hand&&moving||(gas&&v<-.02);
+    tail+=((braking?1.9:(v<-.02?1.1:.45))-tail)*(1-Math.exp(-dt*14));
+    head+=((moving?1.35:.55)-head)*(1-Math.exp(-dt*6));
+  }
+  // time in ms (rAF clock). Returns true while anything is moving, so the caller
+  // keeps rendering and refreshes the moving shadow.
+  api.update=function(time){
+    const frame=last===null?0:THREE.MathUtils.clamp((time-last)/1000,0,.1);last=time;
+    acc+=frame;let n=0;
+    while(acc>=STEP&&n<16){snapshot();step(STEP);acc-=STEP;n++;}
+    if(n===16)acc=0;                                     // after a long stall, do not spiral
+    const t=acc/STEP,lerpAngle=(p,q)=>p+Math.atan2(Math.sin(q-p),Math.cos(q-p))*t;
+    parts.rig.position.x=prev.x+(x-prev.x)*t;parts.rig.position.z=prev.z+(z-prev.z)*t;parts.rig.rotation.y=lerpAngle(prev.h,h);
+    const s=prev.steer+(steer-prev.steer)*t,r=prevRoll+(rollAngle-prevRoll)*t;
+    for(const w of parts.wheels){w.rotation.x=r;if(w.userData.front)w.userData.steer.rotation.y=s;}
     parts.car.rotation.x=pitch;parts.car.rotation.z=roll;
-    // Lights fade between states so a stop and go never strobes them.
-    const braking=brake&&v>.05||hand&&moving||(gas&&v<-.02);
-    tail+=((braking?1.9:(v<-.02?1.1:.45))-tail)*Math.min(1,dt*14);
-    head+=((moving?1.35:.55)-head)*Math.min(1,dt*6);
     m.tailLight.emissiveIntensity=tail;m.headlight.emissiveIntensity=head;
     // The ambulance light bar pulses.
     const flashing=current===AMBULANCE;
     if(flashing)m.siren.emissiveIntensity=.4+1.2*Math.max(0,Math.sin(time*.012));
-    return moving||Math.abs(steer)>.001||Math.abs(pitch)>1e-4||Math.abs(roll)>1e-4||flashing;
+    return Math.abs(v)>.02||Math.abs(steer)>.001||Math.abs(pitch)>1e-4||Math.abs(roll)>1e-4||Math.abs(x-prev.x)+Math.abs(z-prev.z)>1e-6||flashing;
   };
   return api;
 }

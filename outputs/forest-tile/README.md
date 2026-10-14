@@ -23,3 +23,15 @@ Future tiles snap in 10-unit increments along X/Z. Lawn edges share height 0.12.
 Static geometry is batched by material. Pixel ratio is capped at 1.75. Breeze targets 30 FPS; shadows update at 6 Hz. Rendering pauses in hidden tabs and runs on demand with breeze off. Reduced-motion preferences disable breeze by default.
 
 The previous forest study was preserved in the workspace's `work/forest-v1/` directory before this redesign. 
+
+## Rendering and engine notes
+
+Stack: Three.js r180 (vanilla, no React), Vite 7, `postprocessing` 6.39.5 (pmndrs composer), `n8ao` 2.0.1 (ambient occlusion). React Three Fiber, drei, Leva, r3f-perf and Rapier were evaluated and not adopted: the app has no React, collision is a handful of static shapes, and each benefit is available directly in Three.js at a fraction of the bundle cost.
+
+- Pipeline: one multisampled HDR scene pass, N8AO from depth (no second scene render; transparency detection off, it cost ~10 ms), one merged pass for tone mapping and sRGB output. Default tone mapping ACES (keeps the established palette); Neutral and AgX in the developer panel.
+- Light: `src/world/lighting.js` holds lighting presets (sun by azimuth/elevation, sky, fill, environment, exposure, fog, AO). A prefiltered RoomEnvironment gives soft reflections with no download.
+- Quality: `src/quality.js` has High / Balanced / Performance (pixel ratio cap, MSAA, shadow map size, shadow filter taps, AO resolution and samples, decor density). Chosen from the GPU and device, forced with `?quality=`, or set in the developer panel. A frame monitor lowers render scale in small steps with hysteresis and a cool-down, and steps the preset down once if needed (never up automatically).
+- Loop: renders at display rate only while something moves or changed; driving runs a fixed 120 Hz simulation interpolated for display, so it feels the same at 60 or 144 Hz.
+- World kit: `src/world/units.js` (1 unit = 10 design pixels, tile = 10 units = 100 design pixels, tile origin at its centre, edge connectors), `src/world/vegetation.js` (faceted round and pine trees, instanced meadow scatter with GPU wind and density control).
+- Developer tools (dev builds only, stripped from production): a Developer section inside the Workbench (quality, render scale, sun, sky, environment, exposure, tone mapping, shadow softness, AO, fog, decor density, animation speed, colours, saved and exported presets), a stats overlay, and `forestTile.bench(n)` for timed frames.
+- Production chunks: app ~46 kB, three ~520 kB, effects ~212 kB (gzip 18 / 132 / 96 kB).

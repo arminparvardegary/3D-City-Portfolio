@@ -38,6 +38,7 @@ export function createMaterials() {
     roof: make(colors.roof, { ...tactile, bumpScale: 0.018, vertexColors: true }),
     roofDark: make('#7c5140', { ...tactile }),
     leaves: make(colors.leaves, { ...tactile, bumpScale: 0.006, vertexColors: true, side: THREE.DoubleSide }),
+    pine: make('#5f8f4a', { vertexColors: true }),
     leafTips: make(colors.leafLight, { vertexColors: true, side: THREE.DoubleSide }),
     bark: make(colors.bark, { bumpMap: wood, bumpScale: 0.075, vertexColors: true }),
     birch: make('#d5d1b2', { ...tactile }),

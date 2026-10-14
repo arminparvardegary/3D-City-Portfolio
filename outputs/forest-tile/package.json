@@ -1,1 +1,1 @@
-{"name":"my-house-tile","version":"0.2.0","private":true,"type":"module","scripts":{"dev":"vite --host 127.0.0.1","build":"vite build","preview":"vite preview --host 127.0.0.1"},"dependencies":{"three":"0.180.0"},"devDependencies":{"vite":"7.3.7"}}
+{"name":"my-house-tile","version":"0.2.0","private":true,"type":"module","scripts":{"dev":"vite --host 127.0.0.1","build":"vite build","preview":"vite preview --host 127.0.0.1"},"dependencies":{"n8ao":"2.0.1","postprocessing":"6.39.5","three":"0.180.0"},"devDependencies":{"vite":"7.3.7"}}

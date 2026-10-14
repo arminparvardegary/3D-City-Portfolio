@@ -20,3 +20,8 @@
 .vehicle-list button[aria-current="true"] .v-num{background:#6c854c;color:#fff}
 @media(max-width:1000px){.vehicle-list{left:0;right:0;top:auto;bottom:118px;width:auto;padding:0 6%}.vehicle-list .eyebrow{display:none}.vehicle-list ol{flex-direction:row;overflow-x:auto;overflow-y:hidden}.vehicle-list li{flex:0 0 auto}.vehicle-list button{grid-template-columns:20px 54px;width:auto}.vehicle-list .v-name{display:none}}
 @media(max-width:600px){.vehicle-list{bottom:160px}}
+.dev-panel{margin-top:18px;padding-top:14px;border-top:1px solid #e0e5d7}.dev-panel summary{cursor:pointer;list-style:none}.dev-panel summary::-webkit-details-marker{display:none}
+.dev-body{max-height:44vh;overflow-y:auto;padding:14px 4px 0 0}.dev-select select{width:100%;margin-top:8px;font:inherit;font-size:11px;padding:5px 8px;border:1px solid #dfe4d3;border-radius:10px;background:#fff;color:#55634a}
+.dev-presets{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}.dev-presets input,.dev-presets select{flex:1 1 120px;font:inherit;font-size:11px;padding:6px 8px;border:1px solid #dfe4d3;border-radius:10px;background:#fff}
+.dev-presets button{font-size:10px;font-weight:600;color:#6c8058;padding:5px 10px;border-radius:14px;background:#e9eddf}
+.dev-hud{position:fixed;right:8px;top:8px;z-index:50;font:11px/1.45 ui-monospace,Menlo,monospace;white-space:pre;color:#3e4f30;background:#fffff6e6;border:1px solid #e0e5d6;border-radius:10px;padding:6px 9px;pointer-events:none}

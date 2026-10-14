@@ -4,22 +4,7 @@ import { box, mesh, branch, tint, mergeStatic } from './geometry.js';
 import { buildHome, buildTurkishFlag } from './home.js';
 import { createCarControls } from './car.js';
 import { softenShadows } from './shadows.js';
-
-function referenceTree(parent,m,rand,x,z,height=2.25){
-  const g=new THREE.Group();g.position.set(x,ART.tile.top,z);parent.add(g);
-  branch(g,[0,0,0],[.015,height*.64,0],.043,.028,m.bark,1,7);
-  const crown=new THREE.Group();crown.position.y=height*.7;g.add(crown);
-  const geometry=new THREE.IcosahedronGeometry(1,1);
-  const position=geometry.attributes.position,colors=[];
-  for(let i=0;i<position.count;i+=3){
-    const shade=.9+rand()*.15;
-    for(let j=0;j<3;j++)colors.push(shade,shade,shade*.97);
-  }
-  geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geometry.computeVertexNormals();
-  mesh(crown,geometry,m.leaves,[0,0,0],[0,.4,0],[height*.22,height*.34,height*.21]);
-  crown.userData.phase=rand()*6.28;
-  return crown;
-}
+import { tree } from './world/vegetation.js';
 
 export function buildTile(m){
   const group=new THREE.Group();group.name='my-house-01';group.userData.spec=TILE_SPEC;
@@ -41,9 +26,12 @@ export function buildTile(m){
   box(staticGroup,[2.35,.075,.46],[-1.4,.1575,-2.71],m.path,.005);
   for(let i=0;i<4;i++)box(staticGroup,[.48,.3,.35],[-2.25+i*.56,.32,-2.71],m.leaves,.075);
   mergeStatic(staticGroup);
-  const canopies=[referenceTree(group,m,rand,-3.78,-2.75,2.3),referenceTree(group,m,rand,3.63,-3.45,2.15)];
+  const canopies=[tree(group,m,{x:-3.78,z:-2.75,height:2.3,seed:3}),tree(group,m,{x:3.63,z:-3.45,height:2.15,seed:7})];
+  // The lawn stays clean and flat, as in the city reference. The meadow scatter
+  // (world/vegetation.js) is available for tiles that want grass and flowers.
+  const field={group:null,layers:[],materials:[],grassMaterial:null};
   const flag=buildTurkishFlag(group,m);
   // The car is built outside the merged static group so it can drive.
   const car=createCarControls(group,m,{prep:softenShadows});
-  return {group,canopies,animate:flag.animate,car,extraMaterials:[flag.material]};
+  return {group,canopies,animate:flag.animate,car,meadow:field,extraMaterials:[flag.material,...field.materials]};
 }
