@@ -35,4 +35,8 @@ export const FEEL={
   drift:{slip:.55,markLife:7,markWidth:.2,dust:.6},
   camera:{follow:.32,lookAhead:.42,speedZoomOut:.16,panGlide:3.2,zoomGlide:5,shake:.35,shakeDecay:2.6},
   props:{restDelay:4,resetTime:1.6},
+  // Chase camera (New York): distance behind, height above, how far ahead it looks,
+  // how quickly it swings round after the car, pull back per unit of speed,
+  // smoothing time, field of view and how much it widens at top speed.
+  chase:{distance:7.5,height:3,lookAhead:4,turnLag:3.6,speedPull:.22,follow:.14,fov:58,fovBoost:12},
 };

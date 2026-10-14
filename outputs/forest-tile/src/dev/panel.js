@@ -15,6 +15,7 @@ const FEEL_RANGES={
   drift:{slip:[.1,2,.05],markLife:[1,20,.5],markWidth:[.05,.5,.01],dust:[0,2,.05]},
   camera:{follow:[.05,1.5,.01],lookAhead:[0,1.2,.01],speedZoomOut:[0,.5,.01],panGlide:[.5,12,.1],zoomGlide:[1,15,.1],shake:[0,1.5,.01],shakeDecay:[.5,8,.1]},
   props:{restDelay:[.5,15,.5],resetTime:[.3,5,.1]},
+  chase:{distance:[3,16,.1],height:[1,8,.1],lookAhead:[0,10,.1],turnLag:[1,10,.1],speedPull:[0,.6,.01],follow:[.03,.5,.01],fov:[35,85,1],fovBoost:[0,25,1]},
 };
 function mountFeelPanel(){
   const defaults=structuredClone(FEEL);

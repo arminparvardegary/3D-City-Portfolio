@@ -44,20 +44,22 @@ viewport.appendChild(renderer.domElement);
 const scene=new THREE.Scene();
 // Fixed isometric angle. The camera can pan over the map and zoom, but never rotates;
 // it sits far back so the whole map fits between the clip planes.
-const camera=new THREE.OrthographicCamera(-10,10,8,-8,1,400);
+// New York is driven from behind the car (a chase camera, like a racing game);
+// the campus keeps the fixed isometric view.
+const WORLD=new URLSearchParams(location.search).get('world')==='campus'?'campus':'nyc',CHASE=WORLD==='nyc';
+const camera=CHASE?new THREE.PerspectiveCamera(FEEL.chase.fov,1,.1,700):new THREE.OrthographicCamera(-10,10,8,-8,1,400);
 const target=new THREE.Vector3(...ART.camera.target);
 // The view looks from one of four corners (azimuth); it turns only to keep the car in sight.
 const HOME_AZ=THREE.MathUtils.degToRad(ART.camera.azimuth),el=THREE.MathUtils.degToRad(ART.camera.elevation);
 let az=HOME_AZ;
 const viewDir=new THREE.Vector3(Math.sin(az)*Math.cos(el),Math.sin(el),Math.cos(az)*Math.cos(el));
 const CAMERA_DISTANCE=160;
-function placeCamera(){camera.position.copy(target).addScaledVector(viewDir,CAMERA_DISTANCE);camera.lookAt(target);}
+function placeCamera(){if(CHASE)return;camera.position.copy(target).addScaledVector(viewDir,CAMERA_DISTANCE);camera.lookAt(target);}
 placeCamera();
 
 // The world: low poly New York (default) or the white campus (?world=campus).
-const WORLD=new URLSearchParams(location.search).get('world')==='campus'?'campus':'nyc';
 const art=structuredClone(WORLD==='nyc'?THEME.nyc.light:LIGHTING.storybook);
-art.fog.enabled=false;   // the whole map: every tile should read the same
+art.fog.enabled=CHASE;   // the chase view looks far: the city fades softly into the sky
 const lights=createLights(scene),{sun}=lights;
 scene.environment=createEnvironment(renderer,art);
 const materials=createMaterials();
@@ -139,8 +141,9 @@ function resize(){
   const aspect=width/height;
   // Keep the entire tile visible on portrait devices while retaining a large
   // inspection view on desktop. Zoom never changes camera orientation.
-  const frustum=Math.max(ART.camera.viewHeight,16.8/aspect);
-  camera.left=-frustum*aspect/2;camera.right=frustum*aspect/2;camera.top=frustum/2;camera.bottom=-frustum/2;camera.zoom=zoom*speedZoom;
+  if(CHASE)camera.aspect=aspect;
+  else{const frustum=Math.max(ART.camera.viewHeight,16.8/aspect);
+    camera.left=-frustum*aspect/2;camera.right=frustum*aspect/2;camera.top=frustum/2;camera.bottom=-frustum/2;camera.zoom=zoom*speedZoom;}
   camera.updateProjectionMatrix();fitShadow();
   // Sharp on high density screens, capped by the preset, scaled down only by the monitor.
   renderer.setPixelRatio(Math.min(window.devicePixelRatio,quality.maxDpr)*renderScale);
@@ -195,6 +198,7 @@ canvasEl.addEventListener('pointermove',e=>{
     return;
   }
   const dx=e.clientX-p[0],dy=e.clientY-p[1];pointers.set(e.pointerId,[e.clientX,e.clientY,e.timeStamp]);
+  if(CHASE){lookYaw-=dx*.006;lookPitch=THREE.MathUtils.clamp(lookPitch+dy*.004,-.12,.6);looking=true;return;}   // drag looks around the car
   if(FIXED)return;   // the view stays on the car
   const unitsPerPx=(camera.top-camera.bottom)/camera.zoom/canvasEl.clientHeight;
   const wx=(-dx*groundRight.x-dy*groundUp.x)*unitsPerPx,wz=(-dx*groundRight.z-dy*groundUp.z)*unitsPerPx;
@@ -204,6 +208,7 @@ canvasEl.addEventListener('pointermove',e=>{
   syncFollow();followHold=2.5;focus=null;needsRender=true;
 });
 for(const ev of ['pointerup','pointercancel'])canvasEl.addEventListener(ev,e=>{
+  looking=false;
   // A tap (no drag) on a building or its label opens it.
   if(ev==='pointerup'&&pressAt&&pointers.size===1&&Math.hypot(e.clientX-pressAt[0],e.clientY-pressAt[1])<6){const id=pick(e);if(id){panVel.set(0,0,0);openPlace(id);}}
   pressAt=null;pointers.delete(e.pointerId);
@@ -242,6 +247,7 @@ addEventListener('keydown',e=>{if(e.key==='Enter'&&!prompt.hidden&&!e.repeat){e.
 car.onHit=s=>{if(!reducedMotion.matches&&s>.2)trauma=Math.min(1,trauma+s*.8);};
 
 function updateView(dt){
+  if(CHASE)return chaseView(dt);
   let moved=false;
   // Zoom glides in log space, so it feels the same zoomed in or out.
   if(Math.abs(zoomVel)>1e-3&&!(pointers.size===2)){
@@ -284,11 +290,52 @@ function updateView(dt){
   }
   return moved;
 }
+// --- Chase camera (New York) ----------------------------------------------------
+// Behind the car and a little above, looking over it toward where it is going.
+// The camera's heading follows the car's with a short lag, so it swings out in
+// turns; it pulls back and the field of view widens with speed. If a building
+// comes between the car and the camera, the camera slides in along the line so
+// the car stays in view. A drag looks around and springs back on release. When a
+// place is being shown (the experience story, the Experience list), the camera
+// glides to face it and comes back behind the car when you drive off.
+let chaseYaw=null,lookYaw=0,lookPitch=0,looking=false,fov=FEEL.chase.fov;
+const eyeS=[{x:0,v:0},{x:0,v:0},{x:0,v:0}],lookS=[{x:0,v:0},{x:0,v:0},{x:0,v:0}];
+const eye=new THREE.Vector3(),look=new THREE.Vector3(),pull=new THREE.Ray(),hit=new THREE.Vector3(),camRight=new THREE.Vector3(),camUp=new THREE.Vector3();
+function chaseView(dt){
+  const C=FEEL.chase,p=car.shown,py=p.y??.12;
+  if(focus&&p.speed>.6)focus=null;
+  if(chaseYaw===null)chaseYaw=p.h;
+  if(focus){look.set(focus.x,focus.y??4,focus.z-3);eye.set(focus.x+2.5,(focus.y??4)+4.5,focus.z+16);}
+  else{
+    chaseYaw=dampAngle(chaseYaw,p.h,C.turnLag*(1+p.speed*.05),dt);
+    if(!looking){lookYaw=damp(lookYaw,0,2.4,dt);lookPitch=damp(lookPitch,0,2.4,dt);}
+    const yaw=chaseYaw+lookYaw,D=C.distance+p.speed*C.speedPull,H=C.height+lookPitch*D;
+    look.set(p.x+Math.sin(p.h)*C.lookAhead,py+1.1,p.z+Math.cos(p.h)*C.lookAhead);
+    eye.set(p.x-Math.sin(yaw)*D,py+H,p.z-Math.cos(yaw)*D);
+    // Keep the car in view: stop short of any tall building on the line.
+    if(world.occluders){pull.origin.set(p.x,py+1.2,p.z);pull.direction.subVectors(eye,pull.origin);const len=pull.direction.length();pull.direction.multiplyScalar(1/len);
+      let near=len;for(const b of world.occluders)if(pull.intersectBox(b,hit)){const d=hit.distanceTo(pull.origin);if(d<near)near=d;}
+      if(near<len)eye.copy(pull.origin).addScaledVector(pull.direction,Math.max(2.2,near-.7));}
+  }
+  // Smooth both points (a critically damped spring each), snapping on the first frame.
+  const first=eyeS[0].x===0&&eyeS[2].x===0;
+  ['x','y','z'].forEach((k,i)=>{if(first){eyeS[i].x=eye[k];lookS[i].x=look[k];}eye[k]=spring(eyeS[i],eye[k],focus?.6:C.follow,dt);look[k]=spring(lookS[i],look[k],focus?.6:C.follow*.7,dt);});
+  camera.position.copy(eye);camera.lookAt(look);
+  const wantFov=C.fov+C.fovBoost*Math.min(1,p.speed/FEEL.car.maxSpeed);
+  if(Math.abs(wantFov-fov)>.01){fov=damp(fov,wantFov,3,dt);camera.fov=fov;camera.updateProjectionMatrix();}
+  // Shadows follow the car.
+  if(Math.abs(target.x-p.x)+Math.abs(target.z-p.z)>.5){target.set(p.x,target.y,p.z);placeSun();}
+  if(trauma>0){trauma=Math.max(0,trauma-F.shakeDecay*dt);shakeClock+=dt;const k=trauma*trauma*F.shake*.6,t=shakeClock;
+    camRight.setFromMatrixColumn(camera.matrixWorld,0);camUp.setFromMatrixColumn(camera.matrixWorld,1);
+    camera.position.addScaledVector(camRight,k*(Math.sin(t*47.3)*.6+Math.sin(t*83.1+1.3)*.4)).addScaledVector(camUp,k*(Math.sin(t*53.9+2.1)*.6+Math.sin(t*97.7)*.4));}
+  return true;
+}
 // Shadows are drawn for the area in view only; the sun follows the view and snaps
 // to whole shadow texels so edges never crawl while the camera glides.
 const sunDir=new THREE.Vector3(),sunAt=new THREE.Vector3();
 function fitShadow(){
-  const half=THREE.MathUtils.clamp((camera.right-camera.left)/camera.zoom*.6,8,90),cam=sun.shadow.camera;
+  // The chase view sees far ahead: shadows cover a wide square round the car.
+  const half=CHASE?72:THREE.MathUtils.clamp((camera.right-camera.left)/camera.zoom*.6,8,90),cam=sun.shadow.camera;
   cam.left=-half;cam.right=half;cam.top=half;cam.bottom=-half;cam.near=.5;cam.far=420;cam.updateProjectionMatrix();placeSun();
 }
 function placeSun(){
@@ -343,8 +390,8 @@ for(const b of document.querySelectorAll('[data-drive]')){
 // The vehicle is hardcoded: the City car.
 car.select(VEHICLES.findIndex(v=>v.name==='City'));
 // X-ray: where a building hides the car, its outline shows through in its colour
-// (drawn only where something is in front of it).
-{const ghost=new THREE.MeshBasicMaterial({color:world.carColor??'#ff6b5e',transparent:true,opacity:.55,depthWrite:false,depthFunc:THREE.GreaterDepth});
+// (drawn only where something is in front of it). Not needed behind the car.
+if(!CHASE){const ghost=new THREE.MeshBasicMaterial({color:world.carColor??'#ff6b5e',transparent:true,opacity:.55,depthWrite:false,depthFunc:THREE.GreaterDepth});
   const meshes=[];car.rig.traverse(o=>{if(o.isMesh)meshes.push(o);});
   for(const o of meshes){const g=new THREE.Mesh(o.geometry,ghost);g.renderOrder=40;g.castShadow=g.receiveShadow=false;o.add(g);}}
 

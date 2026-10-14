@@ -43,7 +43,7 @@ export const THEME=Object.freeze({
     sky:{color:'#dff5ff',ground:'#ffd9e0',intensity:1.6},
     fill:{color:'#a6e6f2',intensity:.7},
     env:.15,exposure:1,toneMapping:'neutral',
-    fog:{enabled:false,color:'#9ad7e2',near:150,far:320},
+    fog:{enabled:true,color:'#a3d9e3',near:70,far:230},
     ao:{intensity:2.2,radius:1.2,falloff:.6,color:'#3a3348'},
     grade:{saturation:.08},
   }},
