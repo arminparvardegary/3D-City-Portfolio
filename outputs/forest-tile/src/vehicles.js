@@ -134,14 +134,6 @@ export const VEHICLES=[
     box(c,[1.3,.05,.22],[0,.76,-1.82],p,.025);
     return {L:3.9,W:1.62};
   }),
-  v('Sports','#d8302f',{r:.31,track:.76,axles:[{z:1.32,steer:1},{z:-1.3}]},(c,m,p,w)=>{
-    lowerBody(c,m,p,{L:4.1,W:1.74,y0:.2,H:.52,mirrorZ:.4},w);
-    cabin(c,m,p,{pts:[[.45,.72],[-.15,1.07],[-.62,1.07],[-1.45,.76]],width:1.3});
-    for(const sx of [-1,1])box(c,[.04,.18,.07],[sx*.55,.84,-1.82],m.carTrim,.015);
-    box(c,[1.62,.04,.3],[0,.94,-1.84],m.carTrim,.018);
-    box(c,[1.5,.04,.26],[0,.2,2.0],m.carTrim,.018);
-    return {L:4.1,W:1.74};
-  }),
   v('SUV','#3b7d6b',{r:.38,track:.76,axles:[{z:1.35,steer:1},{z:-1.35}]},(c,m,p,w)=>{
     lowerBody(c,m,p,{L:4.1,W:1.74,y0:.32,H:.66,mirrorZ:.75},w);
     cabin(c,m,p,{pts:[[.88,.98],[.46,1.52],[-1.7,1.52],[-1.88,1.0]],width:1.56,pillars:[-.25,-1.15]});
@@ -152,13 +144,6 @@ export const VEHICLES=[
     lowerBody(c,m,p,{L:4.1,W:1.6,y0:.24,H:.5,mirrorZ:.72},w);
     cabin(c,m,p,{pts:[[.82,.74],[.3,1.2],[-1.78,1.22],[-1.92,.8]],width:1.42,pillars:[-.3,-1.2]});
     return {L:4.1,W:1.6};
-  }),
-  v('Roadster','#2aa7b8',{r:.3,track:.7,axles:[{z:1.2,steer:1},{z:-1.15}]},(c,m,p,w)=>{
-    lowerBody(c,m,p,{L:3.7,W:1.6,y0:.22,H:.52,mirrorZ:.45},w);
-    // Open top: a raked windscreen, two seats and roll hoops, all seated on the body.
-    box(c,[1.36,.36,.03],[0,.9,.5],m.carGlass,.012,[-.5,0,0]);
-    for(const sx of [-1,1]){box(c,[.48,.12,.48],[sx*.34,.78,-.25],m.carTrim,.05);box(c,[.46,.42,.1],[sx*.34,.96,-.5],m.carTrim,.05,[-.15,0,0]);box(c,[.36,.08,.08],[sx*.34,1.16,-.62],p,.035);}
-    return {L:3.7,W:1.6};
   }),
   v('Minivan','#8a7fd6',{r:.32,track:.76,axles:[{z:1.42,steer:1},{z:-1.38}]},(c,m,p,w)=>{
     lowerBody(c,m,p,{L:4.3,W:1.74,y0:.28,H:.6,mirrorZ:.95},w);

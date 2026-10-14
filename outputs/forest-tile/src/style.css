@@ -25,3 +25,11 @@
 .dev-presets{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}.dev-presets input,.dev-presets select{flex:1 1 120px;font:inherit;font-size:11px;padding:6px 8px;border:1px solid #dfe4d3;border-radius:10px;background:#fff}
 .dev-presets button{font-size:10px;font-weight:600;color:#6c8058;padding:5px 10px;border-radius:14px;background:#e9eddf}
 .dev-hud{position:fixed;right:8px;top:8px;z-index:50;font:11px/1.45 ui-monospace,Menlo,monospace;white-space:pre;color:#3e4f30;background:#fffff6e6;border:1px solid #e0e5d6;border-radius:10px;padding:6px 9px;pointer-events:none}
+
+/* Concept-only page: the scene fills the window, the numbered vehicle concepts sit at the left. */
+#app{height:100svh;min-height:0}.scene{flex:1}
+.vehicle-list{top:50%;bottom:auto;transform:translateY(-50%);width:auto;max-height:calc(100svh - 48px)}
+.vehicle-list ol{max-height:calc(100svh - 48px)}
+.vehicle-list button{grid-template-columns:22px 60px;width:auto}
+@media(max-width:1000px){.vehicle-list{top:auto;bottom:16px;transform:none}.vehicle-list ol{max-height:none}}
+@media(hover:none){.vehicle-list{bottom:150px}}

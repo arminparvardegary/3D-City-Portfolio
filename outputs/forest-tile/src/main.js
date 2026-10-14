@@ -9,7 +9,7 @@ import { softenShadows, setShadowTaps } from './shadows.js';
 import { PRESETS, ORDER, detectQuality, FrameMonitor } from './quality.js';
 import { LIGHTING, createLights, createEnvironment, applyLighting } from './world/lighting.js';
 import { wind, setDensity } from './world/vegetation.js';
-import { VEHICLES, buildVehicle, disposeVehicle } from './vehicles.js';
+import { VEHICLES } from './vehicles.js';
 
 const viewport=document.querySelector('#viewport');
 const $=id=>document.getElementById(id);
@@ -102,7 +102,7 @@ const monitor=new FrameMonitor({
   onScale:s=>{renderScale=s;resize();},
   onPreset:()=>{const i=ORDER.indexOf(qualityName);if(i<ORDER.length-1)setQuality(ORDER[i+1],'auto');},
 });
-let zoom=1,breeze=ART.vegetation.breeze,needsRender=true,hidden=document.hidden,lastTime=0,noticeTimer;
+let zoom=1,breeze=ART.vegetation.breeze,needsRender=true,hidden=document.hidden;
 const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
 if(reducedMotion.matches)breeze=false;
 
@@ -147,69 +147,16 @@ applyArt();renderer.shadowMap.needsUpdate=true;
 renderer.compile(scene,camera);$('loading').remove();requestAnimationFrame(render);
 document.addEventListener('visibilitychange',()=>{hidden=document.hidden;needsRender=true;});
 
-function notify(message){$('notice').textContent=message;$('notice').classList.add('visible');clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>$('notice').classList.remove('visible'),2400);}
-function updateZoom(value){zoom=THREE.MathUtils.clamp(value,.75,1.45);$('zoom-label').textContent=`${Math.round(zoom*100)}%`;$('zoom-out').disabled=zoom<=.75;$('zoom-in').disabled=zoom>=1.45;resize();}
-$('zoom-in').onclick=()=>updateZoom(zoom+.1);$('zoom-out').onclick=()=>updateZoom(zoom-.1);$('zoom-reset').onclick=()=>updateZoom(1);
-function updateBreeze(){const b=$('breeze-toggle');b.classList.toggle('is-active',breeze);b.setAttribute('aria-pressed',String(breeze));b.setAttribute('aria-label',breeze?'Pause breeze':'Play breeze');b.title=breeze?'Pause breeze':'Play breeze';needsRender=true;}
-$('breeze-toggle').onclick=()=>{breeze=!breeze;updateBreeze();};updateBreeze();
-function showSettings(open){$('settings').hidden=!open;$('settings-toggle').setAttribute('aria-expanded',String(open));$('settings-toggle').classList.toggle('is-active',open);}
-$('settings-toggle').onclick=()=>showSettings($('settings').hidden);$('settings-close').onclick=()=>showSettings(false);
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){showSettings(false);$('settings-toggle').focus();}});
-function updateLight(){const value=Number($('light').value);sun.intensity=art.sun.intensity*value;sky.intensity=art.sky.intensity*(.75+value*.25);$('light-value').value=value.toFixed(1);needsRender=true;}
-function updateCanopy(){const value=Number($('canopy').value);for(const c of canopies)c.scale.setScalar(value);$('canopy-value').value=value.toFixed(2);renderer.shadowMap.needsUpdate=true;needsRender=true;}
-function updateRoughness(){const value=Number($('roughness').value);for(const [name,mat] of Object.entries(materials)){if(!['window','gold'].includes(name))mat.roughness=value;}$('roughness-value').value=value.toFixed(2);needsRender=true;}
-$('light').oninput=updateLight;$('canopy').oninput=updateCanopy;$('roughness').oninput=updateRoughness;
-function updateColors(){materials.ground.color.set($('grass-color').value);materials.grass.color.copy(materials.ground.color);meadow.grassMaterial?.color.copy(materials.ground.color);materials.leaves.color.set($('leaf-color').value);materials.leafTips.color.copy(materials.leaves.color).lerp(new THREE.Color('#d2cb76'),.32);materials.roof.color.set($('roof-color').value);car.paint.color.set($('car-color').value);needsRender=true;}
-for(const id of ['grass-color','leaf-color','roof-color','car-color'])$(id).oninput=updateColors;
-$('grid-toggle').onchange=()=>{grid.visible=$('grid-toggle').checked;needsRender=true;if(grid.visible)notify('10 divisions × 10 design pixels = 100 × 100');};
-$('reset-style').onclick=()=>{
-  $('light').value=1;$('canopy').value=1;$('roughness').value=ART.material.roughness;$('grass-color').value=ART.palette.grass;$('leaf-color').value=ART.palette.leaves;$('roof-color').value=ART.palette.roof;$('car-color').value=car.color;
-  car.reset();updateLight();updateCanopy();updateRoughness();updateColors();$('grid-toggle').checked=false;grid.visible=false;updateZoom(1);notify('Original house style restored.');
-};
-$('save-render').onclick=()=>{
-  composer.render();  // drawn and copied in the same task, so no preserved buffer is neededconst image=document.createElement('canvas');image.width=renderer.domElement.width;image.height=renderer.domElement.height;
-  const context=image.getContext('2d');context.fillStyle=ART.palette.background;context.fillRect(0,0,image.width,image.height);context.drawImage(renderer.domElement,0,0);
-  image.toBlob(blob=>{if(!blob){notify('Could not save this view. Please try again.');return;}const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='my-house-tile.png';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);notify('Your house tile, saved.');},'image/png');
-};
-
+// The page shows only the scene and the vehicle concepts: no toolbar, Workbench
+// or captions. The breeze stays on (unless reduced motion is requested).
 for(const b of document.querySelectorAll('[data-drive]')){
   const k=b.dataset.drive;
   b.addEventListener('pointerdown',e=>{e.preventDefault();b.setPointerCapture(e.pointerId);car.press(k,true);});
   for(const ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,()=>car.press(k,false));
 }
-$('park-car').onclick=()=>{car.reset();needsRender=true;renderer.shadowMap.needsUpdate=true;notify('Parked.');};
 
-// The numbered vehicle list: a small rendered thumbnail of each, click to drive it.
-function thumbnails(){
-  const w=150,h=90,r=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});
-  r.setPixelRatio(2);r.setSize(w,h);r.toneMapping=THREE.NeutralToneMapping;r.outputColorSpace=THREE.SRGBColorSpace;
-  const s=new THREE.Scene();s.add(new THREE.HemisphereLight('#ffffff','#bbc6b5',1.9));const d=new THREE.DirectionalLight('#fffaf1',2.6);d.position.set(-3.5,9,6);s.add(d);
-  const cam=new THREE.OrthographicCamera(-1,1,1,-1,.1,100),box=new THREE.Box3(),c=new THREE.Vector3(),size=new THREE.Vector3();
-  const urls=VEHICLES.map((_,i)=>{
-    const g=new THREE.Group();s.add(g);const parts=buildVehicle(i,g,materials);parts.rig.position.set(0,0,0);
-    box.setFromObject(g);box.getCenter(c);box.getSize(size);
-    cam.position.copy(c).add(new THREE.Vector3(Math.sin(az)*Math.cos(el),Math.sin(el),Math.cos(az)*Math.cos(el)).multiplyScalar(30));cam.lookAt(c);
-    const half=Math.max(size.x,size.z)*.62;cam.left=-half*w/h;cam.right=half*w/h;cam.top=half;cam.bottom=-half;cam.updateProjectionMatrix();
-    r.render(s,cam);const url=r.domElement.toDataURL('image/png');disposeVehicle(parts,materials);g.removeFromParent();return url;
-  });
-  r.dispose();r.forceContextLoss();return urls;
-}
-const list=$('vehicles');
-VEHICLES.forEach((v,i)=>{
-  const li=document.createElement('li'),b=document.createElement('button');
-  b.type='button';b.dataset.index=i;b.setAttribute('aria-label',`${i+1}. ${v.name}`);
-  b.innerHTML=`<span class="v-num">${i+1}</span><img alt="" width="60" height="36"/><span class="v-name">${v.name}</span>`;
-  b.onclick=()=>chooseVehicle(i);li.append(b);list.append(li);
-});
-function chooseVehicle(i){
-  car.select(i);$('car-color').value=car.color;
-  for(const b of list.querySelectorAll('button'))b.setAttribute('aria-current',String(+b.dataset.index===i));
-  needsRender=true;renderer.shadowMap.needsUpdate=true;
-}
-chooseVehicle(0);
-// Thumbnails are rendered after the first frame, when the browser is idle, so
-// they never delay the scene appearing.
-(window.requestIdleCallback||(f=>setTimeout(f,200)))(()=>{const urls=thumbnails();list.querySelectorAll('img').forEach((im,i)=>im.src=urls[i]);},{timeout:1500});
+// The vehicle is hardcoded: the City car.
+car.select(VEHICLES.findIndex(v=>v.name==='City'));
 
 // Deliberately small inspection API for performance checks and future tiles.
 window.forestTile={car,composer,ao,art,applyArt,setQuality,get quality(){return {name:qualityName,mode:qualityMode,scale:renderScale,pixelRatio:renderer.getPixelRatio()};},spec:TILE_SPEC,art:ART,scene,camera,renderer,materials,tile,canopies,refresh:()=>{needsRender=true;renderer.shadowMap.needsUpdate=true;},stats:()=>({drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,footprint:TILE_SPEC.footprint})};

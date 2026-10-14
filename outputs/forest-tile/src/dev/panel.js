@@ -7,6 +7,8 @@ const STORE='forest-art-presets';
 export function mountDevPanel(api){
   const {art,applyArt,materials,meadow,canopies}=api;
   const panel=document.getElementById('settings');
+  // Without the Workbench on the page, only the stats overlay is shown.
+  if(!panel)return hudOnly(api);
   const sec=document.createElement('details');sec.className='dev-panel';
   sec.innerHTML='<summary><span class="eyebrow">DEVELOPER</span></summary><div class="dev-body"></div>';
   panel.insertBefore(sec,panel.querySelector('.panel-footer'));
@@ -79,6 +81,17 @@ export function mountDevPanel(api){
   };
 
   // Live stats overlay: frame rate, frame time, draw calls, triangles, resolution, preset.
+  const hud=document.createElement('div');hud.className='dev-hud';document.body.append(hud);
+  const times=[];let lastHud=0,lastT=0;
+  return function stats(t){
+    if(lastT)times.push(t-lastT);lastT=t;if(times.length>120)times.shift();
+    if(t-lastHud<500)return;lastHud=t;
+    const avg=times.reduce((a,b)=>a+b,0)/(times.length||1),worst=Math.max(...times,0),info=api.renderer.info.render,q=api.getQuality();
+    hud.textContent=`${(1000/avg).toFixed(0)} fps  ${avg.toFixed(1)} ms (worst ${worst.toFixed(1)})\n${info.calls} calls  ${(info.triangles/1000).toFixed(1)}k tris\n${q.name} (${q.mode})  dpr ${api.renderer.getPixelRatio().toFixed(2)}`;
+  };
+}
+
+function hudOnly(api){
   const hud=document.createElement('div');hud.className='dev-hud';document.body.append(hud);
   const times=[];let lastHud=0,lastT=0;
   return function stats(t){
