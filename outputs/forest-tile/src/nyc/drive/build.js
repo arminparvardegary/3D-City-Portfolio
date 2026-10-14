@@ -315,6 +315,7 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
   // String lights with glowing bulbs across the streets of Armin's corner.
   {const bulb=mat('#fff3c4',{emissive:'#ffcf6a',emissiveIntensity:1.4,roughness:.4}),wire=mat('#2b2b2f');
     for(const [z,x0,x1] of [[ST[5],-106,-40],[ST[4],-106,-40]])for(let x=x0;x<=x1;x+=11){
+      if(AV.some(a=>Math.abs(x-a)<HALF+1.5))continue;   // never over an avenue: the posts would stand in the road
       const pts=[];for(let k=0;k<=12;k++){const t=k/12,zz=z-HALF-1+t*(2*HALF+2),y=top+6.2-Math.sin(t*Math.PI)*1.1;pts.push(new THREE.Vector3(x,y,zz));}
       add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),24,.03,4),wire);
       // Each wire hangs between two iron posts on the sidewalks (base, post, finial).
