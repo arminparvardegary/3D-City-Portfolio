@@ -1,6 +1,6 @@
 # My House — Block 001
 
-A single minimal isometric 3D tile based on the supplied neighborhood reference: cream house, coral roof, turquoise windows, a smooth flat lawn, a pearl-white Tesla Model S in its parking space, and a small Turkish flag beside the entrance.
+A single minimal isometric 3D tile based on the supplied neighborhood reference: cream house, coral roof, turquoise windows, a smooth flat lawn, a pearl-white Tesla Model S that pulls out of its parking space and reverses back in (rolling wheels, brake and head lights), and a small Turkish flag beside the entrance.
 
 ## Run
 

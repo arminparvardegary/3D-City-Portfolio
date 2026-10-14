@@ -94,11 +94,11 @@ function render(time=0){
   requestAnimationFrame(render);
   if(hidden||time-lastTime<1000/ART.rendering.targetFPS)return;
   if(breeze){
-    animateTile?.(time);
+    const carMoving=animateTile?.(time);
     for(const canopy of canopies){const phase=canopy.userData.phase;canopy.rotation.z=Math.sin(time*.00065+phase)*ART.vegetation.sway;canopy.rotation.x=Math.cos(time*.00048+phase)*ART.vegetation.sway*.6;}
     needsRender=true;
     // The breeze is tiny; refreshing shadows at 6 Hz is enough to follow it.
-    if(time-lastShadow>160){renderer.shadowMap.needsUpdate=true;lastShadow=time;}
+    if(carMoving||time-lastShadow>160){renderer.shadowMap.needsUpdate=true;lastShadow=time;}
   }
   if(!needsRender)return;
   renderer.info.reset();composer.render();lastTime=time;needsRender=false;
@@ -113,7 +113,7 @@ document.addEventListener('visibilitychange',()=>{hidden=document.hidden;needsRe
 function notify(message){$('notice').textContent=message;$('notice').classList.add('visible');clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>$('notice').classList.remove('visible'),2400);}
 function updateZoom(value){zoom=THREE.MathUtils.clamp(value,.75,1.45);$('zoom-label').textContent=`${Math.round(zoom*100)}%`;$('zoom-out').disabled=zoom<=.75;$('zoom-in').disabled=zoom>=1.45;resize();}
 $('zoom-in').onclick=()=>updateZoom(zoom+.1);$('zoom-out').onclick=()=>updateZoom(zoom-.1);$('zoom-reset').onclick=()=>updateZoom(1);
-function updateBreeze(){const b=$('breeze-toggle');b.classList.toggle('is-active',breeze);b.setAttribute('aria-pressed',String(breeze));b.setAttribute('aria-label',breeze?'Pause breeze':'Play breeze');b.title=breeze?'Pause breeze':'Play breeze';needsRender=true;}
+function updateBreeze(){const b=$('breeze-toggle');b.classList.toggle('is-active',breeze);b.setAttribute('aria-pressed',String(breeze));b.setAttribute('aria-label',breeze?'Pause motion':'Play motion');b.title=breeze?'Pause motion':'Play motion';needsRender=true;}
 $('breeze-toggle').onclick=()=>{breeze=!breeze;updateBreeze();};updateBreeze();
 function showSettings(open){$('settings').hidden=!open;$('settings-toggle').setAttribute('aria-expanded',String(open));$('settings-toggle').classList.toggle('is-active',open);}
 $('settings-toggle').onclick=()=>showSettings($('settings').hidden);$('settings-close').onclick=()=>showSettings(false);

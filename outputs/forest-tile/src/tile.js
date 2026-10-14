@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { ART, TILE_SPEC, seededRandom } from './config.js';
 import { box, mesh, branch, tint, mergeStatic } from './geometry.js';
 import { buildHome, buildTurkishFlag } from './home.js';
-import { buildTeslaModelS } from './tesla.js';
+import { buildTeslaModelS, createTeslaDrive } from './tesla.js';
 
 function referenceTree(parent,m,rand,x,z,height=2.25){
   const g=new THREE.Group();g.position.set(x,ART.tile.top,z);parent.add(g);
@@ -34,12 +34,15 @@ export function buildTile(m){
   box(staticGroup,[.76,.09,.12],[2.2,.19,-1.03],m.path,.008);
   // Simple entrance stepping slabs across the lawn.
   for(let i=0;i<5;i++)box(staticGroup,[.89,.025,.43],[-2.03,.1325,1.56+i*.68],m.path,.008);
-  buildHome(staticGroup,m);buildTeslaModelS(staticGroup,m);
+  buildHome(staticGroup,m);
   // A restrained planting strip at the back of the house.
   box(staticGroup,[2.35,.075,.46],[-1.4,.1575,-2.71],m.path,.005);
   for(let i=0;i<4;i++)box(staticGroup,[.48,.3,.35],[-2.25+i*.56,.32,-2.71],m.leaves,.075);
   mergeStatic(staticGroup);
   const canopies=[referenceTree(group,m,rand,-3.78,-2.75,2.3),referenceTree(group,m,rand,3.63,-3.45,2.15)];
   const flag=buildTurkishFlag(group,m);
-  return {group,canopies,animate:flag.animate,extraMaterials:[flag.material]};
+  // The Tesla is built outside the merged static group so it can drive.
+  const drive=createTeslaDrive(buildTeslaModelS(group,m),m);
+  const animate=time=>{flag.animate?.(time);return drive(time);};
+  return {group,canopies,animate,extraMaterials:[flag.material]};
 }
