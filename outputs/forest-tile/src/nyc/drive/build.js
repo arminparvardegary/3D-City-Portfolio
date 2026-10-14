@@ -158,7 +158,7 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
       const dx=e.b.x-n.x,dz=e.b.z-n.z,len=Math.hypot(dx,dz),fx=dx/len,fz=dz/len,rx=-fz,rz=fx,axis=Math.abs(fx)>.5?'x':'z';
       // Traffic coming in along this road drives toward the node (direction -f); its right is -r.
       const px=n.x+fx*(HALF+1.2)-rx*(HALF+1.2),pz=n.z+fz*(HALF+1.2)-rz*(HALF+1.2);
-      cyl(.1,.12,4.6,8,px,top,pz,dark);
+      cyl(.1,.12,4.6,8,px,top,pz,dark);solids.push([px,pz,.16,.16]);
       const hx=px+rx*1.6,hz=pz+rz*1.6;add(new THREE.BoxGeometry(.1,.1,3.2).rotateY(Math.atan2(rx,rz)),dark,[px+rx*.8,top+4.4,pz+rz*.8]);
       add(new THREE.BoxGeometry(.5,1.3,.35).rotateY(Math.atan2(fx,fz)),dark,[hx,top+3.7,hz]);
       ['r','y','g'].forEach((c,k)=>add(new THREE.SphereGeometry(.14,10,8),LIGHT[axis][c],[hx+fx*.2,top+4.12-k*.4,hz+fz*.2]));
@@ -323,7 +323,7 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
       const pts=[];for(let k=0;k<=12;k++){const t=k/12,zz=z-HALF-1+t*(2*HALF+2),y=top+6.2-Math.sin(t*Math.PI)*1.1;pts.push(new THREE.Vector3(x,y,zz));}
       add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),24,.03,4),wire);
       // Each wire hangs between two iron posts on the sidewalks (base, post, finial).
-      for(const p of [pts[0],pts[12]]){cyl(.14,.16,.3,10,p.x,top,p.z,wire);cyl(.06,.07,p.y+.35-top,8,p.x,top,p.z,wire);
+      for(const p of [pts[0],pts[12]]){solids.push([p.x,p.z,.18,.18]);cyl(.14,.16,.3,10,p.x,top,p.z,wire);cyl(.06,.07,p.y+.35-top,8,p.x,top,p.z,wire);
         add(new THREE.SphereGeometry(.1,8,6),wire,[p.x,p.y+.42,p.z]);}
       for(let k=1;k<12;k++){const p=pts[k];add(new THREE.SphereGeometry(.13,6,4),bulb,[p.x,p.y-.18,p.z]);}}}
 
@@ -332,11 +332,11 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
   // railings and globe lamps; steam stacks (orange and white) in a few parking spots.
   const hydrantRed=mat('#c13a2c',{roughness:.45}),cap=mat('#e6e0d2',{roughness:.5}),binGreen=mat('#2f5a3a',{roughness:.6}),
     subwayGreen=mat('#23573a',{roughness:.45,metalness:.3}),globe=mat('#b9f0c4',{emissive:'#5be07e',emissiveIntensity:.9}),orange=mat('#f06a1d',{roughness:.6});
-  const hydrant=(x,z)=>{cyl(.15,.18,.5,12,x,top,z,hydrantRed);add(new THREE.SphereGeometry(.16,12,8,0,Math.PI*2,0,Math.PI/2),hydrantRed,[x,top+.5,z]);cyl(.05,.05,.08,8,x,top+.66,z,cap);
+  const hydrant=(x,z)=>{solids.push([x,z,.22,.22]);cyl(.15,.18,.5,12,x,top,z,hydrantRed);add(new THREE.SphereGeometry(.16,12,8,0,Math.PI*2,0,Math.PI/2),hydrantRed,[x,top+.5,z]);cyl(.05,.05,.08,8,x,top+.66,z,cap);
     for(const sd of [-1,1])add(new THREE.CylinderGeometry(.06,.06,.14,8).rotateZ(Math.PI/2),cap,[x+sd*.18,top+.34,z]);};
-  const bin=(x,z)=>{cyl(.26,.21,.72,14,x,top,z,binGreen);cyl(.27,.27,.04,14,x,top+.72,z,dark);};
+  const bin=(x,z)=>{solids.push([x,z,.28,.28]);cyl(.26,.21,.72,14,x,top,z,binGreen);cyl(.27,.27,.04,14,x,top+.72,z,dark);};
   const subway=(x,z)=>{   // along x, stairs going down toward -x, open at the -x end
-    box(3.2,.04,1.5,x,top-.01,z,dark);for(let k=0;k<6;k++)box(.05,.02,1.4,x-1.4+k*.5,top+.02,z,iron);
+    solids.push([x,z,1.7,.9]);box(3.2,.04,1.5,x,top-.01,z,dark);for(let k=0;k<6;k++)box(.05,.02,1.4,x-1.4+k*.5,top+.02,z,iron);
     for(const sd of [-1,1]){box(3.2,.07,.07,x,top+1.05,z+sd*.8,subwayGreen);for(let k=0;k<=4;k++)box(.07,1.05,.07,x-1.6+k*.8,top,z+sd*.8,subwayGreen);}
     box(.07,.07,1.6,x+1.6,top+1.05,z,subwayGreen);box(.07,1.05,.07,x+1.6,top,z,subwayGreen);
     for(const sd of [-1,1]){cyl(.05,.05,1.5,8,x-1.6,top,z+sd*.8,subwayGreen);add(new THREE.SphereGeometry(.17,14,10),globe,[x-1.6,top+1.62,z+sd*.8]);}};
