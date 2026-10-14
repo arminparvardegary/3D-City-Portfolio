@@ -15,6 +15,8 @@ import { createPlayground } from './world/playground.js';
 import { buildCampus } from './world/campus.js';
 import { createExperience } from './ui/experience.js';
 import { createIntro } from './ui/intro.js';
+import { startAnalytics, track } from './analytics.js';
+startAnalytics();
 import { buildNYCWorld } from './nyc/world.js';
 import { createStory } from './world/story.js';
 import { JOBS, PROFILE } from './data/profile.js';
@@ -248,7 +250,7 @@ prompt.innerHTML='<kbd>Enter</kbd><span>See my experience</span>';document.query
 let parkedAt=null;
 // The bay the car is stopped in, or null.
 function parkedBay(){const L=world.lot,p=car.pose();if(Math.abs(p.v)>.4||p.z<L.bayZ[0]||p.z>L.bayZ[1])return null;return L.bays.find(b=>p.x>b.x0&&p.x<b.x1)?.id??null;}
-function startStory(){if(!story||story.active||!parkedAt)return;audio.ui.open();car.lock(true);experience.close();prompt.hidden=true;story.start(parkedAt);}
+function startStory(){if(!story||story.active||!parkedAt)return;track('open_experience',{company:parkedAt});audio.ui.open();car.lock(true);experience.close();prompt.hidden=true;story.start(parkedAt);}
 prompt.onclick=startStory;
 addEventListener('keydown',e=>{if(e.key==='Enter'&&!prompt.hidden&&!e.repeat){e.preventDefault();startStory();}});
 
