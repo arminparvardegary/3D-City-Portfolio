@@ -163,8 +163,8 @@ function updateView(dt){
   const p=car.pose();
   if(followHold===0&&(Math.abs(p.v)>.05||target.distanceToSquared(followTo.set(p.x,target.y,p.z))>.02)){
     // Ease toward the car plus a short look-ahead along its motion.
-    followTo.set(p.x+Math.sin(p.h)*p.v*.35,target.y,p.z+Math.cos(p.h)*p.v*.35);
-    target.lerp(followTo,1-Math.exp(-dt*3.2));placeCamera();placeSun();moved=true;
+    followTo.set(p.x+Math.sin(p.h)*p.v*.3,target.y,p.z+Math.cos(p.h)*p.v*.3);
+    target.lerp(followTo,1-Math.exp(-dt*(3.2+Math.abs(p.v)*.3)));placeCamera();placeSun();moved=true;   // keeps up at high speed
   }
   return moved;
 }

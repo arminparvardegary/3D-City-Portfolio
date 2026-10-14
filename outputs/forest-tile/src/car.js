@@ -9,9 +9,10 @@ import { VEHICLES, MAX_STEER, buildVehicle, disposeVehicle } from './vehicles.js
 // you do. select(i) swaps the vehicle in place.
 const KEYS={KeyW:'gas',ArrowUp:'gas',KeyS:'brake',ArrowDown:'brake',KeyA:'left',ArrowLeft:'left',KeyD:'right',ArrowRight:'right',Space:'hand'};
 // Driving feel. Units are tile units per second (1 unit = 10 design pixels).
-const MAX_SPEED=6.4,MAX_REVERSE=2.4;          // twice the old top speed
-const ENGINE=5.6,BRAKE=9,COAST=1.1,DRAG=.04;   // accelerations (units/s²)
-const GRIP=11;                                 // lateral acceleration the tyres hold before sliding
+const MAX_SPEED=12.8,MAX_REVERSE=3.6;         // four times the original top speed
+const ENGINE=11.2,BRAKE=16,COAST=1.6,DRAG=.03; // accelerations (units/s²)
+const GRIP=26;                                 // lateral acceleration the tyres hold before sliding
+const TURN=1.55;                               // turns tighter than the wheel angle alone (the wheels stay clear of the arches)
 const STEER_IN=6,STEER_OUT=9;                  // how fast the wheel turns in and returns (1/s)
 // Things the car can bump into: [x, z, halfW, halfD] boxes and [x, z, r] circles.
 const BOXES=[[-1.5,-.7,1.5,1.6],[-1.4,-2.71,1.2,.26]];
@@ -94,18 +95,18 @@ export function createCarControls(parent,m,{prep,index=0}={}){
     else if(brake&&v<=.15)acc=-ENGINE*.7*(1-Math.max(-v,0)/MAX_REVERSE);
     else acc=-Math.sign(v)*(COAST+DRAG*v*v);
     acc-=Math.sign(v)*BRAKE*brakeRamp;
-    if(hand)acc-=Math.sign(v)*5.5;
+    if(hand)acc-=Math.sign(v)*8;
     const prevV=v;v+=acc*dt;
     if(prevV!==0&&Math.sign(v)!==Math.sign(prevV)&&!(gas&&prevV<0)&&!(brake&&prevV>0))v=0;   // brakes stop, they do not reverse
     v=THREE.MathUtils.clamp(v,-MAX_REVERSE,MAX_SPEED);
     a=(v-prevV)/dt;
     // Steering: lock shrinks with speed; the wheel turns in smoothly and returns faster.
-    const speed=Math.abs(v),lock=THREE.MathUtils.lerp(MAX_STEER,.16,Math.min(1,(speed/MAX_SPEED)**.8));
+    const speed=Math.abs(v),lock=THREE.MathUtils.lerp(MAX_STEER,.26,Math.min(1,(speed/MAX_SPEED)**.7));
     const want=((down.has('left')?1:0)-(down.has('right')?1:0))*lock;
     steer+=(want-steer)*(1-Math.exp(-dt*(Math.abs(want)>Math.abs(steer)?STEER_IN:STEER_OUT)));
     // Yaw: what the wheels ask for, capped by grip, reached over a short response time.
     const grip=hand?GRIP*.35:GRIP;
-    let yawWant=v/parts.wheelbase*Math.tan(steer);
+    let yawWant=v/parts.wheelbase*Math.tan(steer)*TURN;
     const cap=grip/Math.max(speed,.6);yawWant=THREE.MathUtils.clamp(yawWant,-cap,cap);
     if(hand&&speed>1.2)yawWant*=1.6;                       // the tail swings round when the rear locks
     yaw+=(yawWant-yaw)*(1-Math.exp(-dt*(hand?5:12)));
