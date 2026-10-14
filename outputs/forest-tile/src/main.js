@@ -18,7 +18,7 @@ import { buildNYCWorld } from './nyc/world.js';
 import { createStory } from './world/story.js';
 import { JOBS, PROFILE } from './data/profile.js';
 import { VEHICLES } from './vehicles.js';
-import { FEEL, damp, spring } from './motion.js';
+import { FEEL, damp, dampAngle, spring } from './motion.js';
 
 const viewport=document.querySelector('#viewport');
 const $=id=>document.getElementById(id);
@@ -46,7 +46,9 @@ const scene=new THREE.Scene();
 // it sits far back so the whole map fits between the clip planes.
 const camera=new THREE.OrthographicCamera(-10,10,8,-8,1,400);
 const target=new THREE.Vector3(...ART.camera.target);
-const az=THREE.MathUtils.degToRad(ART.camera.azimuth),el=THREE.MathUtils.degToRad(ART.camera.elevation);
+// The view looks from one of four corners (azimuth); it turns only to keep the car in sight.
+const HOME_AZ=THREE.MathUtils.degToRad(ART.camera.azimuth),el=THREE.MathUtils.degToRad(ART.camera.elevation);
+let az=HOME_AZ;
 const viewDir=new THREE.Vector3(Math.sin(az)*Math.cos(el),Math.sin(el),Math.cos(az)*Math.cos(el));
 const CAMERA_DISTANCE=160;
 function placeCamera(){camera.position.copy(target).addScaledVector(viewDir,CAMERA_DISTANCE);camera.lookAt(target);}
@@ -71,6 +73,7 @@ document.documentElement.style.setProperty('--sky-top',skyTint.top);document.doc
 const car=createCarControls(scene,materials,{prep:softenShadows,index:VEHICLES.findIndex(v=>v.name==='City'),home:world.start??{x:0,z:0,h:Math.PI/2}});
 car.setBounds(bounds);car.addStatic([],world.solids);car.paint.color.set(world.carColor??THEME.campus.car);
 if(world.obstacles)car.setObstacles(world.obstacles);
+if(world.surface)car.setSurface(world.surface);if(world.circles)car.addStatic(world.circles);
 // Physics toys belong to the campus only.
 const playground=WORLD==='campus'?createPlayground({scene,prep:softenShadows,car,bounds:tb,solids:world.solids}):null;
 const canopies=[],animateTile=null,meadow={layers:[],grassMaterial:null};
@@ -156,6 +159,26 @@ let followHold=0,zoomVel=0,speedZoom=1,trauma=0,shakeClock=0;
 const panVel=new THREE.Vector3(),camX={x:target.x,v:0},camZ={x:target.z,v:0},BASE_Y=target.y,camY={x:target.y,v:0};
 const groundRight=new THREE.Vector3(Math.cos(az),0,-Math.sin(az)),groundUp=new THREE.Vector3(-Math.sin(az),0,-Math.cos(az)).multiplyScalar(1/Math.sin(el));
 const screenUp=new THREE.Vector3().crossVectors(groundRight,viewDir).normalize();
+function setAzimuth(a){az=a;viewDir.set(Math.sin(a)*Math.cos(el),Math.sin(el),Math.cos(a)*Math.cos(el));groundRight.set(Math.cos(a),0,-Math.sin(a));
+  groundUp.set(-Math.sin(a),0,-Math.cos(a)).multiplyScalar(1/Math.sin(el));screenUp.crossVectors(groundRight,viewDir).normalize();}
+// Look around tall buildings: when one hides the car for a moment, turn smoothly to
+// the nearest of the four corners where the car is in clear view; come back to the
+// home corner once that is clear again for a while.
+let azGoal=HOME_AZ,hiddenFor=0,homeClear=0,viewCheck=0;
+const sight=new THREE.Ray(),sightDir=new THREE.Vector3();
+function inSight(a,p){
+  if(!world.occluders)return true;sightDir.set(Math.sin(a)*Math.cos(el),Math.sin(el),Math.cos(a)*Math.cos(el));
+  for(const lift of [.5,1.3]){sight.origin.set(p.x,(p.y??.12)+lift,p.z);sight.direction.copy(sightDir);
+    for(const b of world.occluders)if(sight.intersectsBox(b))return false;}
+  return true;
+}
+function chooseView(p,dt){
+  if(story?.active){azGoal=HOME_AZ;return;}
+  hiddenFor=inSight(azGoal,p)?0:hiddenFor+dt;
+  if(hiddenFor>=.3){hiddenFor=0;
+    const options=[1,-1,2].map(k=>azGoal+k*Math.PI/2);for(const a of options)if(inSight(a,p)){azGoal=a;break;}}
+  if(Math.abs(Math.atan2(Math.sin(azGoal-HOME_AZ),Math.cos(azGoal-HOME_AZ)))>.01){homeClear=inSight(HOME_AZ,p)?homeClear+dt:0;if(homeClear>1.5){azGoal=HOME_AZ;homeClear=0;}}
+}
 const pointers=new Map();let lastMove=0;
 const canvasEl=renderer.domElement;canvasEl.style.touchAction='none';
 const syncFollow=()=>{camX.x=target.x;camZ.x=target.z;camX.v=panVel.x;camZ.v=panVel.z;};
@@ -243,6 +266,8 @@ function updateView(dt){
       target.x=spring(camX,gx,F.follow,dt);target.z=spring(camZ,gz,F.follow,dt);moved=true;
     }
   }
+  viewCheck+=dt;if(viewCheck>=.1){chooseView(p,viewCheck);viewCheck=0;}
+  if(Math.abs(Math.atan2(Math.sin(azGoal-az),Math.cos(azGoal-az)))>1e-4){setAzimuth(dampAngle(az,azGoal,2.2,dt));moved=true;}
   // Height: up to a place being shown, back down to the street after.
   const gy=focus?.y??BASE_Y;
   if(Math.abs(gy-camY.x)>1e-4||Math.abs(camY.v)>1e-4){target.y=spring(camY,gy,F.follow*1.4,dt);moved=true;}
@@ -330,7 +355,7 @@ window.forestTile={car,playground,world,get story(){return story;},grid:{GRID,HO
 // composer) back to back, each synced with a 1 px read so GPU time is included.
 if(import.meta.env.DEV){
   // Drive the camera by hand in tests: one view update of dt seconds.
-  window.forestTile.view={update:updateView,target,get trauma(){return trauma;},get zoom(){return camera.zoom;}};
+  window.forestTile.view={update:updateView,target,get trauma(){return trauma;},get zoom(){return camera.zoom;},get azimuth(){return az;}};
   window.forestTile.bench=(n=120)=>{
     const gl=renderer.getContext(),px=new Uint8Array(4),times=[];let t=performance.now();
     for(let i=0;i<n;i++){

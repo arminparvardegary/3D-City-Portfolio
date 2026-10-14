@@ -16,15 +16,17 @@ const BOXES=[];
 const CIRCLES=[];
 let BOUNDS={x0:-4.95,x1:4.95,z0:-4.95,z1:4.95};
 let dynamicObstacles=()=>[];
+// Road height under a point (null where there is no road), for bridges and ramps.
+let surface=null;
 const AMBULANCE=VEHICLES.findIndex(q=>q.name==='Ambulance');
 
 export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
   const home=start??{x:ART.car.position[0],z:ART.car.position[2],h:ART.car.rotation};
   const C=FEEL.car,S=FEEL.suspension;
-  let x=home.x,z=home.z,h=home.h,v=0,vy=0,yaw=0,steer=0,a=0,lat=0,brakeRamp=0,head=.55,tail=.45,slide=0,rollAngle=0;
+  let cy=0,x=home.x,z=home.z,h=home.h,v=0,vy=0,yaw=0,steer=0,a=0,lat=0,brakeRamp=0,head=.55,tail=.45,slide=0,rollAngle=0;
   // Sprung body: angles (rad) and heave (units), each with its own velocity.
   let pitch=0,pitchV=0,roll=0,rollV=0,heave=0,heaveV=0;
-  let parts=buildVehicle(index,parent,m,prep),current=index,bodyY=parts.car.position.y;
+  let parts=buildVehicle(index,parent,m,prep),current=index,bodyY=parts.car.position.y,rigY=parts.rig.position.y;parts.rig.rotation.order='YXZ';
   const skid=createSkid(parent);
   // The footprint as a row of circles along the car.
   let probes=[],r=1;
@@ -34,6 +36,8 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
     const fx=Math.sin(ph),fz=Math.cos(ph);
     for(const o of probes){
       const cx=px+fx*o,cz=pz+fz*o;
+      // No road there, or a step too high to drive up or down (a deck seen from below).
+      if(surface){const sy=surface(cx,cz);if(sy===null||Math.abs(sy-cy)>.9)return true;}
       if(cx<BOUNDS.x0+r||cx>BOUNDS.x1-r||cz<BOUNDS.z0+r||cz>BOUNDS.z1-r)return true;
       for(const [bx,bz,hw,hd] of BOXES){const dx=cx-Math.max(bx-hw,Math.min(cx,bx+hw)),dz=cz-Math.max(bz-hd,Math.min(cz,bz+hd));if(dx*dx+dz*dz<r*r)return true;}
       for(const [qx,qz,qr] of CIRCLES)if((cx-qx)**2+(cz-qz)**2<(r+qr)**2)return true;
@@ -55,8 +59,8 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
   // Fixed timestep: the simulation always advances in 1/120 s steps, whatever the
   // display rate. The drawn car sits between the last two steps (interpolated).
   const clock=fixedClock(STEP);
-  const prev={x,z,h,steer,roll:0,pitch:0,bodyRoll:0,heave:0};
-  const snapshot=()=>{prev.x=x;prev.z=z;prev.h=h;prev.steer=steer;prev.roll=rollAngle;prev.pitch=pitch;prev.bodyRoll=roll;prev.heave=heave;};
+  const prev={x,z,h,steer,roll:0,pitch:0,bodyRoll:0,heave:0,y:0,slope:0};let slope=0;
+  const snapshot=()=>{prev.x=x;prev.z=z;prev.h=h;prev.steer=steer;prev.roll=rollAngle;prev.pitch=pitch;prev.bodyRoll=roll;prev.heave=heave;prev.y=cy;prev.slope=slope;};
   // Coming back to the tab (or any long stall) never replays the missed time.
   let last=null;
   const resync=()=>{last=null;clock.reset();snapshot();};
@@ -78,7 +82,7 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
     reset(){x=home.x;z=home.z;h=home.h;v=0;vy=0;yaw=0;steer=0;pitch=pitchV=roll=rollV=heave=heaveV=0;snapshot();place();},
     resync,
     // Put the car somewhere, at rest (for tests and future spawn points).
-    teleport(nx,nz,nh=h){x=nx;z=nz;h=nh;v=vy=yaw=0;snapshot();place();},
+    teleport(nx,nz,nh=h){x=nx;z=nz;h=nh;v=vy=yaw=0;cy=surface?.(x,z)??0;snapshot();place();},
     get speed(){return v;},
     get index(){return current;},
     get paint(){return parts.paint;},
@@ -93,13 +97,15 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
     hit,
     set onHit(fn){onHit=fn;},
     setObstacles(fn){dynamicObstacles=fn;},
+    // fn(x, z) -> road height there, or null where the car cannot be.
+    setSurface(fn){surface=fn;cy=fn(x,z)??0;snapshot();},
     addStatic(circles,boxes=[]){CIRCLES.push(...circles);BOXES.push(...boxes);},
     get length(){return parts.length;},
     setBounds(b){BOUNDS={x0:b.x0+.05,x1:b.x1-.05,z0:b.z0+.05,z1:b.z1-.05};},
     count:VEHICLES.length,
     select(i){
       if(i===current)return;
-      disposeVehicle(parts,m);parts=buildVehicle(i,parent,m,prep);current=i;bodyY=parts.car.position.y;footprint();
+      disposeVehicle(parts,m);parts=buildVehicle(i,parent,m,prep);current=i;bodyY=parts.car.position.y;rigY=parts.rig.position.y;parts.rig.rotation.order='YXZ';footprint();
       v=0;if(blocked(x,z,h)){x=home.x;z=home.z;h=home.h;}rollAngle=0;snapshot();place();
     },
   };
@@ -137,7 +143,9 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
     vy+=-yaw*v*dt*(hand?.55:.08);vy=damp(vy,0,hand?1.6:14,dt);
     const nh=h+yaw*dt,fx=Math.sin(nh),fz=Math.cos(nh);
     const nx=x+(fx*v+fz*vy)*dt,nz=z+(fz*v-fx*vy)*dt;
-    if(!blocked(nx,nz,nh)){h=nh;x=nx;z=nz;lat=yaw*v;}
+    if(!blocked(nx,nz,nh)){h=nh;x=nx;z=nz;lat=yaw*v;
+      // Follow the road height; tilt with the slope between the front and back of the car.
+      if(surface){cy=surface(x,z)??cy;const L=parts.length*.42,fy=surface(x+fx*L,z+fz*L),by=surface(x-fx*L,z-fz*L);slope=fy!==null&&by!==null?Math.atan2(fy-by,2*L):slope;}}
     else{hit(Math.abs(v)/C.maxSpeed*1.4);v*=-.15;vy=0;yaw=0;a=0;lat=0;}   // a soft bump, not a dead stop
     rollAngle+=v*dt/parts.wheelR;
 
@@ -168,6 +176,7 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
     shown.x=lerp(prev.x,x,t);shown.z=lerp(prev.z,z,t);shown.h=lerpAngle(prev.h,h,t);
     shown.vx=Math.sin(h)*v+Math.cos(h)*vy;shown.vz=Math.cos(h)*v-Math.sin(h)*vy;shown.speed=Math.abs(v);
     parts.rig.position.x=shown.x;parts.rig.position.z=shown.z;parts.rig.rotation.y=shown.h;
+    parts.rig.position.y=rigY+lerp(prev.y,cy,t);parts.rig.rotation.x=-lerp(prev.slope,slope,t);shown.y=parts.rig.position.y;
     const s=lerp(prev.steer,steer,t),wr=lerp(prev.roll,rollAngle,t);
     for(const w of parts.wheels){w.rotation.x=wr;if(w.userData.front)w.userData.steer.rotation.y=s;}
     parts.car.rotation.x=lerp(prev.pitch,pitch,t);parts.car.rotation.z=lerp(prev.bodyRoll,roll,t);parts.car.position.y=bodyY+lerp(prev.heave,heave,t);

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createKit, facade } from '../diorama/kit.js';
+import { damp } from '../motion.js';
 
 // New York as one low poly diorama: a square block with layered sides, a
 // street grid with sidewalks and trees, a riverside avenue, the East River and
@@ -55,18 +56,20 @@ export function buildCity({drive=false}={}){
   // --- Blocks: raised sidewalks (or lawns) -----------------------------------------
   const block=(c,r,m=NYC.walk)=>{const [x0,x1]=COLS[c],[z0,z1]=ROWS[r];box(x1-x0,WALK,z1-z0,(x0+x1)/2,0,(z0+z1)/2,m);return {x0,x1,z0,z1,x:(x0+x1)/2,z:(z0+z1)/2};};
   // A plain tower: a textured body and a roof cap; returns the roof height.
-  const tower=(x,z,w,d,h,m,{y=WALK,cap=NYC.roof}={})=>{box(w,h,d,x,y,z,m);box(w+.16,.22,d+.16,x,y+h,z,cap);return y+h+.22;};
+  // Tall things, for the camera: [x, z, w, d, base, height] in city units.
+  const occluders=[],occl=(x,z,w,d,h,y=WALK)=>occluders.push([x,z,w,d,y,h]);
+  const tower=(x,z,w,d,h,m,{y=WALK,cap=NYC.roof}={})=>{occl(x,z,w,d,h+.22,y);box(w,h,d,x,y,z,m);box(w+.16,.22,d+.16,x,y+h,z,cap);return y+h+.22;};
   const waterTank=(x,y,z)=>{for(const [a,b] of [[-.3,-.3],[.3,-.3],[-.3,.3],[.3,.3]])box(.08,.7,.08,x+a,y,z+b,NYC.wood);
     cyl(.45,.45,.85,8,x,y+.7,z,NYC.wood);add(new THREE.ConeGeometry(.52,.45,8).translate(0,.22,0),NYC.wood,[x,y+1.55,z]);};
   const roofBits=(x,y,z,w)=>{box(.7,.4,.5,x-w*.2,y,z,NYC.white);box(.5,.3,.5,x+w*.2,y,z+.3,NYC.white);};
 
   // Empire State Building: stepped setbacks, mast and antenna.
-  {const b=block('A','R1'),x=b.x,z=b.z;let y=WALK;
+  {const b=block('A','R1'),x=b.x,z=b.z;let y=WALK;occl(x,z,6,6,33);
     for(const [w,h] of [[6,3],[5,6],[4,12],[3.2,3],[2.4,2],[1.6,1.4]]){box(w,h,w,x,y,z,M.limestone);box(w+.14,.18,w+.14,x,y+h,z,NYC.limestone);y+=h+.18;}
     cyl(.32,.55,2,8,x,y,z,NYC.steel);cyl(.07,.1,4,6,x,y+2,z,NYC.steel);
     tower(b.x0+1.4,z-2,2.4,3.4,7,M.brick);tower(b.x1-1.4,z+1.6,2.4,4,5,M.brickDark);waterTank(b.x1-1.4,WALK+5.22,z+1.6);}
   // Chrysler Building: shaft, then the stepped steel crown and the spire.
-  {const b=block('B','R1'),x=b.x,z=b.z;let y=WALK;
+  {const b=block('B','R1'),x=b.x,z=b.z;let y=WALK;occl(x,z,5.6,5.6,30);
     for(const [w,h] of [[5.6,4],[4.4,5],[3.4,13]]){box(w,h,w,x,y,z,M.sand);box(w+.14,.18,w+.14,x,y+h,z,NYC.sand);y+=h+.18;}
     const crown=[[1.9,0],[1.9,.9],[1.6,.9],[1.6,1.9],[1.25,1.9],[1.25,2.8],[.9,2.8],[.9,3.6],[.55,3.6],[.55,4.2],[.2,4.2]].map(([r,h])=>new THREE.Vector2(r,h));
     add(new THREE.LatheGeometry(crown,4).rotateY(Math.PI/4),NYC.steel,[x,y,z]);
@@ -76,7 +79,7 @@ export function buildCity({drive=false}={}){
   {const b=block('B','R0'),x=b.x+.6,z=b.z+.6;tower(x,z,5,5,28,M.glassDark,{cap:NYC.glassDark});roofBits(x,WALK+28.2,z,5);
     tower(b.x0+1.3,b.z0+2.4,2.2,4.2,9,M.brick);waterTank(b.x0+1.3,WALK+9.22,b.z0+2.4);tower(b.x1-1.2,b.z1-1.6,2,2.6,6,M.grey);}
   // One World Trade Center: a square base twisting to a turned square top, faceted glass, spire.
-  {const b=block('C','R0'),x=b.x,z=b.z;tower(x,z,4.6,4.6,2.6,M.glass,{cap:NYC.glass});
+  {const b=block('C','R0'),x=b.x,z=b.z;occl(x,z,4.6,4.6,36);tower(x,z,4.6,4.6,2.6,M.glass,{cap:NYC.glass});
     const h=26,g=new THREE.CylinderGeometry(1.35,2.97,h,4,1).translate(0,h/2,0),p=g.attributes.position;
     for(let i=0;i<p.count;i++)if(p.getY(i)<.01){const a=Math.atan2(p.getX(i),p.getZ(i))+Math.PI/4,r=Math.hypot(p.getX(i),p.getZ(i));p.setXYZ(i,Math.sin(a)*r,p.getY(i),Math.cos(a)*r);}
     add(g,M.glass,[x,WALK+2.82,z]);
@@ -91,7 +94,7 @@ export function buildCity({drive=false}={}){
   if(!skip('A,R2')){const b=block('A','R2');let y=tower(b.x-2.6,b.z-1.6,3.6,3.6,22,M.limestone,{cap:NYC.limestone});cyl(.5,.8,1.4,4,b.x-2.6,y,b.z-1.6,NYC.limestone,[0,Math.PI/4,0]);
     y=tower(b.x+2.8,b.z-2.2,3.6,4,10,M.brick);waterTank(b.x+2.8,y,b.z-2.2);tower(b.x+.4,b.z+4.6,6,2.4,5,M.brickDark);}
   // Liberty Island: a lawn, the star fort, the pedestal and the statue.
-  {const b=block('B','R2',NYC.grass),x=b.x+.2,z=b.z-.4;
+  {const b=block('B','R2',NYC.grass),x=b.x+.2,z=b.z-.4;occl(x,z,2.6,2.6,13);
     const star=new THREE.Shape();for(let i=0;i<22;i++){const a=i/22*Math.PI*2,r=i%2?2.2:3.1;star[i?'lineTo':'moveTo'](Math.sin(a)*r,Math.cos(a)*r);}
     add(new THREE.ExtrudeGeometry(star,{depth:.7,bevelEnabled:false}).rotateX(-Math.PI/2),NYC.limestone,[x,WALK,z]);
     let y=WALK+.7;box(2.6,.5,2.6,x,y,z,NYC.limestone);y+=.5;box(2,3.2,2,x,y,z,NYC.sand);y+=3.2;box(2.3,.4,2.3,x,y,z,NYC.limestone);y+=.4;
@@ -118,6 +121,8 @@ export function buildCity({drive=false}={}){
   if(!drive)for(let t=-17;t<=17;t+=4.2)tree(14.6,t+1,.7,0);
 
   // --- Brooklyn Bridge: gothic towers, deck, main cables, suspenders, stays ---------
+  // (The drivable version, with ramps, is built at full size in bridge.js.)
+  if(!drive){
   const towerZ=[-8,8],TH=7.4;
   {const face=new THREE.Shape([new THREE.Vector2(-1.7,0),new THREE.Vector2(1.7,0),new THREE.Vector2(1.6,TH),new THREE.Vector2(-1.6,TH)]);
     for(const cx of [-.8,.8]){const hole=new THREE.Path();hole.moveTo(cx-.42,.9);hole.lineTo(cx+.42,.9);hole.lineTo(cx+.42,4.4);hole.lineTo(cx,5.2);hole.lineTo(cx-.42,4.4);hole.closePath();face.holes.push(hole);}
@@ -135,6 +140,20 @@ export function buildCity({drive=false}={}){
     for(let z=-S+.6;z<S;z+=.6){const h=cableY(z)-DECK_Y;if(h>.25)box(.03,h,.03,cx,DECK_Y,z,NYC.cable);}
     for(const tz of towerZ)for(const d of [-1,1])for(let k=1;k<=4;k++){const z1=tz+d*k*1.3,from=new THREE.Vector3(cx,TH-.6,tz),to=new THREE.Vector3(cx,DECK_Y+.1,z1);
       add(new THREE.TubeGeometry(new THREE.LineCurve3(from,to),1,.025,4),NYC.cable);}}
+  }
+  // --- Four way crossings: a traffic light on each corner, one head per direction --
+  // Lights for traffic moving along z and along x switch in turn (green, yellow, red).
+  const LIGHT={z:{},x:{}};for(const a of ['z','x'])for(const [c,hex] of [['r','#ff3b30'],['y','#ffc93a'],['g','#3fe07a']])LIGHT[a][c]=new THREE.MeshStandardMaterial({color:hex,emissive:hex,emissiveIntensity:.05,flatShading:true});
+  const housing=mat(NYC.dark),pole=mat('#4a4f5c');
+  for(const ix of [-6,6])for(const iz of [-6,6])for(const [sx,sz] of [[-1,-1],[1,-1],[-1,1],[1,1]]){
+    const px=ix+sx*1.75,pz=iz+sz*1.75;box(.07,1.25,.07,px,WALK,pz,pole);
+    // One head faces traffic coming along z (from the side this corner serves), one along x.
+    for(const [a,fx,fz] of [['z',0,-sz],['x',-sx,0]]){const hx=px+fx*.12,hz=pz+fz*.12,y=WALK+1.05;
+      box(fx?.12:.2,.5,fx?.2:.12,hx,y,hz,housing);
+      ['r','y','g'].forEach((c,k)=>add(new THREE.SphereGeometry(.055,6,4),LIGHT[a][c],[hx+fx*.07,y+.4-k*.15,hz+fz*.07]));}
+  }
+  // 20 s cycle: z green 8 s, yellow 2 s; then x green 8 s, yellow 2 s.
+  const phase=t=>{const k=t%20;return {z:k<8?'g':k<10?'y':'r',x:k<10?'r':k<18?'g':'y'};};
   K.finish(root);
 
   // --- Taxis: one instanced draw call, driving the lanes and fading at the edges ----
@@ -147,12 +166,18 @@ export function buildCity({drive=false}={}){
   const lanes=[['z',-6.55,1,0,3,2.4],['z',-5.45,-1,0,3,2.1],['z',5.45,1,0,3,2.3],['z',6.55,-1,0,2,2.6],['x',-6.55,-1,0,3,2.2],['x',-5.45,1,0,2,2.5],['x',5.45,-1,0,3,2.4],['x',6.55,1,0,3,2],
     ['z',13.3,1,0,4,3],['z',14.3,-1,0,4,3.2],['z',BRIDGE_X-.55,1,DECK_Y,3,2.8],['z',BRIDGE_X+.55,-1,DECK_Y,3,2.6]];
   // Driving: about one taxi in ten, on four lanes.
-  const used=drive?lanes.filter((_,i)=>[0,6,9,10].includes(i)).map(l=>[...l.slice(0,4),1,l[5]]):lanes;
+  const used=drive?lanes.filter((_,i)=>[0,4,6,8].includes(i)).map(l=>[...l.slice(0,4),1,l[5]]):lanes;
   const cars=[];used.forEach(([axis,fixed,dir,y,n,v],li)=>{for(let i=0;i<n;i++)cars.push({axis,fixed,dir,y,v,s:-S+(2*S)*(i+li*.37%1)/n});});
   const taxis=new THREE.InstancedMesh(taxiGeo,mat('#ffffff',{vertexColors:true}),cars.length);taxis.castShadow=taxis.receiveShadow=true;taxis.frustumCulled=false;root.add(taxis);
   const o=new THREE.Object3D(),END=S-.5;
+  let lightTime=0;
   function updateTaxis(dt){
-    cars.forEach((c,i)=>{c.s+=c.v*c.dir*dt;if(c.s>END)c.s-=2*END;if(c.s<-END)c.s+=2*END;
+    const ph=phase(lightTime);
+    cars.forEach((c,i)=>{
+      // Stop before the crosswalk unless the light for this direction is green.
+      let want=c.v;
+      if(c.y===0&&Math.abs(Math.abs(c.fixed)-6)<1.2&&ph[c.axis]!=='g')for(const I of [-6,6]){const ahead=(I-c.dir*3-c.s)*c.dir;if(ahead>-.05&&ahead<2.2){want=0;break;}}
+      c.cur=damp(c.cur??c.v,want,want?2:4,dt);c.s+=c.cur*c.dir*dt;if(c.s>END)c.s-=2*END;if(c.s<-END)c.s+=2*END;
       const edge=Math.min(1,(END-Math.abs(c.s))/1.2);   // shrink away at the base edge
       if(c.axis==='z'){o.position.set(c.fixed,c.y,c.s);o.rotation.y=c.dir>0?0:Math.PI;}else{o.position.set(c.s,c.y,c.fixed);o.rotation.y=c.dir>0?Math.PI/2:-Math.PI/2;}
       o.scale.setScalar(Math.max(.001,edge));o.updateMatrix();taxis.setMatrixAt(i,o.matrix);});
@@ -173,7 +198,7 @@ export function buildCity({drive=false}={}){
 
   let time=0;
   // Taxis on the ground as circles the player's car bumps into (city units).
-  const circles=cars.filter(c=>c.y===0).map(()=>[0,0,.75]);
+  const circles=cars.filter(c=>c.y===0).map(()=>[0,0,.36]);   // about a taxi's half width
   function obstacles(){let k=0;for(const c of cars)if(c.y===0){const q=circles[k++];if(c.axis==='z'){q[0]=c.fixed;q[1]=c.s;}else{q[0]=c.s;q[1]=c.fixed;}}return circles;}
-  return {root,obstacles,update(dt){time+=dt;updateTaxis(dt);for(const f of floaters)f.o.position.y=f.y+Math.sin(time*.6+f.phase)*.35;sun.rotation.y+=dt*.15;return true;}};
+  return {root,obstacles,occluders,update(dt){time+=dt;lightTime+=dt;const ph=phase(lightTime);for(const a of ['z','x'])for(const c of ['r','y','g'])LIGHT[a][c].emissiveIntensity=ph[a]===c?1.6:.05;updateTaxis(dt);for(const f of floaters)f.o.position.y=f.y+Math.sin(time*.6+f.phase)*.35;sun.rotation.y+=dt*.15;return true;}};
 }

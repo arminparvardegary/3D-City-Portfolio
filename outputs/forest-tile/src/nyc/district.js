@@ -13,7 +13,7 @@ import { NYC } from './city.js';
 //   striped awnings and a sign on the roof ("Figma Café", "Behance Restaurant").
 export function buildDistrict({row:R,shops:SH,top}){
   const root=new THREE.Group(),K=createKit(),{box,cyl,add,mat}=K;
-  const solids=[],signs=[];
+  const solids=[],signs=[],occluders=[];
   const sign=(text,sub,accent,w,h,{x,y,z,yaw=0})=>{
     const c=document.createElement('canvas');c.width=512;c.height=Math.round(512*h/w);const g=c.getContext('2d'),H=c.height;
     g.fillStyle='#ffffff';g.beginPath();g.roundRect(4,4,504,H-8,Math.min(28,H*.2));g.fill();g.strokeStyle=accent;g.lineWidth=8;g.stroke();
@@ -117,6 +117,7 @@ export function buildDistrict({row:R,shops:SH,top}){
     const signY=DESIGNS[j.id](x,z,w,d),sw=w*.86,sh=sw*.36;
     sign(j.name,`${j.start[0]} – ${j.end[0]}`,j.accent,sw,sh,{x,y:signY+sh/2,z:z+d/2+(j.id==='bigup'?-.4:.25)});
     row.push({id:j.id,x,z,top:signY+sh,w,front:z+d/2});
+    occluders.push(new THREE.Box3(new THREE.Vector3(x-w/2,top,z-d/2),new THREE.Vector3(x+w/2,top+{bigup:9.5,aaq:13,hindra:15,rush:24}[j.id],z+d/2)));
     // Bay: white lines, the company colour painted at its head.
     const bx0=x-slot/2,bx1=x+slot/2;
     box(.16,.02,8,bx0+.08,.12,front+5.8,NYC.line);if(i===JOBS.length-1)box(.16,.02,8,bx1-.08,.12,front+5.8,NYC.line);
@@ -163,5 +164,5 @@ export function buildDistrict({row:R,shops:SH,top}){
     }
   }
   K.finish(root);
-  return {root,solids,row,lot};
+  return {root,solids,row,lot,occluders};
 }
