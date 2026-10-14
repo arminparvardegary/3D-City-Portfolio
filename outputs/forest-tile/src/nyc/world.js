@@ -44,7 +44,7 @@ export function buildNYCWorld({prep,materials,player}){
     return Math.abs(deck-y)<Math.abs(ground-y)?deck:ground;
   }
   return {
-    group,solids,places,labels:[],row:district.row,lot:district.lot,occluders,surface,
+    group,solids,places,labels:[],row:district.row,lot:district.lot,occluders,surface,trafficCars:traffic.cars,
     obstacles:()=>traffic.obstacles(),circles:bridge.circles,
     bounds:{x0:MAN.x0-1,x1:BKN.x1+1,z0:NS.z0-1,z1:NS.z1+1},
     // Start on Skills Street, Experience Row on the right, the shops on the left.

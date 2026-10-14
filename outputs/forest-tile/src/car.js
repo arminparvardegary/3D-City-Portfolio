@@ -85,6 +85,9 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
     // Put the car somewhere, at rest (for tests and future spawn points).
     teleport(nx,nz,nh=h,ny=0){x=nx;z=nz;h=nh;v=vy=yaw=0;cy=surface?.(x,z,ny)??0;snapshot();place();},
     get speed(){return v;},
+    // For the sound: pedal (1 gas, -1 brake, 0 none) and how hard the tyres slide.
+    get throttle(){return down.has('gas')?1:down.has('brake')?-1:0;},
+    get slide(){return slide;},
     get index(){return current;},
     get paint(){return parts.paint;},
     get rig(){return parts.rig;},

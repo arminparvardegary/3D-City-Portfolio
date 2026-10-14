@@ -17,6 +17,7 @@ import { createExperience } from './ui/experience.js';
 import { buildNYCWorld } from './nyc/world.js';
 import { createStory } from './world/story.js';
 import { JOBS, PROFILE } from './data/profile.js';
+import { createAudio } from './audio.js';
 import { VEHICLES } from './vehicles.js';
 import { FEEL, damp, dampAngle, spring } from './motion.js';
 
@@ -242,11 +243,14 @@ prompt.innerHTML='<kbd>Enter</kbd><span>See my experience</span>';document.query
 let parkedAt=null;
 // The bay the car is stopped in, or null.
 function parkedBay(){const L=world.lot,p=car.pose();if(Math.abs(p.v)>.4||p.z<L.bayZ[0]||p.z>L.bayZ[1])return null;return L.bays.find(b=>p.x>b.x0&&p.x<b.x1)?.id??null;}
-function startStory(){if(!story||story.active||!parkedAt)return;car.lock(true);experience.close();prompt.hidden=true;story.start(parkedAt);}
+function startStory(){if(!story||story.active||!parkedAt)return;audio.ui.open();car.lock(true);experience.close();prompt.hidden=true;story.start(parkedAt);}
 prompt.onclick=startStory;
 addEventListener('keydown',e=>{if(e.key==='Enter'&&!prompt.hidden&&!e.repeat){e.preventDefault();startStory();}});
 
-car.onHit=s=>{if(!reducedMotion.matches&&s>.2)trauma=Math.min(1,trauma+s*.8);};
+// Sound: engine, tyres, wind, horn (H), the city round you; M or the button mutes.
+const audio=createAudio({car,world,maxSpeed:()=>FEEL.car.maxSpeed});
+car.onHit=s=>{audio.hit(s);if(!reducedMotion.matches&&s>.2)trauma=Math.min(1,trauma+s*.8);};
+addEventListener('keydown',e=>{if(story?.active&&/^Arrow/.test(e.key))audio.ui.step();});
 
 let holdCamera=false;   // dev: keep the camera where a test put it
 function updateView(dt){
@@ -364,7 +368,8 @@ function render(time=0){
   // The car is driven by the visitor, so it keeps running even with the breeze paused.
   // The world animates (beacons, taxis, clouds); 2 means moving shadows too.
   {const w=world.update(time,frameDt/1000);if(w){animating=true;if(w===2)renderer.shadowMap.needsUpdate=true;}}
-  parkedAt=story&&!story.active?parkedBay():null;if(prompt.hidden===!!parkedAt)prompt.hidden=!parkedAt;
+  parkedAt=story&&!story.active?parkedBay():null;if(prompt.hidden===!!parkedAt){prompt.hidden=!parkedAt;if(parkedAt)audio.ui.prompt();}
+  audio.update(frameDt/1000);
   if(story?.update(frameDt/1000))animating=true;
   if(car.update(time)){animating=true;renderer.shadowMap.needsUpdate=true;}
   if(playground?.update(frameDt/1000)){animating=true;renderer.shadowMap.needsUpdate=true;}
@@ -400,7 +405,7 @@ if(!CHASE){const ghost=new THREE.MeshBasicMaterial({color:world.carColor??'#ff6b
   for(const o of meshes){const g=new THREE.Mesh(o.geometry,ghost);g.renderOrder=40;g.castShadow=g.receiveShadow=false;o.add(g);}}
 
 // Deliberately small inspection API for performance checks and future tiles.
-window.forestTile={car,playground,world,get story(){return story;},grid:{GRID,HOME_NUMBER,tileNumber,tileCenter},composer,ao,art,applyArt,setQuality,get quality(){return {name:qualityName,mode:qualityMode,scale:renderScale,pixelRatio:renderer.getPixelRatio()};},spec:TILE_SPEC,art:ART,scene,camera,renderer,materials,canopies,refresh:()=>{needsRender=true;renderer.shadowMap.needsUpdate=true;},stats:()=>({drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,footprint:TILE_SPEC.footprint})};
+window.forestTile={car,playground,world,audio,get story(){return story;},grid:{GRID,HOME_NUMBER,tileNumber,tileCenter},composer,ao,art,applyArt,setQuality,get quality(){return {name:qualityName,mode:qualityMode,scale:renderScale,pixelRatio:renderer.getPixelRatio()};},spec:TILE_SPEC,art:ART,scene,camera,renderer,materials,canopies,refresh:()=>{needsRender=true;renderer.shadowMap.needsUpdate=true;},stats:()=>({drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,footprint:TILE_SPEC.footprint})};
 
 // Development benchmark: runs n full animated frames (breeze, car, shadows,
 // composer) back to back, each synced with a 1 px read so GPU time is included.
