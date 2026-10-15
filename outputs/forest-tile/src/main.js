@@ -278,9 +278,11 @@ try{const saved=JSON.parse(localStorage.getItem('nyc-car')||'null');if(CHASE&&sa
 // Parking: stop in a bay in front of a place and press Enter for its card; the
 // camera turns to the store while the card is open.
 const visit=world.parking?createVisit({
-  garage:{models:VEHICLES.map(v=>v.name),colors:PAINTS,current:()=>carChoice,choose:(i,color)=>applyCar({i,color})},
-  onOpen:b=>{const ax=b.axis==='z'?'x':'z',side=Math.sign(ax==='x'?b.x-b.store.x:b.z-b.store.z)||1;focus={x:b.store.x,z:b.store.z,y:3.2,dist:21,side,axis:ax,zoom};followHold=0;needsRender=true;},
-  onClose:()=>{focus=null;needsRender=true;},
+  garage:{models:VEHICLES.map(v=>v.name),colors:PAINTS,current:()=>carChoice,choose:(i,color)=>applyCar({i,color}),preview:(i,color)=>world.garage?.preview(i,color)},
+  onOpen:b=>{if(b.id==='garage'&&world.garage){   // the camera goes in to the preview turntable; the arrows pick, not drive
+      const t=world.garage.table;car.lock(true);const gy=car.shown?.y??0,sd=Math.sign(b.x-t.x)||1;focus={x:t.x,z:t.z,y:gy+.75,eye:{x:t.x+sd*3,y:gy+2.3,z:t.z+5.6},zoom};followHold=0;needsRender=true;return;}
+    const ax=b.axis==='z'?'x':'z',side=Math.sign(ax==='x'?b.x-b.store.x:b.z-b.store.z)||1;focus={x:b.store.x,z:b.store.z,y:3.2,dist:21,side,axis:ax,zoom};followHold=0;needsRender=true;},
+  onClose:()=>{car.lock(false);focus=null;needsRender=true;},
 }):null;
 // The map (top right): click a place to go to its parking bay, facing the way
 // traffic runs on that side of the street.
@@ -373,7 +375,7 @@ function chaseView(dt){
   const C=FEEL.chase,p=car.shown,py=p.y??.12;
   if(focus&&p.speed>.6)focus=null;
   if(chaseYaw===null)chaseYaw=p.h;
-  if(focus){const fd=focus.dist??16,sd=focus.side??1,fy=focus.y??4;if(focus.axis==='x'){look.set(focus.x-3*sd,fy,focus.z);eye.set(focus.x+fd*sd,fy+4.5*fd/16,focus.z+2.5*fd/16);}else{look.set(focus.x,fy,focus.z-3*sd);eye.set(focus.x+2.5*fd/16,fy+4.5*fd/16,focus.z+fd*sd);}}   // side: -1 looks from the north
+  if(focus){const fd=focus.dist??16,sd=focus.side??1,fy=focus.y??4;if(focus.eye){look.set(focus.x,fy,focus.z);eye.set(focus.eye.x,focus.eye.y,focus.eye.z);}else if(focus.axis==='x'){look.set(focus.x-(focus.shift??3)*sd,fy,focus.z);eye.set(focus.x+fd*sd,fy+4.5*fd/16,focus.z+2.5*fd/16);}else{look.set(focus.x,fy,focus.z-3*sd);eye.set(focus.x+2.5*fd/16,fy+4.5*fd/16,focus.z+fd*sd);}}   // side: -1 looks from the north
   else{
     chaseYaw=dampAngle(chaseYaw,p.h,C.turnLag*(1+p.speed*.05),dt);
     const side=glance.KeyQ-glance.KeyE,back=glance.KeyQ&&glance.KeyE;

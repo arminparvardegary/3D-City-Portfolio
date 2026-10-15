@@ -47,7 +47,9 @@ export function buildNYCWorld({prep,materials,player}){
   // The first one, where the bridge lands, is Keel's flagship.
   const KEEL_BK=5,RANKD_BK=4,GARAGE_BK=3;   // the second one is Rankd, the third the Lux Garage
   // Display cars for the garage turntables, in luxury paint.
-  const showCar=(i,parent)=>{const p=buildVehicle(i,parent,materials,prep);p.rig.position.set(0,0,0);p.rig.rotation.set(0,0,0);p.paint?.color.set(i?'#0f3a2c':'#d8d4cc');};
+  const showCar=(i,parent,color)=>{const p=buildVehicle(i,parent,materials,prep);p.rig.position.set(0,0,0);p.rig.rotation.set(0,0,0);p.paint?.color.set(color??(i?'#0f3a2c':'#d8d4cc'));
+    // Big vehicles shrink to fit the turntable (just for show).
+    const L=Math.max(p.length??4,(p.width??2)*2);if(L>4.6)p.rig.scale.setScalar(4.6/L);return p;};
   const lux=BK.map((key,j)=>{const b=find(9,j),cx=(b.x0+b.x1)/2,cz=(b.z0+b.z1)/2;
     const L=j===KEEL_BK?buildKeelBoutique({x:cx,z:cz,top,facing:-1}):j===RANKD_BK?buildRankdBoutique({x:cx,z:cz,top,facing:-1}):j===GARAGE_BK?buildGarage({x:cx,z:cz,top,facing:-1,makeCar:showCar}):buildLux({x:cx,z:cz,top,w:9,d:17,facing:-1,style:j});group.add(L.root);return {...L,x:cx,z:cz,j};});
   // A parking bay in front of every place: park, press Enter.
@@ -107,7 +109,7 @@ export function buildNYCWorld({prep,materials,player}){
     return deck!==null?deck:ground;
   }
   return {
-    parking:parking.bays,
+    parking:parking.bays,garage:lux.find(L=>L.j===GARAGE_BK),
     group,solids,places,labels:[keelSign.userData.cta],row:null,lot:null,occluders,surface,trafficCars:traffic.cars,
     obstacles:()=>traffic.obstacles(),circles:bridge.circles,
     bounds:{x0:MAN.x0-6,x1:BKN.x1+6,z0:NS.z0-6,z1:NS.z1+6},

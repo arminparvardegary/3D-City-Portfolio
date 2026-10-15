@@ -39,16 +39,18 @@ const SCALE=1/150;   // centimetres to world units (one unit is about 1.5 m)
 const cache=new Map();
 
 // Material by its name in the FBX.
-function convert(m){
+function convert(m,paintName){
   const n=(m.name||'').toLowerCase(),c=m.color?.clone()??new THREE.Color('#888');
+  // The paint: the body colour that covers the most of the car (decided per model).
+  if(n===paintName)return {kind:'paint',mat:new THREE.MeshPhysicalMaterial({color:c,metalness:.45,roughness:.3,clearcoat:1,clearcoatRoughness:.08,envMapIntensity:1.2})};
+  // Other body colours (stripes, trim) stay as they are; "body light blue" is paint, not a lamp.
+  if(n.startsWith('body'))return {kind:'solid',mat:new THREE.MeshStandardMaterial({color:c,roughness:.4,metalness:.25})};
   if(n.includes('window'))return {kind:'glass',mat:new THREE.MeshPhysicalMaterial({color:'#0b1118',metalness:.25,roughness:.04,clearcoat:1,envMapIntensity:1.8})};
   if(n.includes('headlight'))return {kind:'lamp',mat:new THREE.MeshStandardMaterial({color:'#f6f8ff',emissive:'#fff1d0',emissiveIntensity:2.6})};
   if(n.includes('rear light')||n.includes('rearlight')||n.includes('brake'))return {kind:'lamp',mat:new THREE.MeshStandardMaterial({color:'#5a0006',emissive:'#ff2418',emissiveIntensity:1.8})};
   if(n.includes('light')||n.includes('siren'))return {kind:'lamp',mat:new THREE.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:2})};
   if(n.includes('tire')||n.includes('tyre'))return {kind:'solid',mat:new THREE.MeshStandardMaterial({color:'#121316',roughness:.85})};
   if(n.includes('wheel')||n.includes('rim')||n.includes('chrome'))return {kind:'solid',mat:new THREE.MeshStandardMaterial({color:c.getHex()?c:'#c4c8ce',metalness:.9,roughness:.25,envMapIntensity:1.5})};
-  const hsl={};c.getHSL(hsl);
-  if(n.startsWith('body')&&hsl.s>.15&&hsl.l>.04&&hsl.l<.95)return {kind:'paint',mat:new THREE.MeshPhysicalMaterial({color:c,metalness:.45,roughness:.3,clearcoat:1,clearcoatRoughness:.08,envMapIntensity:1.2})};
   return {kind:'solid',mat:new THREE.MeshStandardMaterial({color:c,roughness:.45,metalness:.2})};
 }
 
@@ -60,8 +62,17 @@ export async function loadModels(prep){
     root.scale.setScalar(SCALE);root.updateMatrixWorld(true);
     const box=new THREE.Box3().setFromObject(root),size=box.getSize(new THREE.Vector3());
     const wheels=[],body=[];let paintColor=null;
+    // Surface area of each body material, to find the main paint.
+    const area=new Map(),A=new THREE.Vector3(),B=new THREE.Vector3(),Cv=new THREE.Vector3(),tri=new THREE.Triangle();
+    root.traverse(o=>{if(!o.isMesh||/wheel/i.test(o.name))return;const g=o.geometry,pos=g.attributes.position,idx=g.index,ms=[].concat(o.material);
+      const groups=g.groups.length?g.groups:[{start:0,count:idx?idx.count:pos.count,materialIndex:0}];
+      for(const gr of groups){const n=(ms[gr.materialIndex]?.name||'').toLowerCase();if(!n.startsWith('body'))continue;let a=0;
+        for(let i=gr.start;i<gr.start+gr.count-2;i+=3){const v=k=>idx?idx.getX(k):k;A.fromBufferAttribute(pos,v(i));B.fromBufferAttribute(pos,v(i+1));Cv.fromBufferAttribute(pos,v(i+2));a+=tri.set(A,B,Cv).getArea();}
+        area.set(n,(area.get(n)??0)+a);}});
+    // Black is trim (bumpers, sills) on these models, except the limousine, which is black.
+    const ranked=[...area].sort((a,b)=>b[1]-a[1]).map(e=>e[0]),paintName=M.id==='limousine'?ranked[0]:ranked.find(n=>!n.includes('black'))??ranked[0];
     root.traverse(o=>{if(!o.isMesh)return;
-      const mats=[].concat(o.material).map(m=>{const r=convert(m);prep?.(r.mat);if(r.kind==='paint'&&!paintColor)paintColor='#'+r.mat.color.getHexString();return r;});
+      const mats=[].concat(o.material).map(m=>{const r=convert(m,paintName);prep?.(r.mat);if(r.kind==='paint'&&!paintColor)paintColor='#'+r.mat.color.getHexString();return r;});
       o.material=Array.isArray(o.material)?mats.map(r=>r.mat):mats[0].mat;o.userData.kinds=mats.map(r=>r.kind);
       o.castShadow=true;o.receiveShadow=true;
       (/wheel_(front|rear)_(left|right)/i.test(o.name)?wheels:body).push(o);});

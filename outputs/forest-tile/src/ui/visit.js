@@ -43,6 +43,13 @@ const cardCls=css`
   .paints{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0 16px;}
   .paints button{width:34px;height:34px;padding:0;border-radius:50%;box-shadow:inset 0 0 0 2px #ffffff33;}
   .paints button[aria-pressed="true"]{box-shadow:0 0 0 3px ${WARM};}
+  .models button.hi{box-shadow:inset 0 0 0 2px ${WARM};}
+  .models button[aria-pressed="true"]::after{content:' ✓';}
+  .keys{display:flex;gap:6px;align-items:center;font-size:13px;color:${DIM};}
+  .keys kbd{min-width:24px;height:24px;padding:0 6px;display:inline-grid;place-items:center;border-radius:7px;background:#ffffff18;color:${INK};font:600 13px ${FONT};}
+  button.go{padding:8px 22px;border-radius:999px;background:${WARM};color:#1a1035;white-space:nowrap;}
+  /* On a phone the garage card sits low and short, so the car on the turntable shows above it. */
+  @media(max-width:520px){&.garage{top:auto;bottom:16px;padding:18px;h2{font-size:32px;}.models{max-height:20vh;}.paints{flex-wrap:nowrap;overflow-x:auto;gap:8px;margin-bottom:10px;}.paints button{flex:none;width:30px;height:30px;}.keys{display:none;}}}
   @media(max-width:520px){left:16px;right:16px;top:16px;width:auto;padding:22px;h2{font-size:40px;}}
 `;
 
@@ -53,7 +60,14 @@ export function createVisit({onOpen,onClose,garage}){
   const prompt=document.createElement('button');prompt.className=promptCls;prompt.hidden=true;
   const card=document.createElement('section');card.className=cardCls;card.hidden=true;card.setAttribute('aria-live','polite');
   document.querySelector('.scene').append(prompt,card);
-  let bay=null,open=null;
+  let bay=null,open=null,pick=null;
+  // Garage: the highlighted car and paint show on the turntable; Enter drives it.
+  function showPick(){
+    card.querySelectorAll('.models [data-i]').forEach(el=>{const on=+el.dataset.i===pick.i;el.classList.toggle('hi',on);if(on)el.scrollIntoView({block:'nearest'});});
+    card.querySelectorAll('.paints [data-c]').forEach(el=>el.setAttribute('aria-pressed',String(el.dataset.c===pick.color)));
+    garage.preview?.(pick.i,pick.color);}
+  const movePick=d=>{const n=garage.models.length;pick.i=Math.min(n-1,Math.max(0,pick.i+d));showPick();};
+  function drive(){garage.choose(pick.i,pick.color);close();}
 
   function fill(b){
     const job=JOBS.find(j=>j.id===b.id),logo=LOGO[b.id.startsWith('keel')?'keel':b.id];
@@ -63,15 +77,19 @@ export function createVisit({onOpen,onClose,garage}){
       card.innerHTML=`${logoHtml}<p class="label">Experience</p><h2>${b.name}</h2><p class="role">${job.role}</p>
         <div class="meta"><div><b>${duration(job)}</b><span>${span(job)}</span></div><div><b>${job.place.split(' · ')[0]}</b><span>${job.place.includes('·')?job.place.split(' · ')[1]:'On site'}</span></div></div>
         ${job.note?`<p class="note">${job.note}</p>`:''}<div class="row"><span></span><button data-close>Close ×</button></div>`;
-    }else if(b.id==='garage'&&garage){   // the Lux Garage: pick a car and a paint
-      const cur=garage.current();
+    }else if(b.id==='garage'&&garage){   // the Lux Garage: look at a car on the turntable, then drive it
+      const cur=garage.current();pick={i:cur.i,color:cur.color};
       card.innerHTML=`<p class="label">Lux Garage</p><h2>Choose your car</h2>
         <div class="models">${garage.models.map((n,i)=>`<button data-i="${i}" aria-pressed="${i===cur.i}">${n}</button>`).join('')}</div>
         <p class="label" style="margin-top:14px">Paint</p>
-        <div class="paints">${garage.colors.map(c=>`<button data-c="${c}" aria-label="Paint ${c}" aria-pressed="${c===cur.color}" style="background:${c}"></button>`).join('')}</div>
-        <div class="row"><span></span><button data-close>Done ×</button></div>`;
-      card.querySelector('.models').onclick=e=>{const t=e.target.closest('[data-i]');if(!t)return;garage.choose(+t.dataset.i,garage.current().color);fill(b);};
-      card.querySelector('.paints').onclick=e=>{const t=e.target.closest('[data-c]');if(!t)return;garage.choose(garage.current().i,t.dataset.c);fill(b);};
+        <div class="paints">${garage.colors.map(c=>`<button data-c="${c}" aria-label="Paint ${c}" style="background:${c}"></button>`).join('')}</div>
+        <div class="row"><span class="keys"><kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>⏎</kbd><kbd>⌫</kbd></span><button class="go" data-go>Drive it</button></div>
+        <div class="row" style="margin-top:6px"><span></span><button data-close>Close ×</button></div>`;
+      card.querySelector('.models').onclick=e=>{const t=e.target.closest('[data-i]');if(t)movePick(+t.dataset.i-pick.i);};
+      card.querySelector('.models').ondblclick=e=>{if(e.target.closest('[data-i]'))drive();};
+      card.querySelector('.paints').onclick=e=>{const t=e.target.closest('[data-c]');if(!t)return;pick.color=t.dataset.c;showPick();};
+      card.querySelector('[data-go]').onclick=drive;
+      showPick();
     }else if(b.id==='rankd'){
       card.innerHTML=`${logoHtml}<p class="label">My project</p><h2>Rankd</h2><p class="role">Bring your list. Leave with a real one.</p>
         <p class="note">Head to head ranking for movies, TV and books. Rankd asks one question at a time, which is better, until every title has its own number. No stars. No ties.</p>
@@ -87,14 +105,21 @@ export function createVisit({onOpen,onClose,garage}){
     card.querySelector('[data-close]').onclick=close;
   }
   function show(){
-    if(!bay||open)return;open=bay;fill(bay);card.hidden=false;prompt.hidden=true;track('open_place',{place:bay.id});onOpen?.(bay);
+    if(!bay||open)return;open=bay;card.classList.toggle('garage',bay.id==='garage');fill(bay);card.hidden=false;prompt.hidden=true;track('open_place',{place:bay.id});onOpen?.(bay);
     if(!reduced.matches)gsap.fromTo(card,{y:16,opacity:0},{y:0,opacity:1,duration:.45,ease:'power2.out'});
   }
   function close(){if(!open)return;card.hidden=true;open=null;onClose?.();if(bay)prompt.hidden=false;}
   prompt.onclick=show;
+  const typing=t=>t&&(t.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
   addEventListener('keydown',e=>{
+    if(typing(e.target))return;
+    if(open?.id==='garage'&&garage){
+      const d={ArrowLeft:-1,ArrowRight:1,ArrowUp:-2,ArrowDown:2}[e.key];
+      if(d){e.preventDefault();movePick(d);return;}
+      if(e.key==='Enter'){e.preventDefault();if(!e.repeat)drive();return;}
+    }
     if(e.key==='Enter'&&!e.repeat&&bay&&!open){e.preventDefault();show();}
-    else if(e.key==='Escape'&&open){close();}
+    else if((e.key==='Escape'||e.key==='Backspace')&&open){e.preventDefault();close();}
   });
   return {
     // Every frame: the bay the car stands still in (or null).

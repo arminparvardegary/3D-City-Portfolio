@@ -137,7 +137,13 @@ export function buildKeelBoutique({x,z,top,w=9,d=18,h=5.4,facing=-1}){
     const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthWrite:false,fog:false,color:'#c9c9d6'}));sp.scale.set(5.2,1.3,1);root.add(sp);return sp;};
   const bubbles=[['Remind me in 3 minutes',true],['Done. Set for 4:32 PM ✓',false],['Plan my day',true]].map(([t,me],i)=>({sp:bubble(t,me,i),y:top+h+4+i*1.6,ph:i*2.1}));
   let clock=0;
-  return {root,solid:base.solid,update(dt){clock+=Math.min(dt,.1);
+  // The front turntable shows the car you are choosing (the garage card calls preview).
+  const show={i:-1,color:null,paint:null};
+  return {root,solid:base.solid,table:{x,z:z-hd*.42},
+    preview(i,color){if(i===show.i&&color===show.color)return;const t=tables[0];
+      if(i!==show.i){t.clear();try{show.paint=makeCar?.(i,t,color)?.paint??null;}catch(e){console.warn(e);}}else show.paint?.color.set(color);
+      show.i=i;show.color=color;},
+    update(dt){clock+=Math.min(dt,.1);
     bubbles.forEach((b,i)=>{b.sp.position.set(x+f*(hw-1.5)+Math.sin(clock*.5+b.ph)*.4,b.y+Math.sin(clock*1.1+b.ph)*.18,z+(i-1)*3.2);b.sp.material.opacity=.85+.15*Math.sin(clock*1.3+b.ph);});
     blue.emissiveIntensity=2.1+Math.sin(clock*1.2)*.4;}};
 }
@@ -227,7 +233,13 @@ export function buildRankdBoutique({x,z,top,w=9,d=17,h=5.2,facing=-1}){
     const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthWrite:false,fog:false,color:'#c9c9d6'}));sp.scale.set(2.4,1.2,1);root.add(sp);return sp;};
   const badges=['01','02','03'].map((n,i)=>({sp:badge(n,i),y:top+h+4.2+i*.9,ph:i*1.7}));
   let clock=0;
-  return {root,solid:base.solid,update(dt){clock+=Math.min(dt,.1);
+  // The front turntable shows the car you are choosing (the garage card calls preview).
+  const show={i:-1,color:null,paint:null};
+  return {root,solid:base.solid,table:{x,z:z-hd*.42},
+    preview(i,color){if(i===show.i&&color===show.color)return;const t=tables[0];
+      if(i!==show.i){t.clear();try{show.paint=makeCar?.(i,t,color)?.paint??null;}catch(e){console.warn(e);}}else show.paint?.color.set(color);
+      show.i=i;show.color=color;},
+    update(dt){clock+=Math.min(dt,.1);
     badges.forEach((b,i)=>{b.sp.position.set(x+f*(hw-1.5)+Math.sin(clock*.45+b.ph)*.5,b.y+Math.sin(clock*1+b.ph)*.2,z+(i-1)*3.4);});
     amber.emissiveIntensity=1.9+Math.sin(clock*1.1)*.4;}};
 }
@@ -256,5 +268,11 @@ export function buildGarage({x,z,top,w=9,d=17,h=5.2,facing=-1,makeCar}){
     try{makeCar?.(k?2:1,spin);}catch(e){console.warn(e);}   // Roadster and Muscle on the turntables
     tables.push(spin);}
   let clock=0;
-  return {root,solid:base.solid,update(dt){clock+=Math.min(dt,.1);tables.forEach((t,i)=>{t.rotation.y=clock*.25*(i?-1:1);});white.emissiveIntensity=2+Math.sin(clock*1.2)*.3;}};
+  // The front turntable shows the car you are choosing (the garage card calls preview).
+  const show={i:-1,color:null,paint:null};
+  return {root,solid:base.solid,table:{x,z:z-hd*.42},
+    preview(i,color){if(i===show.i&&color===show.color)return;const t=tables[0];
+      if(i!==show.i){t.clear();try{show.paint=makeCar?.(i,t,color)?.paint??null;}catch(e){console.warn(e);}}else show.paint?.color.set(color);
+      show.i=i;show.color=color;},
+    update(dt){clock+=Math.min(dt,.1);tables.forEach((t,i)=>{t.rotation.y=clock*.25*(i?-1:1);});white.emissiveIntensity=2+Math.sin(clock*1.2)*.3;}};
 }

@@ -126,7 +126,9 @@ export function createMap({world,car,goTo}){
   function show(){open=true;panel.hidden=false;draw();loop();track('map_open');panel.querySelector('.sheet').focus({preventScroll:true});
     gsap.fromTo(panel.querySelector('.sheet'),{y:20,opacity:0,scale:.98},{y:0,opacity:1,scale:1,duration:.45,ease:'power2.out'});}
   function close(){open=false;cancelAnimationFrame(raf);panel.hidden=true;btn.focus();}
-  btn.onclick=()=>open?close():show();
+  btn.onclick=()=>{btn.blur();open?close():show();};
+  // Enter is for parking (and the garage), never the map: the map opens with a click or M.
+  btn.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();btn.blur();}});
   panel.querySelector('.close').onclick=close;
   panel.addEventListener('click',e=>{if(e.target===panel)close();});
   addEventListener('keydown',e=>{if(e.key==='Escape'&&open)close();});
