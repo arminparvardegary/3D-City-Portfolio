@@ -161,6 +161,7 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
   // handbrake (Space) locks the rear: grip drops, the tail steps out and the car
   // slides until you let go.
   function step(dt){
+    const x0=x,z0=z;   // to roll the wheels by the distance really travelled
     const gas=down.has('gas'),brake=down.has('brake'),hand=down.has('hand'),front=down.has('front');
     const held=(hand||front)&&Math.abs(v)<.6;   // a locked axle holds the car: the engine cannot push it
     brakeRamp=damp(brakeRamp,brake&&v>.15||gas&&v<-.15?1:0,16,dt);
@@ -230,7 +231,9 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
       // Follow the road height; tilt with the slope between the front and back of the car.
       const fx2=Math.sin(h),fz2=Math.cos(h);{const ty=surface(x,z,cy)??cy;cy=Math.abs(ty-cy)>1.2?ty:damp(cy,ty,26,dt);}   // up and down curbs with a quick ease, not a pop
       const L=parts.length*.42,fy=surface(x+fx2*L,z+fz2*L,cy),by=surface(x-fx2*L,z-fz2*L,cy);slope=fy!==null&&by!==null?Math.atan2(fy-by,2*L):slope;}
-    rollAngle+=v*dt/parts.wheelR;
+    // Wheels roll by the distance the car really moved along its heading (backwards
+    // in reverse, not at all against a wall); each wheel turns it by its own radius.
+    rollAngle+=(x-x0)*Math.sin(h)+(z-z0)*Math.cos(h);
 
     // Suspension: each axis is a spring-damper pulled toward where the load puts it.
     // Gas squats the tail (nose up), braking dives the nose, corners lean out.
@@ -266,7 +269,7 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
     parts.rig.position.x=shown.x;parts.rig.position.z=shown.z;parts.rig.rotation.y=shown.h;
     parts.rig.position.y=rigY+lerp(prev.y,cy,t);parts.rig.rotation.x=-lerp(prev.slope,slope,t);shown.y=parts.rig.position.y;
     const s=lerp(prev.steer,steer,t),wr=lerp(prev.roll,rollAngle,t);
-    for(const w of parts.wheels){w.rotation.x=wr;if(w.userData.front)w.userData.steer.rotation.y=s;}
+    for(const w of parts.wheels){w.rotation.x=wr/(w.userData.r??parts.wheelR);if(w.userData.front)w.userData.steer.rotation.y=s;}
     parts.car.rotation.x=lerp(prev.pitch,pitch,t);parts.car.rotation.z=lerp(prev.bodyRoll,roll,t);parts.car.position.y=bodyY+lerp(prev.heave,heave,t);
     m.tailLight.emissiveIntensity=tail;m.headlight.emissiveIntensity=head;
     // The ambulance light bar pulses.

@@ -97,7 +97,7 @@ export function buildModelVehicle(id,parent){
   for(const w of C.wheels){
     const mesh=copy.getObjectByName(w.o.name);if(!mesh)continue;
     const pivot=new THREE.Group();pivot.position.set(w.c.x,w.c.y+C.lift,w.c.z);rig.add(pivot);
-    const spin=new THREE.Group();pivot.add(spin);spin.userData.steer=pivot;spin.userData.front=w.front;
+    const spin=new THREE.Group();pivot.add(spin);spin.userData.steer=pivot;spin.userData.front=w.front;spin.userData.r=Math.max(.05,w.r);
     // Keep the wheel exactly where it was, now turning about its own centre.
     copy.updateMatrixWorld(true);const m=mesh.matrixWorld.clone();mesh.removeFromParent();
     const inv=new THREE.Matrix4().makeTranslation(-w.c.x,-(w.c.y+C.lift),-w.c.z);mesh.matrix.copy(inv.multiply(m));mesh.matrix.decompose(mesh.position,mesh.quaternion,mesh.scale);spin.add(mesh);
@@ -108,18 +108,27 @@ export function buildModelVehicle(id,parent){
 }
 
 // Traffic: every model merged into three batches (body, glass, lights), each
-// coloured by its materials, so all the traffic is three draw calls.
+// coloured by its materials, plus a fourth for the wheels, which are drawn on
+// their own so they can roll and steer. All the traffic is four draw calls.
+const WHEEL=/wheel_(front|rear)_(left|right)/i;
+// One mesh as a vertex coloured geometry per material bucket, moved by matrix.
+function bakeMesh(o,matrix,out,only){const g0=o.geometry,mats=[].concat(o.material),k=o.userData.kinds||[];
+  const groups=g0.groups.length?g0.groups:[{start:0,count:g0.index?g0.index.count:g0.attributes.position.count,materialIndex:0}];
+  const g=g0.index?g0.toNonIndexed():g0;
+  for(const gr of groups){const kind=k[gr.materialIndex]??'solid',bucket=only??(kind==='paint'?'solid':kind),mat=mats[gr.materialIndex]??mats[0],st=gr.start,ct=gr.count;
+    const pos=g.attributes.position.array.slice(st*3,(st+ct)*3),nor=g.attributes.normal?.array.slice(st*3,(st+ct)*3);
+    const sub=new THREE.BufferGeometry();sub.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));if(nor)sub.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3));else sub.computeVertexNormals();
+    const col=new Float32Array(ct*3),c=mat.color||new THREE.Color('#fff');for(let i=0;i<ct;i++)col.set([c.r,c.g,c.b],i*3);sub.setAttribute('color',new THREE.BufferAttribute(col,3));
+    sub.applyMatrix4(matrix);(out[bucket]??=[]).push(sub);}
+  if(g!==g0)g.dispose();}
 export function createModelFleet({cars,prep}){
-  const geos={};
+  const geos={},wheelGeos={};
+  // Each wheel of a model, centred on its own axle, so it can turn about it.
+  const bakeWheels=id=>{if(wheelGeos[id])return wheelGeos[id];const C=cache.get(id);C.root.updateMatrixWorld(true);
+    return wheelGeos[id]=C.wheels.map(w=>{const out={};bakeMesh(w.o,new THREE.Matrix4().makeTranslation(-w.c.x,-w.c.y,-w.c.z).multiply(w.o.matrixWorld),out,'wheel');
+      return {geo:mergeGeometries(out.wheel,false),at:new THREE.Vector3(w.c.x,w.c.y+C.lift,w.c.z),front:w.front,r:Math.max(.05,w.r)};});};
   const bake=(id)=>{if(geos[id])return geos[id];const C=cache.get(id),out={solid:[],glass:[],lamp:[]};C.root.updateMatrixWorld(true);
-    C.root.traverse(o=>{if(!o.isMesh)return;const g0=o.geometry,mats=[].concat(o.material),k=o.userData.kinds||[];
-      const groups=g0.groups.length?g0.groups:[{start:0,count:g0.index?g0.index.count:g0.attributes.position.count,materialIndex:0}];
-      for(const gr of groups){const kind=k[gr.materialIndex]??'solid',bucket=kind==='paint'?'solid':kind,mat=mats[gr.materialIndex]??mats[0];
-        let g=g0.index?g0.toNonIndexed():g0.clone();const st=g0.index?gr.start:gr.start,ct=gr.count;
-        const pos=g.attributes.position.array.slice(st*3,(st+ct)*3),nor=g.attributes.normal?.array.slice(st*3,(st+ct)*3);
-        const sub=new THREE.BufferGeometry();sub.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));if(nor)sub.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3));else sub.computeVertexNormals();
-        const col=new Float32Array(ct*3),c=mat.color||new THREE.Color('#fff');for(let i=0;i<ct;i++)col.set([c.r,c.g,c.b],i*3);sub.setAttribute('color',new THREE.BufferAttribute(col,3));
-        sub.applyMatrix4(new THREE.Matrix4().makeTranslation(0,C.lift,0).multiply(o.matrixWorld));out[bucket].push(sub);g.dispose();}});
+    C.root.traverse(o=>{if(!o.isMesh||WHEEL.test(o.name))return;bakeMesh(o,new THREE.Matrix4().makeTranslation(0,C.lift,0).multiply(o.matrixWorld),out);});
     const merged={};for(const b in out)if(out[b].length)merged[b]=mergeGeometries(out[b],false);return geos[id]=merged;};
   const P=m=>{prep?.(m);return m;};
   const mats={solid:P(new THREE.MeshStandardMaterial({vertexColors:true,roughness:.4,metalness:.3,envMapIntensity:1.1})),
@@ -133,8 +142,30 @@ export function createModelFleet({cars,prep}){
     const gid={};for(const t of types)gid[t]=bm.addGeometry(geos[t][b]);
     ids[b]=cars.map(c=>geos[c.type][b]?bm.addInstance(gid[c.type]):null);batches[b]=bm;root.add(bm);
   }
-  const m4=new THREE.Matrix4(),q=new THREE.Quaternion(),v=new THREE.Vector3(),one=new THREE.Vector3(1,1,1),up=new THREE.Vector3(0,1,0);
-  return {root,set(i,x,y,z,h){m4.compose(v.set(x,y,z),q.setFromAxisAngle(up,h),one);for(const b in batches){const id=ids[b][i];if(id!==null)batches[b].setMatrixAt(id,m4);}}};
+  // Wheels: one instance per wheel per car.
+  const wheelsOf=cars.map(c=>bakeWheels(c.type)),wTypes=[...new Set(cars.map(c=>c.type))];
+  let wVerts=0,wCount=0;for(const t of wTypes)for(const w of wheelGeos[t])wVerts+=w.geo.attributes.position.count;for(const ws of wheelsOf)wCount+=ws.length;
+  const wb=new THREE.BatchedMesh(Math.max(1,wCount),Math.max(1,wVerts),0,mats.solid);wb.castShadow=wb.receiveShadow=true;root.add(wb);
+  const wGid=new Map();for(const t of wTypes)wheelGeos[t].forEach(w=>wGid.set(w,wb.addGeometry(w.geo)));
+  const wIds=wheelsOf.map(ws=>ws.map(w=>wb.addInstance(wGid.get(w))));
+  // Rolling is measured, not animated: each frame the distance the car really
+  // moved along its heading (negative when reversing) turns each wheel by
+  // distance / its own radius. The front wheels steer by the curve the car is driving:
+  // the steering angle for this wheelbase on that turning radius.
+  const WB=cars.map(c=>{const C=cache.get(c.type);return Math.max(1,C.front-C.rear);});
+  const roll=new Float64Array(cars.length),steer=new Float32Array(cars.length),last=cars.map(()=>null);
+  const m4=new THREE.Matrix4(),w4=new THREE.Matrix4(),s4=new THREE.Matrix4(),q=new THREE.Quaternion(),v=new THREE.Vector3(),one=new THREE.Vector3(1,1,1),up=new THREE.Vector3(0,1,0),side=new THREE.Vector3(1,0,0);
+  const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
+  return {root,set(i,x,y,z,h){m4.compose(v.set(x,y,z),q.setFromAxisAngle(up,h),one);for(const b in batches){const id=ids[b][i];if(id!==null)batches[b].setMatrixAt(id,m4);}
+    const L=last[i];
+    if(L){const dx=x-L.x,dy=y-L.y,dz=z-L.z,along=dx*Math.sin(h)+dz*Math.cos(h),dist=Math.hypot(dx,dy,dz);
+      if(dist<3){   // a jump further than that is a respawn, not driving
+        const ds=Math.sign(along)*dist;roll[i]+=ds;   // distance rolled
+        if(Math.abs(ds)>1e-4){const want=THREE.MathUtils.clamp(Math.atan(WB[i]*wrap(h-L.h)/ds),-.6,.6);steer[i]+=(want-steer[i])*.25;}}
+      L.x=x;L.y=y;L.z=z;L.h=h;}
+    else last[i]={x,y,z,h};
+    wheelsOf[i].forEach((w,k)=>{w4.copy(m4).multiply(s4.makeTranslation(w.at.x,w.at.y,w.at.z));if(w.front)w4.multiply(s4.makeRotationY(steer[i]));
+      w4.multiply(s4.makeRotationAxis(side,(roll[i]/w.r)%(Math.PI*2)));wb.setMatrixAt(wIds[i][k],w4);});}};
 }
 // Size and speed of a model, for the traffic.
 export const modelType=id=>{const C=cache.get(id);return {L:C.L,W:C.Wd,speed:C.M.speed,colors:[C.paintColor]};};
