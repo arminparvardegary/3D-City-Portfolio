@@ -1,30 +1,19 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { BRAND, imgTex, contain, round, url } from '../stores/brand.ts';
+import { BRAND, imgTex, round } from '../stores/brand.ts';
 import { EDGE, HALF } from './drive/layout.js';
 
 // A parking bay in front of each of Armin's places (his four companies and Keel).
 // Made to be found: a painted bay with a big P, an orange outline that glows and
 // pulses brighter as the car comes near, a hand drawn "PARK HERE" label bobbing
-// above it, and a tall lit sign with the company's logo beside it. main.js shows
+// above it (and Keel's lit logo sign beside its bay). main.js shows
 // "Enter" when the car stops inside a bay.
 const HAND='"Amatic SC","Marker Felt",cursive',SANS='-apple-system,"SF Pro Display","Helvetica Neue",Arial,sans-serif';
 
-// The big logo panel for each place (square, high resolution).
-function logoPanel(id){
-  const B=BRAND[id],S=1024;
-  if(id==='rush')return imgTex('panel-rush',S,S,[],g=>{g.fillStyle='#141416';g.fillRect(0,0,S,S);
-    g.fillStyle='#fff';g.font=`italic 900 300px ${SANS}`;g.textAlign='center';g.textBaseline='middle';g.fillText('RUSH',S/2,S*.45);
-    g.fillStyle=B.color;g.font=`800 110px ${SANS}`;g.fillText('GRAPHICS',S/2,S*.7);g.fillRect(S*.2,S*.8,S*.6,18);});
-  if(id==='hindra')return imgTex('panel-hindra',S,S,[B.logo],(g,[im])=>{g.fillStyle='#ffffff';g.fillRect(0,0,S,S);round(g,im,S/2,S*.42,S*.3);
-    g.fillStyle='#111';g.font=`700 120px ${SANS}`;g.textAlign='center';g.textBaseline='alphabetic';g.fillText('Hindra',S/2,S*.9);});
-  if(id==='aaq')return imgTex('panel-aaq',S,S,[B.logo],(g,[im])=>{g.fillStyle='#ffffff';g.fillRect(0,0,S,S);contain(g,im,40,60,S-80,S-120);});
-  if(id==='bigup')return imgTex('panel-bigup',S,S,[B.logo],(g,[im])=>{g.fillStyle='#ffffff';g.fillRect(0,0,S,S);
-    g.fillStyle=B.color;g.beginPath();g.arc(S/2,S*.38,S*.27,0,Math.PI*2);g.fill();
-    if(im){const sw=336,sh=337,k=S*.36/sh;g.drawImage(im,0,0,sw,sh,S/2-sw*k/2,S*.38-sh*k/2,sw*k,sh*k);}
-    contain(g,im,60,S*.7,S-120,S*.2);});
+// Keel's logo panel (square, high resolution).
+function keelPanel(){
+  const B=BRAND.keel,S=1024;
   return imgTex('panel-keel',S,S,[B.logo],(g,[im])=>{g.fillStyle='#ffffff';g.fillRect(0,0,S,S);round(g,im,S/2,S*.38,S*.26);
-    g.font=`700 200px ${SANS}`;g.textAlign='center';g.textBaseline='alphabetic';g.fillStyle='#1d1d1f';const w=g.measureText('Keel').width,d=g.measureText('.').width;
+    g.font=`700 200px ${SANS}`;g.textBaseline='alphabetic';g.fillStyle='#1d1d1f';const w=g.measureText('Keel').width,d=g.measureText('.').width;
     g.textAlign='left';g.fillText('Keel',(S-w-d)/2,S*.9);g.fillStyle=B.color;g.fillText('.',(S-w-d)/2+w,S*.9);});
 }
 
@@ -68,16 +57,13 @@ export function buildParking({places,top}){
     // Colour just under the bloom threshold: the label glows softly but its edges stay sharp.
     const label=new THREE.Sprite(new THREE.SpriteMaterial({map:parkLabel(name),color:'#b8b2d0',transparent:true,depthWrite:false,fog:false}));
     label.scale.set(3.6,1.8,1);label.position.set(x,top+3.1,z);label.renderOrder=5;root.add(label);
-    // The logo sign on the sidewalk at the end of the bay: a post and a lit square panel, both faces.
+    // A logo sign on the sidewalk only for Keel (the four companies' stores carry their own logos).
+    if(id==='keel'){
     const sx=x+LX/2-.4,sz=z+side*(LZ/2+1.25+.9);
     add(new THREE.CylinderGeometry(.09,.11,3.2,10),post,sx,top+1.6,sz).castShadow=true;
-    const tex=logoPanel(id),panel=new THREE.MeshStandardMaterial({map:tex,emissiveMap:tex,emissive:'#ffffff',emissiveIntensity:.55,roughness:.5});
+    const tex=keelPanel(),panel=new THREE.MeshStandardMaterial({map:tex,emissiveMap:tex,emissive:'#ffffff',emissiveIntensity:.55,roughness:.5});
     const sign=add(new THREE.BoxGeometry(1.9,1.9,.14),[post,post,post,post,panel,panel],sx,top+3.6,sz);sign.castShadow=true;
     solids.push([sx,sz,.2,.2]);
-    if(id==='rush'){   // the real 3D Rush logo on top of its sign
-      new GLTFLoader().load(url('logos/rush.glb'),gl=>{const o=gl.scene,box=new THREE.Box3().setFromObject(o),s3=box.getSize(new THREE.Vector3()),c=box.getCenter(new THREE.Vector3()),k=1.1/Math.max(s3.x,s3.y,s3.z);
-        o.scale.setScalar(k);o.position.set(sx-c.x*k,top+4.65-box.min.y*k,sz-c.z*k);
-        const m=new THREE.MeshStandardMaterial({color:BRAND.rush.color,emissive:BRAND.rush.color,emissiveIntensity:1});o.traverse(n=>{if(n.isMesh){n.material=m;n.castShadow=true;}});root.add(o);});
     }
     bays.push({id,name,x,z,w:LX,d:LZ+.6,glow,label,base:top+3.1,phase:Math.random()*6});
   }
