@@ -6,7 +6,7 @@
 // space (reverb): a low traffic rumble, nearby cars, distant horns and sirens,
 // the police car's siren when close, birds in Central Park, water at the edge.
 // A soft lounge pad plays underneath (N toggles it). Sound starts on the first
-// key press or click; M or the button mutes; both are remembered.
+// key press or click; the button mutes; both are remembered.
 const KEY='nyc-sound',MKEY='nyc-music';
 
 export function createAudio({car,world,maxSpeed=()=>9.6}){
@@ -15,7 +15,7 @@ export function createAudio({car,world,maxSpeed=()=>9.6}){
   const N={};
   // Mute button (top right).
   const btn=document.createElement('button');btn.className='sound-toggle';
-  const icon=()=>{btn.setAttribute('aria-pressed',String(on));btn.setAttribute('aria-label',on?'Sound on (M to mute, N for music)':'Sound off (M to turn on)');btn.innerHTML=on
+  const icon=()=>{btn.setAttribute('aria-pressed',String(on));btn.setAttribute('aria-label',on?'Sound on (N for music)':'Sound off');btn.innerHTML=on
     ?'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>'
     :'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/></svg>';};
   icon();document.querySelector('.scene')?.append(btn);
@@ -86,7 +86,7 @@ export function createAudio({car,world,maxSpeed=()=>9.6}){
 
   const typing=t=>t&&(t.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
   addEventListener('keydown',e=>{if(typing(e.target)||e.metaKey||e.ctrlKey)return;start();
-    if(e.code==='KeyM'){setOn(!on);return;}if(e.code==='KeyN'){setMusic(!music);return;}
+    if(e.code==='KeyN'){setMusic(!music);return;}   // M is the map now; mute is the sound button
     if(e.code==='KeyH'&&N.horn&&!e.repeat)N.horn.gain.setTargetAtTime(1,ctx.currentTime,.015);},true);
   addEventListener('keyup',e=>{if(e.code==='KeyH'&&N.horn)N.horn.gain.setTargetAtTime(0,ctx.currentTime,.05);});
   addEventListener('pointerdown',()=>start(),{capture:true});

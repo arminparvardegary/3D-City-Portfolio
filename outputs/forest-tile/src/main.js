@@ -244,7 +244,9 @@ function focusOn(id){const q=world.places[id];if(!q)return;focus={x:q.x,z:q.z,y:
 // The city has no Experience list for now (experience and skills are off).
 const experience=WORLD==='nyc'?{open(){},close(){},first:null,get isOpen(){return false;}}:createExperience({onSelect:focusOn});
 // The Work tower opens the timeline at the newest job.
-function openPlace(id){experience.open(id==='work'?experience.first:id);}
+function openPlace(id){
+  if(id==='keel-cta'){track('cta_keeltwin');window.open('https://www.keeltwin.com','_blank','noopener');return;}   // the Keel billboard
+  experience.open(id==='work'?experience.first:id);}
 if(WORLD==='nyc')createIntro({onPlace:focusOn});
 
 // --- Experience story: park in a bay at Experience Row and press Enter ------------

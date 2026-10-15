@@ -113,3 +113,7 @@ html,body,#app{background:linear-gradient(180deg,var(--sky-top,#bfe3ff) 0%,var(-
 .speedo span{font-size:13px;letter-spacing:.08em;color:#ff9a4a;text-transform:uppercase}
 @media(hover:none){.speedo{bottom:150px}}
 @media(max-width:520px){.speedo{right:16px;bottom:16px;min-width:104px}.speedo b{font-size:44px}}
+
+/* Everything you can press shows the pointer (goober-styled controls included). */
+button:not(:disabled),a[href],summary,[role="button"],label[for],select{cursor:pointer}
+button:disabled{cursor:default}

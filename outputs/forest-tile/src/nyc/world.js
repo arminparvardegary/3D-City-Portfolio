@@ -31,7 +31,7 @@ export function buildNYCWorld({prep,materials,player}){
   // the giant name on its roof.
   const kb=find(1,4),KS=2,kx=(kb.x0+kb.x1)/2,kz=(kb.z0+kb.z1)/2;
   const keel={solids:[[kx,kz,3.2*KS,3.2*KS]],occluders:[],place:{x:kx,z:kz,y:top+4,dist:30}};
-  group.add(buildKeelSign({x:kx,z:kz,y:top+2.25*KS,width:12}));
+  const keelSign=buildKeelSign({x:kx,z:kz,y:top+2.25*KS,width:12});group.add(keelSign);
   // Work experience stores across the street, facing Keel (north). A block's origin
   // is the top of its platform: set at the sidewalk, the plinth sits in the ground.
   // All four in one row, newest on the left as you look from Keel: Rush, Hindra, AAQ, Big Uppetite.
@@ -95,7 +95,7 @@ export function buildNYCWorld({prep,materials,player}){
   }
   return {
     parking:parking.bays.map((b,i)=>({...b,store:i<4?spots[i]:{x:kx,z:kz}})),
-    group,solids,places,labels:[],row:null,lot:null,occluders,surface,trafficCars:traffic.cars,
+    group,solids,places,labels:[keelSign.userData.cta],row:null,lot:null,occluders,surface,trafficCars:traffic.cars,
     obstacles:()=>traffic.obstacles(),circles:bridge.circles,
     bounds:{x0:MAN.x0-6,x1:BKN.x1+6,z0:NS.z0-6,z1:NS.z1+6},
     // Start on the street in front of Keel HQ, heading west: Keel on the right.

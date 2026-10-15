@@ -34,7 +34,7 @@ export function createMap({world,car,goTo}){
   const btn=document.createElement('button');btn.className=btnCls;btn.setAttribute('aria-label','Open the map');
   btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></svg>';
   const panel=document.createElement('div');panel.className=panelCls;panel.hidden=true;panel.setAttribute('role','dialog');panel.setAttribute('aria-label','Portfolio map');
-  panel.innerHTML='<div class="sheet" tabindex="-1"><div class="head"><h2>Armin\'s New York</h2><button class="close">Close ×</button></div><canvas></canvas><p class="hint">Click a place to drive there. Park in its bay and press Enter.</p></div>';
+  panel.innerHTML='<div class="sheet" tabindex="-1"><div class="head"><h2>Armin\'s New York</h2><button class="close">Close ×</button></div><canvas></canvas><p class="hint">Click a place to drive there. Park in its bay and press Enter. Hold M to peek at the map.</p></div>';
   document.querySelector('.scene').append(btn,panel);
   const cv=panel.querySelector('canvas'),g=cv.getContext('2d');
 
@@ -122,5 +122,10 @@ export function createMap({world,car,goTo}){
   panel.querySelector('.close').onclick=close;
   panel.addEventListener('click',e=>{if(e.target===panel)close();});
   addEventListener('keydown',e=>{if(e.key==='Escape'&&open)close();});
+  // Hold M to look at the map; let go and it hides again.
+  let held=false;
+  addEventListener('keydown',e=>{if(e.code!=='KeyM'||e.repeat||e.metaKey||e.ctrlKey||/INPUT|TEXTAREA/.test(e.target.tagName))return;if(!open){held=true;show();}});
+  addEventListener('keyup',e=>{if(e.code==='KeyM'&&held){held=false;close();}});
+  addEventListener('blur',()=>{if(held){held=false;close();}});
   return {show,close,get isOpen(){return open;}};
 }

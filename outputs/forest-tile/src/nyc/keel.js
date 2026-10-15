@@ -86,6 +86,8 @@ export function buildKeelSign({x,z,y,width}){
   const sign=new THREE.MeshStandardMaterial({map:signTex,emissiveMap:signTex,emissive:'#ffffff',emissiveIntensity:.42,roughness:.6});
   const h=width*H/W,board=new THREE.Mesh(new THREE.BoxGeometry(width,h,.4),[white,white,white,white,sign,white]);
   board.position.set(x,y+1.4+h/2,z);board.castShadow=true;root.add(board);
+  // The billboard is a link: hover shows the pointer, a click opens keeltwin.com.
+  board.userData={id:'keel-cta',url:'https://www.keeltwin.com'};root.userData.cta=board;
   for(const s of [-1,1]){const p=new THREE.Mesh(new THREE.BoxGeometry(.4,1.5,.4),white);p.position.set(x+s*width*.35,y+.75,z);p.castShadow=true;root.add(p);}
   return root;
 }
