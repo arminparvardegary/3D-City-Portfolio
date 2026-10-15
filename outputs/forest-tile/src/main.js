@@ -268,6 +268,11 @@ const visit=world.parking?createVisit({
   onClose:()=>{focus=null;needsRender=true;},
 }):null;
 const parkedIn=()=>{const p=car.shown;if(!p||p.speed>.5)return null;return world.parking.find(b=>Math.abs(p.x-b.x)<b.w/2&&Math.abs(p.z-b.z)<b.d/2)||null;};
+// Speedometer, bottom right: km/h (a world unit is about 1.5 m).
+const speedo=CHASE?document.createElement('div'):null;
+if(speedo){speedo.className='speedo';speedo.setAttribute('aria-hidden','true');speedo.innerHTML='<b>0</b><span>km/h</span>';document.querySelector('.scene').append(speedo);}
+let shownKmh=-1;
+const updateSpeedo=()=>{if(!speedo)return;const k=Math.round((car.shown?.speed??0)*5.4);if(k!==shownKmh){shownKmh=k;speedo.firstChild.textContent=k;}};
 // Night driving: two warm headlight beams that light the road ahead.
 if(CHASE){const beam=new THREE.SpotLight('#ffd7a1',60,38,.42,.55,1.3);beam.position.set(0,.75,1.7);beam.target.position.set(0,0,14);car.rig.add(beam,beam.target);}
 car.onHit=s=>{audio.hit(s);if(!reducedMotion.matches&&s>.2)trauma=Math.min(1,trauma+s*.8);};
@@ -403,6 +408,7 @@ function render(time=0){
   // The world animates (beacons, taxis, clouds); 2 means moving shadows too.
   {const w=world.update(time,frameDt/1000,camera);if(w){animating=true;if(w===2)renderer.shadowMap.needsUpdate=true;}}
   if(visit)visit.update(parkedIn());
+  updateSpeedo();
   parkedAt=story&&!story.active?parkedBay():null;if(prompt.hidden===!!parkedAt){prompt.hidden=!parkedAt;if(parkedAt)audio.ui.prompt();}
   audio.update(frameDt/1000);
   if(story?.update(frameDt/1000))animating=true;

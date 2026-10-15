@@ -98,7 +98,7 @@ export function buildNYCWorld({prep,materials,player}){
     start:{x:AV[2]+12,z:ST[5]-LANE,h:-Math.PI/2},
     vehicle:'Sport',carColor:'#b5121b',zoom:.62,fixedZoom:true,
     placeAt(){return null;},
-    update(t,dt,camera){city.update(dt);stores.update(dt);parking.update(t,player());city.sea.value+=dt;traffic.update(dt);people.update(dt);
+    update(t,dt,camera){city.update(dt);stores.update(dt);parking.update(dt,player());city.sea.value+=dt;traffic.update(dt);people.update(dt);
       if(camera)sky.position.copy(camera.position);
       for(const c of clouds){c.position.x+=dt*1.6;if(c.position.x>340)c.position.x-=680;}
       for(const sp of steam){const u=sp.userData;u.age=(u.age+dt)%3;const k=u.age/3;sp.position.set(u.x+k*1.2,G+1.6+k*6,u.z);sp.scale.setScalar(.8+k*4);sp.material.opacity=.45*(1-k)*Math.min(1,k*6);}

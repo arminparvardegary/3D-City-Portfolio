@@ -65,12 +65,20 @@ export function buildParking({places,top}){
     const sign=add(new THREE.BoxGeometry(1.9,1.9,.14),[post,post,post,post,panel,panel],sx,top+3.6,sz);sign.castShadow=true;
     solids.push([sx,sz,.2,.2]);
     }
-    bays.push({id,name,x,z,w:LX,d:LZ+.6,glow,label,base:top+3.1,phase:Math.random()*6});
+    bays.push({id,name,x,z,w:LX,d:LZ+.6,glow,label,base:top+3.1,phase:Math.random()*6,near:0,fade:1});
   }
+  let clock=0;
   return {root,bays,solids,
-    // Pulse each bay, brighter as the car comes near; the label bobs and hides once parked.
-    update(t,car){for(const b of bays){const d=car?Math.hypot(car.x-b.x,car.z-b.z):99,near=THREE.MathUtils.clamp(1-(d-3)/22,0,1);
-      b.glow.emissiveIntensity=.8+near*2.2+Math.sin(t*3+b.phase)*(.3+near*.6);
-      const inside=d<2.2;b.label.visible=!inside;b.label.position.y=b.base+Math.sin(t*2+b.phase)*.15;}},
+    // Slow and smooth, on its own clock in seconds: the outline breathes (about
+    // 3.5 s a cycle) and eases brighter as the car comes near; the label floats
+    // gently (about 4 s) and fades out once you are parked.
+    update(dt,car){clock+=Math.min(dt,.1);
+      for(const b of bays){const d=car?Math.hypot(car.x-b.x,car.z-b.z):99,nearGoal=THREE.MathUtils.clamp(1-(d-3)/22,0,1);
+        b.near=THREE.MathUtils.damp(b.near,nearGoal,2.5,dt);
+        const breathe=.5+.5*Math.sin(clock*1.8+b.phase);
+        b.glow.emissiveIntensity=.9+b.near*1.8+breathe*(.25+b.near*.45);
+        const show=d<2.2?0:1;b.fade=THREE.MathUtils.damp(b.fade,show,4,dt);
+        b.label.material.opacity=b.fade;b.label.visible=b.fade>.01;
+        b.label.position.y=b.base+Math.sin(clock*1.55+b.phase)*.12;}},
   };
 }

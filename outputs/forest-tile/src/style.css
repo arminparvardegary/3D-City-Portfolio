@@ -106,3 +106,10 @@ html,body,#app{background:linear-gradient(180deg,var(--sky-top,#bfe3ff) 0%,var(-
 .exp-toggle{font-size:26px!important}.exp-card h3{font-size:40px!important}.story-title{font-size:26px!important}
 .park-prompt kbd{background:#ff9a4a!important;color:#1a1035!important;box-shadow:0 0 18px #ff9a4a88}
 .story-hud button{background:#ffffff14!important;color:#f4f0ff!important}
+
+/* Speedometer, bottom right, night glass like the rest of the UI. */
+.speedo{position:absolute;right:24px;bottom:24px;z-index:8;min-width:132px;padding:10px 20px 12px;border-radius:24px;background:rgba(22,16,56,.82);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 12px 40px #0006,inset 0 0 0 1px #ffffff14;color:#f4f0ff;text-align:center;pointer-events:none;font-family:-apple-system,"SF Pro Text",Inter,system-ui,sans-serif}
+.speedo b{display:block;font:700 56px/1 "Amatic SC","Marker Felt",cursive;font-variant-numeric:tabular-nums}
+.speedo span{font-size:13px;letter-spacing:.08em;color:#ff9a4a;text-transform:uppercase}
+@media(hover:none){.speedo{bottom:150px}}
+@media(max-width:520px){.speedo{right:16px;bottom:16px;min-width:104px}.speedo b{font-size:44px}}
