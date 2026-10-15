@@ -30,11 +30,12 @@ export function buildNYCWorld({prep,materials,player}){
   // the giant name on its roof.
   const kb=find(1,4),KS=2,kx=(kb.x0+kb.x1)/2,kz=(kb.z0+kb.z1)/2;
   const keel={solids:[[kx,kz,3.2*KS,3.2*KS]],occluders:[],place:{x:kx,z:kz,y:top+4,dist:30}};
-  group.add(buildKeelSign({x:kx,z:kz,y:top+.55*KS+2.25*KS,width:12}));
-  // Work experience stores across the street, facing Keel (north); a block's origin is the top of its 0.55 high platform.
+  group.add(buildKeelSign({x:kx,z:kz,y:top+2.25*KS,width:12}));
+  // Work experience stores across the street, facing Keel (north). A block's origin
+  // is the top of its platform: set at the sidewalk, the plinth sits in the ground.
   const S=1.7,PW=6.4*S,row=(b,i)=>({x:(b.x0+b.x1)/2+(i?1:-1)*(PW/2+.3),z:(b.z0+b.z1)/2});
   const b15=find(1,5),b05=find(0,5),spots=[row(b15,0),row(b15,1),row(b05,0),row(b05,1)];
-  const stores=mountStores(group,[...[NikeBlock,MiBlock,GoogleBlock,McDonaldsBlock].map((C,i)=>({C,x:spots[i].x,y:top+.55*S,z:spots[i].z,rot:Math.PI,scale:S})),{C:AppleBlock,x:kx,y:top+.55*KS,z:kz,rot:0,scale:KS}]);
+  const stores=mountStores(group,[...[NikeBlock,MiBlock,GoogleBlock,McDonaldsBlock].map((C,i)=>({C,x:spots[i].x,y:top,z:spots[i].z,rot:Math.PI,scale:S})),{C:AppleBlock,x:kx,y:top,z:kz,rot:0,scale:KS}]);
   const storeSolids=spots.map(p=>[p.x,p.z,PW/2,PW/2]);
   const bridge=buildBridge({prep});group.add(bridge.root);
   for(const o of [city.root])o.traverse(m=>{if(m.isMesh)[].concat(m.material).forEach(x=>prep?.(x));});

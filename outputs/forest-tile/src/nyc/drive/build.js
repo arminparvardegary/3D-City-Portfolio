@@ -176,7 +176,7 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
     sh.lineTo(x1,-z1+rb);sh.absarc(x1-rb,-z1+rb,rb,0,-Math.PI/2,true);
     sh.lineTo(x0+rc,-z1);sh.absarc(x0+rc,-z1+rc,rc,-Math.PI/2,-Math.PI,true);
     sh.lineTo(x0,-z0-rd);sh.absarc(x0+rd,-z0-rd,rd,Math.PI,Math.PI/2,true);return sh;};
-  function sidewalk(b){
+  function sidewalk(b,inner=true){   // inner: the area inside the sidewalk holds buildings (solid)
     const r=[[b.x1,b.z0],[b.x1,b.z1],[b.x0,b.z1],[b.x0,b.z0]].map(([x,z])=>cornerR(x,z)),ri=r.map(v=>v-.32);
     const top=rounded(b.x0+.32,b.x1-.32,b.z0+.32,b.z1-.32,ri);
     add(new THREE.ExtrudeGeometry(top,{depth:CURB,bevelEnabled:false,curveSegments:16}).rotateX(-Math.PI/2),paving,[0,G,0]);
@@ -184,7 +184,7 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
     add(new THREE.ExtrudeGeometry(ring,{depth:CURB+.01,bevelEnabled:false,curveSegments:16}).rotateX(-Math.PI/2),granite,[0,G,0]);
     walks.push({x0:b.x0,x1:b.x1,z0:b.z0,z1:b.z1,r});
     // Only what stands inside the sidewalk is solid.
-    solids.push([(b.x0+b.x1)/2,(b.z0+b.z1)/2,(b.x1-b.x0)/2-WALK,(b.z1-b.z0)/2-WALK]);
+    if(inner)solids.push([(b.x0+b.x1)/2,(b.z0+b.z1)/2,(b.x1-b.x0)/2-WALK,(b.z1-b.z0)/2-WALK]);
   }
   const lampHead=mat('#fff3d6',{emissive:'#ffb052',emissiveIntensity:4});
   const lamp=(x,z,ox,oz)=>{solids.push([x,z,.15,.15]);cyl(.09,.13,5.6,8,x,top,z,dark);add(new THREE.BoxGeometry(.08,.08,1.6).rotateY(Math.atan2(ox,oz)),dark,[x+ox*.8,top+5.5,z+oz*.8]);
@@ -304,7 +304,8 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
     tree(P[0]+sx*3.2,P[1]+sz*3.2,1.1);}
 
   for(const b of blocks()){
-    const key=b.i+','+b.j;if(pave.has(key))sidewalk(b);if(reserved.has(key)){continue;}
+    // Armin's store blocks: an open plaza, the stores bring their own solids.
+    const key=b.i+','+b.j;if(pave.has(key))sidewalk(b,false);if(reserved.has(key)){continue;}
     sidewalk(b);
     const inner={x0:b.x0+WALK,x1:b.x1-WALK,z0:b.z0+WALK,z1:b.z1-WALK};
     loops.push({x0:b.x0+1,x1:b.x1-1,z0:b.z0+1,z1:b.z1-1,y:top});

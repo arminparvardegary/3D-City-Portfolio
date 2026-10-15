@@ -40,8 +40,6 @@ export function buildBridge({prep}={}){
     const s=new THREE.Shape();s.moveTo(x,0);s.lineTo(x1,0);s.lineTo(x1,Math.max(hb,0));s.lineTo(x,Math.max(ha,0));s.closePath();
     add(new THREE.ExtrudeGeometry(s,{depth:W,bevelEnabled:false}).translate(0,0,-W/2),stoneM,[0,G,Z]);}};
   fill(landM,SHORE[0]);fill(SHORE[1],landB);
-  // Stone pillars at both ends and where the bridge leaves the shore.
-  for(const x of [landM+.4,SHORE[0],SHORE[1],landB-.4])for(const s of [-1,1]){box(.9,1.6,.9,x,y(x)-.05,Z+s*(W/2-.2),stoneM);solids.push([x,Z+s*(W/2-.2),.45,.45,bridgeHeight(x)+1.5]);}
   // Towers in the water: gothic stone with one pointed arch over the whole road.
   const TH=G+BRIDGE.deck+16;
   for(const tx of TOWERS){
@@ -54,7 +52,8 @@ export function buildBridge({prep}={}){
   }
   // Main cables: from stone pylons at both ends, over the tower tops, sagging between.
   const A=[landM+1.5,landB-1.5],top=TH+.4,aY=A.map(x=>y(x)+1.6),low=y(MID)+3.2;
-  for(const ax of A)for(const s of [-1,1])box(1.2,2.2,1.2,ax,y(ax)-.6,Z+s*(W/2+.6),stoneM);
+  // Pylons stand outside the railing, never on the road.
+  for(const ax of A)for(const s of [-1,1])box(1.2,2.2,1.4,ax,y(ax)-.6,Z+s*(W/2+.95),stoneM);
   const cableY=x=>{
     if(x<TOWERS[0]){const t=(x-A[0])/(TOWERS[0]-A[0]);return aY[0]+(top-aY[0])*(t*t*.4+t*.6);}
     if(x>TOWERS[1]){const t=(A[1]-x)/(A[1]-TOWERS[1]);return aY[1]+(top-aY[1])*(t*t*.4+t*.6);}
