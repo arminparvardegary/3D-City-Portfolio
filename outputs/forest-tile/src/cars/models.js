@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { settleCoplanar } from '../fx/coplanar.js';
 
 // The cars of New York: "Free Low Poly Vehicles Pack" by Rgsdev (CC0, public
 // domain, credit not required). 21 FBX models in centimetres, nose toward +z,
@@ -124,6 +125,8 @@ export async function loadModels(prep){
     let bodyHW=0,bz0=1e9,bz1=-1e9;const bv=new THREE.Vector3();
     root.traverse(o=>{if(!o.isMesh||/wheel/i.test(o.name))return;const p=o.geometry.attributes.position;
       for(let i=0;i<p.count;i++){bv.fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);bz0=Math.min(bz0,bv.z);bz1=Math.max(bz1,bv.z);if(bv.y-box.min.y<size.y*.6)bodyHW=Math.max(bodyHW,Math.abs(bv.x));}});
+    // Body panels and wheels that share a plane get a fixed draw order (no flicker).
+    settleCoplanar(root,{now:true,budgetMs:Infinity});
     // Wheels: centre, radius, front or rear.
     const W=wheels.map(o=>{const b=new THREE.Box3().setFromObject(o),c=b.getCenter(new THREE.Vector3());return {o,c,r:b.getSize(new THREE.Vector3()).y/2,front:/front|wheel_F[LR]$/i.test(o.name)};});
     const lift=-box.min.y,fz=W.filter(w=>w.front).map(w=>w.c.z),rz=W.filter(w=>!w.front).map(w=>w.c.z);

@@ -186,7 +186,11 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
   }
   const lampHead=mat('#fff3d6',{emissive:'#ffb052',emissiveIntensity:4});
   const lamp=(x,z,ox,oz)=>{posts.push([x,z,.13]);cyl(.09,.13,5.6,8,x,top,z,dark);add(new THREE.BoxGeometry(.08,.08,1.6).rotateY(Math.atan2(ox,oz)),dark,[x+ox*.8,top+5.5,z+oz*.8]);
-    add(new THREE.BoxGeometry(.5,.16,.8).rotateY(Math.atan2(ox,oz)),dark,[x+ox*1.6,top+5.38,z+oz*1.6]);box(.4,.04,.6,x+ox*1.6,top+5.3,z+oz*1.6,lampHead);};
+    add(new THREE.BoxGeometry(.5,.16,.8).rotateY(Math.atan2(ox,oz)),dark,[x+ox*1.6,top+5.38,z+oz*1.6]);box(.4,.06,.6,x+ox*1.6,top+5.24,z+oz*1.6,lampHead);
+    // The glass hangs just under the housing (it used to share the housing's bottom face, and two
+    // faces in one place flicker); a bulb under it stays visible far away (a thin glass alone
+    // falls between pixels and blinks as you drive).
+    add(new THREE.SphereGeometry(.12,10,6),lampHead,[x+ox*1.6,top+5.2,z+oz*1.6]);};
   // Painterly canopies (as on bruno-simon.com): a blotchy alpha map tears each leaf
   // ball into ragged dabs, so trees read as brush strokes, not spheres.
   const LEAF=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');g.fillStyle='#000';g.fillRect(0,0,128,128);

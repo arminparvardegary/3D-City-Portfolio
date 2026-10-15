@@ -1,5 +1,6 @@
 import './style.css';
 import * as THREE from 'three';
+import { settleCoplanar } from './fx/coplanar.js';
 import { EffectComposer, RenderPass, EffectPass, ToneMappingEffect, ToneMappingMode, HueSaturationEffect, BloomEffect, SMAAEffect, SMAAPreset } from 'postprocessing';
 import { N8AOPostPass } from 'n8ao';
 import { ART, TILE_SPEC } from './config.js';
@@ -87,6 +88,10 @@ const CAR_MODEL=world.vehicle??'City';
 const car=createCarControls(scene,materials,{prep:softenShadows,index:VEHICLES.findIndex(v=>v.name===CAR_MODEL),home:world.start??{x:0,z:0,h:Math.PI/2}});
 car.setBounds(bounds);car.addStatic([],world.solids);car.paint.color.set(world.carColor??THEME.campus.car);
 if(world.obstacles)car.setObstacles(world.obstacles);if(world.vehicleBoxes)car.setVehicleBoxes(world.vehicleBoxes);
+// Faces that share a plane (a sign on a wall, trim on a panel) would flicker as
+// the camera moves: once the world (and its stores) are built, they are ranked
+// so the detail is always drawn over what it sits on.
+setTimeout(()=>settleCoplanar(world.group,{onDone:r=>{needsRender=true;if(import.meta.env.DEV)console.info('coplanar faces settled',r);}}),2500);
 // Dev: ?colliders draws every collision shape over the scene.
 if(new URLSearchParams(location.search).has('colliders'))import('./dev/colliders.js').then(m=>m.showColliders({scene,car,world}));
 carRef=car;if(world.surface)car.setSurface(world.surface);if(world.circles)car.addStatic(world.circles);
