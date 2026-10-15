@@ -1,6 +1,9 @@
 "use client";
 
-import { RoundedBox } from "@react-three/drei";
+import { Suspense, useMemo } from "react";
+import * as THREE from "three";
+import { RoundedBox, useGLTF } from "@react-three/drei";
+import { BRAND, url } from "./brand";
 import { Block, Foliage, Mat, Person, ctex } from "./kit";
 import {
   Base, Bench, Bin, ClothesRack, Curtain, FONT, GLOW, LEAF, Label, LanternLamp, ProductShelf, Shrub, SignBox, WARM,
@@ -28,18 +31,26 @@ function swoosh(g: CanvasRenderingContext2D, x: number, y: number, s: number) {
 
 function T() {
   return {
-    swoosh: ctex("nike-swoosh", 512, 256, (g) => {
+    // Rush Graphics: the wordmark where the swoosh was.
+    swoosh: ctex("rush-mark", 512, 256, (g) => {
       g.fillStyle = "#fff";
-      swoosh(g, 0, 0, 1);
+      g.font = `italic 900 170px ${FONT}`;
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      g.fillText("RUSH", 256, 116);
+      g.fillStyle = BRAND.rush.color;
+      g.fillRect(96, 206, 320, 14);
     }),
-    wordmark: ctex("nike-wordmark", 256, 256, (g) => {
+    wordmark: ctex("rush-wordmark", 256, 256, (g) => {
       g.fillStyle = "#fff";
       g.font = `italic 900 92px ${FONT}`;
       g.textAlign = "center";
-      g.fillText("NIKE", 128, 112);
-      swoosh(g, 40, 120, 0.36);
+      g.fillText("RUSH", 128, 112);
+      g.fillStyle = BRAND.rush.color;
+      g.font = `800 34px ${FONT}`;
+      g.fillText("GRAPHICS", 128, 170);
     }),
-    sign: signTex("nike-sign", "NIKE", { bg: N.black, fg: "#ffffff", size: 84, weight: 900, family: `italic ${FONT}` }),
+    sign: signTex("rush-sign", "RUSH GRAPHICS", { bg: N.black, fg: BRAND.rush.color, size: 56, weight: 900, family: `italic ${FONT}` }),
   };
 }
 type Tex = ReturnType<typeof T>;
@@ -210,12 +221,29 @@ function SquareTree({ position, seed }: { position: [number, number, number]; se
   );
 }
 
+// The real Rush Graphics logo (3D) on the roof, glowing coral.
+function RushLogo({ y }: { y: number }) {
+  const { scene } = useGLTF(url("logos/rush.glb"));
+  const logo = useMemo(() => {
+    const o = scene.clone(true);
+    const box = new THREE.Box3().setFromObject(o), size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
+    const k = 1.7 / Math.max(size.x, size.y, size.z);
+    o.position.set(-c.x * k, -box.min.y * k, -c.z * k);
+    o.scale.setScalar(k);
+    const m = new THREE.MeshStandardMaterial({ color: BRAND.rush.color, emissive: BRAND.rush.color, emissiveIntensity: 0.9, roughness: 0.35, metalness: 0.2 });
+    o.traverse((n) => { if ((n as THREE.Mesh).isMesh) { (n as THREE.Mesh).material = m; n.castShadow = true; } });
+    return o;
+  }, [scene]);
+  return <primitive object={logo} position={[0, y, 0]} />;
+}
+
 export default function NikeBlock() {
   const t = T();
   return (
     <group>
       <Base kind="nike" />
       <Store t={t} />
+      <Suspense fallback={null}><RushLogo y={TOP + 0.3} /></Suspense>
       <group position={[0, 0.045, 0]}>
         <Bench position={[-1.0, 0, 2.55]} />
         <Bench position={[2.55, 0, -0.9]} rotation={-Math.PI / 2} />

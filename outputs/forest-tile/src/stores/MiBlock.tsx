@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import * as THREE from "three";
 import { RoundedBox } from "@react-three/drei";
+import { BRAND, imgTex, round } from "./brand";
 import { Block, Foliage, Mat, Platform, ctex, noise, rng, roundedShape, stucco } from "./kit";
 
 /* ---------- palette (sampled from the reference) ---------- */
@@ -15,9 +16,9 @@ const C = {
   frame: "#cdd2d8",
   roof: "#45474c",
   black: "#232427",
-  orange: "#f46f20",
+  orange: "#7f86ff",   // Hindra violet (was Mi orange)
   awning: "#ec6a22",
-  red: "#d4383d",
+  red: "#1c1c22",   // Hindra black (was red)
   terracotta: "#c8703e",
   pot: "#d8743b",
   wood: "#d48a4c",
@@ -101,21 +102,11 @@ function T() {
       }
     }, { repeat: [4, 4] }),
     gravelBump: ctex("mi-gravel-b", 256, 256, (g, w, h) => noise(g, w, h, 5, 128, 180, 2.5), { repeat: [4, 4], color: false }),
-    logo: ctex("mi-logo", 512, 512, (g) => {
-      const grd = g.createLinearGradient(0, 0, 0, 512);
-      grd.addColorStop(0, "#ff7a26");
-      grd.addColorStop(1, "#f0600f");
-      g.fillStyle = grd;
+    // Hindra Studio: the deer logo from the brand guidelines.
+    logo: imgTex("hindra-logo", 512, 512, [BRAND.hindra.logo!], (g, [im]) => {
+      g.fillStyle = "#111";
       g.beginPath(); g.roundRect(0, 0, 512, 512, 120); g.fill();
-      g.strokeStyle = "#fff";
-      g.lineWidth = 46;
-      g.lineJoin = "round";
-      g.beginPath();
-      g.moveTo(118, 392); g.lineTo(118, 140); g.lineTo(258, 140);
-      g.quadraticCurveTo(300, 140, 300, 184); g.lineTo(300, 392);
-      g.moveTo(210, 392); g.lineTo(210, 226);
-      g.moveTo(394, 392); g.lineTo(394, 140);
-      g.stroke();
+      round(g, im, 256, 256, 236);
     }),
     menu: ctex("mi-menu", 512, 112, (g) => {
       g.fillStyle = C.red;
@@ -127,9 +118,9 @@ function T() {
       g.font = `800 64px ${font}`;
       g.textAlign = "center";
       g.textBaseline = "middle";
-      g.fillText("MENU", 200, 60);
+      g.fillText("STUDIO", 200, 60);
       g.font = `700 40px ${font}`;
-      g.fillText("营业中", 395, 60);
+      g.fillText("OPEN", 395, 60);
     }),
     shopSign: ctex("mi-shopsign", 512, 112, (g) => {
       g.fillStyle = C.orange;
@@ -138,7 +129,7 @@ function T() {
       g.font = `800 66px ${font}`;
       g.textAlign = "center";
       g.textBaseline = "middle";
-      g.fillText("MI STORE", 256, 60);
+      g.fillText("HINDRA", 256, 60);
     }),
     upperGlass: ctex("mi-glass", 256, 256, (g) => {
       const grd = g.createLinearGradient(0, 0, 0, 256);

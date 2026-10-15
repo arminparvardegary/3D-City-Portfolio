@@ -317,6 +317,11 @@ function updateView(dt){
 // place is being shown (the experience story, the Experience list), the camera
 // glides to face it and comes back behind the car when you drive off.
 let chaseYaw=null,lookYaw=0,lookPitch=0,looking=false,fov=FEEL.chase.fov;
+// Q looks left, E looks right (held); letting go swings the view back behind the car.
+const glance={KeyQ:0,KeyE:0};
+addEventListener('keydown',e=>{if(e.code in glance&&!e.metaKey&&!e.ctrlKey&&!/INPUT|TEXTAREA/.test(e.target.tagName))glance[e.code]=1;});
+addEventListener('keyup',e=>{if(e.code in glance)glance[e.code]=0;});
+addEventListener('blur',()=>{glance.KeyQ=glance.KeyE=0;});
 const eyeS=[{x:0,v:0},{x:0,v:0},{x:0,v:0}],lookS=[{x:0,v:0},{x:0,v:0},{x:0,v:0}];
 const eye=new THREE.Vector3(),look=new THREE.Vector3(),pull=new THREE.Ray(),hit=new THREE.Vector3(),camRight=new THREE.Vector3(),camUp=new THREE.Vector3();
 function chaseView(dt){
@@ -326,9 +331,12 @@ function chaseView(dt){
   if(focus){const fd=focus.dist??16;look.set(focus.x,focus.y??4,focus.z-3);eye.set(focus.x+2.5*fd/16,(focus.y??4)+4.5*fd/16,focus.z+fd);}
   else{
     chaseYaw=dampAngle(chaseYaw,p.h,C.turnLag*(1+p.speed*.05),dt);
-    if(!looking){lookYaw=damp(lookYaw,0,2.4,dt);lookPitch=damp(lookPitch,0,2.4,dt);}
+    const side=glance.KeyQ-glance.KeyE;
+    if(side)lookYaw=damp(lookYaw,side*1.45,7,dt);
+    else if(!looking){lookYaw=damp(lookYaw,0,side?7:3.2,dt);lookPitch=damp(lookPitch,0,2.4,dt);}
     const yaw=chaseYaw+lookYaw,D=C.distance+p.speed*C.speedPull,H=C.height+lookPitch*D;
-    look.set(p.x+Math.sin(p.h)*C.lookAhead,py+1.1,p.z+Math.cos(p.h)*C.lookAhead);
+    const lh=p.h+lookYaw;   // look the way the camera is turned
+    look.set(p.x+Math.sin(lh)*C.lookAhead,py+1.1,p.z+Math.cos(lh)*C.lookAhead);
     eye.set(p.x-Math.sin(yaw)*D,py+H,p.z-Math.cos(yaw)*D);
     // Keep the car in view: stop short of any tall building on the line.
     if(world.occluders){pull.origin.set(p.x,py+1.2,p.z);pull.direction.subVectors(eye,pull.origin);const len=pull.direction.length();pull.direction.multiplyScalar(1/len);

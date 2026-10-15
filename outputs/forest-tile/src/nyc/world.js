@@ -30,7 +30,7 @@ export function buildNYCWorld({prep,materials,player}){
   // Work experience stores across the street, facing Keel (north).
   const S=1.7,PW=6.4*S,row=(b,i)=>({x:(b.x0+b.x1)/2+(i?1:-1)*(PW/2+.3),z:(b.z0+b.z1)/2});
   const b15=find(1,5),b05=find(0,5),spots=[row(b15,0),row(b15,1),row(b05,0),row(b05,1)];
-  const stores=mountStores(group,[NikeBlock,MiBlock,GoogleBlock,McDonaldsBlock].map((C,i)=>({C,x:spots[i].x,y:top,z:spots[i].z,rot:Math.PI,scale:S})));
+  const stores=mountStores(group,[NikeBlock,MiBlock,GoogleBlock,McDonaldsBlock].map((C,i)=>({C,x:spots[i].x,y:top+.55*S,z:spots[i].z,rot:Math.PI,scale:S})));   // a block's origin is the top of its 0.55 high platform
   const storeSolids=spots.map(p=>[p.x,p.z,PW/2,PW/2]);
   const bridge=buildBridge({prep});group.add(bridge.root);
   for(const o of [city.root])o.traverse(m=>{if(m.isMesh)[].concat(m.material).forEach(x=>prep?.(x));});

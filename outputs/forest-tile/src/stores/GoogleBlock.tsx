@@ -5,20 +5,20 @@ import { Block, Mat, Person, ctex, stucco } from "./kit";
 import { Base, Bench, Bollard, Curtain, FONT, GLOW, Label, Planter, ProductShelf, WARM } from "./shop";
 
 const GG = {
-  blue: "#1a73e8",
-  blueDark: "#1559b8",
+  blue: "#2a9a8d",      // AAQ teal (was Google blue)
+  blueDark: "#1f6f66",
   white: "#f6f5f1",
   trim: "#e9e7e1",
-  colors: ["#4285F4", "#EA4335", "#FBBC05", "#4285F4", "#34A853", "#EA4335"],
+  colors: ["#3fb8a8", "#3fb8a8", "#1f6f66"],   // AAQ
 };
 const PRODUCTS = ["#f4f4f2", "#202124", "#a8c7fa", "#f6c3c0", "#c4eed0", "#fde293", "#e8eaed"];
 
 function T() {
   return {
-    logo: ctex("google-logo", 1024, 320, (g) => {
-      g.font = `600 230px "Product Sans", ${FONT}`;
+    logo: ctex("aaq-logo", 1024, 320, (g) => {
+      g.font = `800 200px ${FONT}`;
       g.textBaseline = "middle";
-      const letters = [..."Google"];
+      const letters = [..."AAQ"];
       const widths = letters.map((l) => g.measureText(l).width);
       let x = (1024 - widths.reduce((a, b) => a + b, 0)) / 2;
       letters.forEach((l, i) => {
@@ -29,12 +29,16 @@ function T() {
         g.fillText(l, x, 166);
         x += widths[i];
       });
+      g.font = `600 64px ${FONT}`;
+      g.textAlign = "center";
+      g.fillStyle = GG.colors[2];
+      g.fillText("REAL ESTATE", 512, 290);
     }),
-    small: ctex("google-small", 512, 128, (g) => {
-      g.font = `600 84px "Product Sans", ${FONT}`;
+    small: ctex("aaq-small", 512, 128, (g) => {
+      g.font = `800 84px ${FONT}`;
       g.textBaseline = "middle";
       g.textAlign = "left";
-      const letters = [..."Google"];
+      const letters = [..."AAQ"];
       const widths = letters.map((l) => g.measureText(l).width);
       let x = (512 - widths.reduce((a, b) => a + b, 0)) / 2;
       letters.forEach((l, i) => {

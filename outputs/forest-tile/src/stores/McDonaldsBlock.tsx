@@ -9,29 +9,28 @@ import {
 } from "./shop";
 
 const M = {
-  red: "#d52b1e",
-  redDark: "#b3241a",
-  yellow: "#ffbc0d",
+  red: "#2b2320",   // Big Uppetite dark (was McDonald's red)
+  redDark: "#1c1715",
+  yellow: "#ffc93a",   // Big Uppetite yellow
   frame: "#2a2c30",
   metal: "#3a3d42",
 };
 
 function T() {
   return {
-    sign: signTex("mcd-sign", "McDonald's", { bg: M.red, fg: "#ffffff", size: 78, weight: 800 }),
-    arches: ctex("mcd-arches", 256, 256, (g) => {
-      g.fillStyle = "rgba(0,0,0,0)";
+    sign: signTex("bu-sign", "Big Uppetite", { bg: M.red, fg: M.yellow, size: 70, weight: 900 }),
+    // Big Uppetite: a BU mark in its yellow where the arches were.
+    arches: ctex("bu-mark", 256, 256, (g) => {
       g.clearRect(0, 0, 256, 256);
-      g.strokeStyle = M.yellow;
-      g.lineWidth = 30;
-      g.lineCap = "butt";
-      g.beginPath();
-      g.moveTo(28, 220);
-      g.bezierCurveTo(32, 40, 110, 20, 128, 140);
-      g.bezierCurveTo(146, 20, 224, 40, 228, 220);
-      g.stroke();
+      g.fillStyle = M.yellow;
+      g.beginPath(); g.arc(128, 128, 118, 0, Math.PI * 2); g.fill();
+      g.fillStyle = M.red;
+      g.font = `900 120px ${FONT}`;
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      g.fillText("BU", 128, 136);
     }),
-    menu: ctex("mcd-menu", 512, 160, (g) => {
+    menu: ctex("bu-menu", 512, 160, (g) => {
       const r = rng(4);
       g.fillStyle = "#1c1c1e";
       g.fillRect(0, 0, 512, 160);
@@ -49,12 +48,12 @@ function T() {
         g.fillStyle = "#fff";
         g.font = `700 20px ${FONT}`;
         g.textAlign = "center";
-        g.fillText(["Big Mac", "Fries", "Coke", "McFlurry"][i], x + 57, 118);
+        g.fillText(["Burger", "Fries", "Shake", "Wrap"][i], x + 57, 118);
         g.fillStyle = M.yellow;
         g.fillText(`$${(3 + r() * 4).toFixed(2)}`, x + 57, 140);
       }
     }),
-    poster: ctex("mcd-poster", 256, 384, (g) => {
+    poster: ctex("bu-poster", 256, 384, (g) => {
       const grd = g.createLinearGradient(0, 0, 0, 384);
       grd.addColorStop(0, "#ffcf3a");
       grd.addColorStop(1, "#ffb000");
@@ -72,7 +71,7 @@ function T() {
       g.textAlign = "center";
       g.fillText("NEW", 128, 70);
       g.font = `700 26px ${FONT}`;
-      g.fillText("i'm lovin' it", 128, 330);
+      g.fillText("big taste", 128, 330);
     }),
   };
 }
