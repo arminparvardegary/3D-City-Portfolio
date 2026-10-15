@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { buildParking, wordsBoard } from './parking.js';
-import { placeOf } from '../plan/plan.js';
+import { placeOf, startPose } from '../plan/plan.js';
 import { buildLux, buildGarage } from './lux.js';
 import { buildVehicle } from '../vehicles.js';
 import { mountStores } from '../stores/mount.tsx';
@@ -181,12 +181,19 @@ export function buildCustomWorld({ prep, materials, player }) {
   group.add(people.root);
   const sky = createSky({ group, steam: city.steam });
 
-  // Start 12 units behind the first place's bay, in its lane, facing the way the
-  // bay's traffic runs (the place is just ahead); without places, on the first avenue.
+  // Where the builder put the start; else 12 units behind the first place's bay,
+  // in its lane, facing the way the bay's traffic runs (the place is just ahead);
+  // without places, on the first avenue.
   const firstBay = parking.bays.find(b => b.place) ?? parking.bays[0];
-  const start = firstBay
-    ? { x: firstBay.x - Math.sin(firstBay.h) * 12, z: firstBay.z - Math.cos(firstBay.h) * 12, h: firstBay.h }
-    : { x: AV[0] + LANE, z: (ST[0] + ST[1]) / 2, h: 0 };
+  const start =
+    startPose(PLAN) ??
+    (firstBay
+      ? {
+          x: firstBay.x - Math.sin(firstBay.h) * 12,
+          z: firstBay.z - Math.cos(firstBay.h) * 12,
+          h: firstBay.h,
+        }
+      : { x: AV[0] + LANE, z: (ST[0] + ST[1]) / 2, h: 0 });
 
   return {
     parking: parking.bays,

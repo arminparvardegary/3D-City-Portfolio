@@ -29,10 +29,13 @@ It goes in four steps and saves in your browser as you go (Undo goes back one ch
 1. **About you**: name, job title, age, a few words, email and phone numbers. All optional; the intro card shows them.
 2. **Experience**: jobs and schools (name, role or degree, years, what you did, a link, a colour, your logo
    and one of five building designs), plus your skills and tools.
-3. **Build**: drag each job, school and the skills and tools boards onto a square (or tap it, then tap a
-   square). Drag along the grid lines to lay or remove roads, click a crossing to switch its traffic lights,
-   and add city blocks: a glass boutique, a car garage, walk ups, offices, towers, brownstones, parks, a
-   plaza and four landmarks. **Drive it** opens the game with your city (`/?city=mine`).
+3. **Build**: your city in 3D, as it drives (turn the view by dragging, zoom with the wheel), or as a flat
+   Map. Drag each job, school and the skills and tools boards onto a square (or tap it, then tap a square).
+   Tools: **Roads** (drag along a line to lay or remove one), **Traffic lights** (click a crossing),
+   **Merge blocks** (drag across squares to make one big block, click a big block to split it) and
+   **Car start** (click a road where the car starts, again to turn it round). City blocks: a glass
+   boutique, a car garage, walk ups, offices, towers, brownstones, parks, a plaza and four landmarks.
+   The 3D view updates a moment after each change. **Drive it** opens the game with your city (`/?city=mine`).
 4. **Publish**: download `city.json`, press **Deploy to Vercel** (it copies this project to your GitHub
    and puts it online), then upload `city.json` into `outputs/forest-tile/public` in your new repository.
    A site with a `public/city.json` opens that city as its homepage.

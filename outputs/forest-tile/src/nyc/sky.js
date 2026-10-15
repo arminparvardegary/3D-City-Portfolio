@@ -150,7 +150,10 @@ export function createSky({ group, steam: stacks = [] }) {
   return {
     update(dt, camera) {
       if (camera) sky.position.copy(camera.position);
+      // Seen from above (the builder's view) the clouds would hide the city.
+      const above = camera?.position.y > 90;
       for (const c of clouds) {
+        c.visible = !above;
         c.position.x += dt * 1.6;
         if (c.position.x > 340) c.position.x -= 680;
       }

@@ -42,6 +42,10 @@ if (PLAN) {
     .querySelector('meta[name="description"]')
     ?.setAttribute('content', PLAN.profile.about || document.title);
 }
+// Inside the builder (?city=mine&edit): the city seen from above, edited by the
+// builder around it. No intro, sound or driving screens; the camera orbits.
+const EDIT = !!PLAN && new URLSearchParams(location.search).has('edit');
+if (EDIT) document.body.classList.add('editing');
 import { createStory } from './world/story.js';
 import { JOBS, PROFILE } from './data/profile.js';
 import { createAudio } from './audio.js';
@@ -103,10 +107,20 @@ function placeCamera() {
   camera.lookAt(target);
 }
 placeCamera();
+const editView = EDIT
+  ? (await import('./editor/view3d.js')).createEditView({
+      camera,
+      canvas: renderer.domElement,
+      scene,
+      plan: PLAN,
+      onRender: () => (needsRender = true),
+    })
+  : null;
+if (editView) target.set(0, 0, 0);
 
 // The world: low poly New York (default) or the white campus (?world=campus).
 const art = structuredClone(WORLD === 'nyc' ? THEME.nyc.light : LIGHTING.storybook);
-art.fog.enabled = CHASE; // the chase view looks far: the city fades softly into the sky
+art.fog.enabled = CHASE && !EDIT; // the chase view looks far: the city fades softly into the sky
 const lights = createLights(scene),
   { sun } = lights;
 scene.environment = createEnvironment(renderer, art);
@@ -505,6 +519,7 @@ function pick(e) {
   return ray.ray.intersectPlane(floorPlane, hitPoint) ? world.placeAt(hitPoint.x, hitPoint.z) : null;
 }
 function hover(e) {
+  if (EDIT) return;
   if (e.pointerType === 'mouse') canvasEl.style.cursor = pick(e) ? 'pointer' : '';
 }
 function focusOn(id) {
@@ -541,7 +556,7 @@ function openPlace(id) {
   } // the Keel billboard
   experience.open(id === 'work' ? experience.first : id);
 }
-if (WORLD === 'nyc') createIntro({ onPlace: focusOn, person: PLAN?.profile });
+if (WORLD === 'nyc' && !EDIT) createIntro({ onPlace: focusOn, person: PLAN?.profile });
 
 // --- Experience story: park in a bay at Experience Row and press Enter ------------
 const story = world.lot
@@ -594,7 +609,9 @@ addEventListener('keydown', e => {
 });
 
 // Sound: engine, tyres, wind, horn (H), the city round you; M or the button mutes.
-const audio = createAudio({ car, world, maxSpeed: () => car.spec.maxSpeed });
+// The builder's view is silent: every sound call goes nowhere.
+const silent = new Proxy(() => {}, { get: () => silent });
+const audio = EDIT ? silent : createAudio({ car, world, maxSpeed: () => car.spec.maxSpeed });
 // Night driving: two warm headlight beams that light the road ahead (added again when the car changes).
 function addHeadlights() {
   if (!CHASE || car.rig.userData.beam) return;
@@ -747,6 +764,7 @@ addEventListener('keydown', e => {
 let holdCamera = false; // dev: keep the camera where a test put it
 function updateView(dt) {
   if (holdCamera) return true;
+  if (editView) return editView.update();
   if (CHASE) return chaseView(dt);
   let moved = false;
   // Zoom glides in log space, so it feels the same zoomed in or out.
@@ -1047,7 +1065,12 @@ const sunDir = new THREE.Vector3(),
   sunAt = new THREE.Vector3();
 function fitShadow() {
   // The chase view sees far ahead: shadows cover a wide square round the car.
-  const half = CHASE ? 72 : THREE.MathUtils.clamp(((camera.right - camera.left) / camera.zoom) * 0.6, 8, 90),
+  // The builder's view sees the whole city: shadows cover all of it.
+  const half = editView
+      ? editView.half
+      : CHASE
+        ? 72
+        : THREE.MathUtils.clamp(((camera.right - camera.left) / camera.zoom) * 0.6, 8, 90),
     cam = sun.shadow.camera;
   cam.left = -half;
   cam.right = half;

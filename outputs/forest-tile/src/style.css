@@ -1402,3 +1402,9 @@ button:disabled {
 .music-toggle {
   right: 120px;
 }
+
+/* Inside the builder: only the city, no screens over it. */
+.editing .scene > :not(#viewport),
+.editing #viewport > :not(canvas, #loading) {
+  display: none !important;
+}

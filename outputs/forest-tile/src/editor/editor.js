@@ -41,7 +41,8 @@ const api = {
     status('Saving…');
     clearTimeout(saveTimer);
     saveTimer = setTimeout(save, 400);
-    if (rebuild) show(step);
+    // A step that can redraw itself in place (the 3D view stays up) does; others remount.
+    if (rebuild) current?.refresh ? current.refresh() : show(step);
   },
   // Swap in a whole plan (opened from a file).
   replace(next) {

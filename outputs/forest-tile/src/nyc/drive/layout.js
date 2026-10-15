@@ -10,7 +10,7 @@
 // src/plan/plan.js): one island, its avenues, streets and road segments, no
 // river, Brooklyn or bridge. Everything else reads the same constants below, so
 // both cities are built by the same code.
-import { activePlan, xsOf, zsOf } from '../../plan/plan.js';
+import { activePlan, planRects, xsOf, zsOf } from '../../plan/plan.js';
 export const PLAN = activePlan(); // null: Armin's New York
 const PX = PLAN && xsOf(PLAN),
   PZ = PLAN && zsOf(PLAN);
@@ -196,75 +196,25 @@ function planNetwork() {
   return { nodes: [...nodes.values()], edges };
 }
 
-// Its blocks. Cells joined by missing roads become one block when together they
-// fill a rectangle with no road left inside (like Armin's Experience Row);
-// otherwise each cell stays a block and the empty road between them is paved
-// (gaps). Each block carries its cell(s) from the plan.
+// Its blocks (planRects: same kind squares with no road between them are one
+// block), with the empty roads between blocks paved (gaps). Each block carries
+// its first square from the plan.
 export function planBlocks() {
   const { cols, rows, roads, cells } = PLAN;
-  const open = (i, j, di, dj) => (di ? !roads.v[i + 1][j] : !roads.h[j + 1][i]); // no road toward +x / +z
-  const seen = fullGridOf(rows, cols),
-    out = [],
-    merged = fullGridOf(rows, cols);
-  for (let j = 0; j < rows; j++)
-    for (let i = 0; i < cols; i++) {
-      if (seen[j][i]) continue;
-      // The cells reachable through missing roads.
-      const comp = [],
-        stack = [[i, j]];
-      seen[j][i] = true;
-      while (stack.length) {
-        const [a, b] = stack.pop();
-        comp.push([a, b]);
-        for (const [da, db] of [
-          [1, 0],
-          [-1, 0],
-          [0, 1],
-          [0, -1],
-        ]) {
-          const na = a + da,
-            nb = b + db;
-          if (na < 0 || nb < 0 || na >= cols || nb >= rows || seen[nb][na]) continue;
-          // Joined only through a missing road, and only plain blocks of the same kind:
-          // a place, boutique or garage always stays its own block.
-          const k1 = cells[b][a].kind,
-            k2 = cells[nb][na].kind,
-            alike = k1 === k2 && !SOLO.has(k1);
-          const through = alike && (da ? open(Math.min(a, na), b, 1, 0) : open(a, Math.min(b, nb), 0, 1));
-          if (through) {
-            seen[nb][na] = true;
-            stack.push([na, nb]);
-          }
-        }
-      }
-      const i0 = Math.min(...comp.map(c => c[0])),
-        i1 = Math.max(...comp.map(c => c[0])),
-        j0 = Math.min(...comp.map(c => c[1])),
-        j1 = Math.max(...comp.map(c => c[1]));
-      let rect = comp.length === (i1 - i0 + 1) * (j1 - j0 + 1);
-      for (let a = i0; rect && a <= i1; a++)
-        for (let b = j0; rect && b <= j1; b++) {
-          if (a < i1 && !open(a, b, 1, 0)) rect = false;
-          if (b < j1 && !open(a, b, 0, 1)) rect = false;
-        }
-      const parts = rect ? [[i0, i1, j0, j1]] : comp.map(([a, b]) => [a, a, b, b]);
-      for (const [a0, a1, b0, b1] of parts) {
-        if (rect) for (let a = a0; a <= a1; a++) for (let b = b0; b <= b1; b++) merged[b][a] = true;
-        out.push({
-          x0: AV[a0] + HALF,
-          x1: AV[a1 + 1] - HALF,
-          z0: ST[b0] + HALF,
-          z1: ST[b1 + 1] - HALF,
-          i: a0,
-          j: b0,
-          i1: a1,
-          j1: b1,
-          wide: a1 > a0 || b1 > b0,
-          borough: 'man',
-          cell: cells[b0][a0],
-        });
-      }
-    }
+  const { rects, merged } = planRects(PLAN),
+    out = rects.map(([a0, a1, b0, b1]) => ({
+      x0: AV[a0] + HALF,
+      x1: AV[a1 + 1] - HALF,
+      z0: ST[b0] + HALF,
+      z1: ST[b1 + 1] - HALF,
+      i: a0,
+      j: b0,
+      i1: a1,
+      j1: b1,
+      wide: a1 > a0 || b1 > b0,
+      borough: 'man',
+      cell: cells[b0][a0],
+    }));
   // Missing road segments not inside a merged block are paved, up to the next
   // crossing (a crossing is paved only if no road at all reaches it).
   const gaps = [],
@@ -288,5 +238,3 @@ export function planBlocks() {
         gaps.push({ x0: AV[i] - HALF, x1: AV[i] + HALF, z0: ST[j] - HALF, z1: ST[j] + HALF });
   return { blocks: out, gaps };
 }
-const SOLO = new Set(['place', 'boutique', 'garage']);
-const fullGridOf = (rows, cols) => Array.from({ length: rows }, () => Array(cols).fill(false));

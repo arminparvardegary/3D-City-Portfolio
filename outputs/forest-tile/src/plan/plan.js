@@ -15,6 +15,9 @@
 // logo and a parking bay. "skills" and "tools" squares are boards listing them.
 // Traffic lights stand at every crossing of three or more roads, except at the
 // crossings listed in lightsOff ("i,j").
+// Neighbouring squares of the same kind with no road between them are one big
+// block (planRects). start: where the car starts, a road segment and a direction
+// ({ axis: 'h' | 'v', i, j, dir: 1 | -1 }), or null for in front of the first place.
 
 export const PITCH = 38; // avenue to avenue (a block plus a road)
 export const MIN = 2,
@@ -205,6 +208,12 @@ export function normalize(input) {
     Array.from({ length: a }, (_, x) => Array.from({ length: b }, (_, y) => arr?.[x]?.[y] !== false));
   out.roads = { h: bool(p.roads?.h, out.rows + 1, out.cols), v: bool(p.roads?.v, out.cols + 1, out.rows) };
   out.lightsOff = Array.isArray(p.lightsOff) ? p.lightsOff.filter(k => typeof k === 'string') : [];
+  // The start must be on a road that is there.
+  const st = p.start;
+  out.start =
+    st && (st.axis === 'h' ? out.roads.h[st.j]?.[st.i] : st.axis === 'v' && out.roads.v[st.i]?.[st.j])
+      ? { axis: st.axis, i: st.i | 0, j: st.j | 0, dir: st.dir === -1 ? -1 : 1 }
+      : null;
   return out;
 }
 
@@ -220,6 +229,101 @@ export function placeOf(plan, ref) {
     return e && { ...e, kind: 'Education', name: e.school, role: e.degree };
   }
   return null;
+}
+
+// Squares that never join a neighbour: each of your things, a boutique, the garage.
+export const SOLO = new Set(['place', 'boutique', 'garage', 'skills', 'tools']);
+
+// The plan's blocks as rectangles of squares [i0, i1, j0, j1]. Squares joined by
+// missing roads are one block when they are the same kind and together fill a
+// rectangle with no road left inside; otherwise each stays its own block (the
+// empty road between them is paved). merged[j][i] marks squares inside a big block.
+export function planRects(plan) {
+  const { cols, rows, roads, cells } = plan;
+  const open = (i, j, di) => (di ? !roads.v[i + 1][j] : !roads.h[j + 1][i]); // no road toward +x / +z
+  const grid = () => Array.from({ length: rows }, () => Array(cols).fill(false));
+  const seen = grid(),
+    merged = grid(),
+    rects = [];
+  for (let j = 0; j < rows; j++)
+    for (let i = 0; i < cols; i++) {
+      if (seen[j][i]) continue;
+      // The squares reachable through missing roads, between plain blocks of one kind.
+      const comp = [],
+        stack = [[i, j]];
+      seen[j][i] = true;
+      while (stack.length) {
+        const [a, b] = stack.pop();
+        comp.push([a, b]);
+        for (const [da, db] of [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ]) {
+          const na = a + da,
+            nb = b + db;
+          if (na < 0 || nb < 0 || na >= cols || nb >= rows || seen[nb][na]) continue;
+          const k = cells[b][a].kind,
+            alike = k === cells[nb][na].kind && !SOLO.has(k);
+          if (alike && (da ? open(Math.min(a, na), b, 1) : open(a, Math.min(b, nb), 0))) {
+            seen[nb][na] = true;
+            stack.push([na, nb]);
+          }
+        }
+      }
+      const i0 = Math.min(...comp.map(c => c[0])),
+        i1 = Math.max(...comp.map(c => c[0])),
+        j0 = Math.min(...comp.map(c => c[1])),
+        j1 = Math.max(...comp.map(c => c[1]));
+      let rect = comp.length === (i1 - i0 + 1) * (j1 - j0 + 1);
+      for (let a = i0; rect && a <= i1; a++)
+        for (let b = j0; rect && b <= j1; b++) {
+          if (a < i1 && !open(a, b, 1)) rect = false;
+          if (b < j1 && !open(a, b, 0)) rect = false;
+        }
+      if (rect) {
+        rects.push([i0, i1, j0, j1]);
+        if (comp.length > 1) for (const [a, b] of comp) merged[b][a] = true;
+      } else for (const [a, b] of comp) rects.push([a, a, b, b]);
+    }
+  return { rects, merged };
+}
+// The block a square belongs to.
+export const rectAt = (plan, i, j) =>
+  planRects(plan).rects.find(([i0, i1, j0, j1]) => i >= i0 && i <= i1 && j >= j0 && j <= j1);
+
+// Make the squares from (i0, j0) to (i1, j1) one block of the given kind: every
+// road inside goes. Things (places, boards) and SOLO blocks cannot be merged.
+export function mergeRect(plan, [i0, i1, j0, j1], kind) {
+  for (let j = j0; j <= j1; j++)
+    for (let i = i0; i <= i1; i++) {
+      plan.cells[j][i] = { kind };
+      if (i < i1) plan.roads.v[i + 1][j] = false;
+      if (j < j1) plan.roads.h[j + 1][i] = false;
+    }
+}
+// Split a big block back into squares: its inside roads return.
+export function splitRect(plan, [i0, i1, j0, j1]) {
+  for (let j = j0; j <= j1; j++)
+    for (let i = i0; i <= i1; i++) {
+      if (i < i1) plan.roads.v[i + 1][j] = true;
+      if (j < j1) plan.roads.h[j + 1][i] = true;
+    }
+}
+
+// Where the car starts in the world: the middle of the start road, in the lane
+// for its direction (traffic keeps right), or null.
+export function startPose(plan) {
+  const s = plan.start;
+  if (!s) return null;
+  const X = xsOf(plan),
+    Z = zsOf(plan),
+    LANE = 3.85 / 2;
+  const h = s.axis === 'h' ? (s.dir * Math.PI) / 2 : s.dir > 0 ? 0 : Math.PI,
+    x = s.axis === 'h' ? (X[s.i] + X[s.i + 1]) / 2 : X[s.i],
+    z = s.axis === 'h' ? Z[s.j] : (Z[s.j] + Z[s.j + 1]) / 2;
+  return { x: x + LANE * Math.cos(h), z: z - LANE * Math.sin(h), h };
 }
 
 // World positions of the grid lines, centred on the origin.

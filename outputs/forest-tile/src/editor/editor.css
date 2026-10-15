@@ -124,6 +124,37 @@ button {
   font-size: 13px;
   color: var(--dim);
   white-space: nowrap;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+/* A narrower window: the step names give way first, then only numbers show. */
+@media (max-width: 1180px) and (min-width: 901px) {
+  .steps button {
+    padding: 0 10px;
+  }
+  .status {
+    max-width: 110px;
+  }
+}
+@media (max-width: 1040px) and (min-width: 901px) {
+  .steps button {
+    font-size: 0;
+    gap: 0;
+  }
+  .steps button b {
+    font-size: 12px;
+  }
+  .steps button[aria-current='true'] {
+    font-size: 14px;
+    gap: 8px;
+  }
+}
+.hint.warn {
+  color: #ffd2a8;
+  box-shadow: inset 0 0 0 1px rgba(255, 154, 74, 0.6);
 }
 .status.warn {
   color: #ffb3a8;
@@ -279,6 +310,64 @@ label {
   touch-action: none;
   border-radius: 24px;
 }
+/* The 3D city: the game in edit mode; a new one loads behind and takes over when drawn. */
+.stage3d {
+  position: absolute;
+  inset: 0 0 56px;
+  border-radius: 24px;
+  overflow: hidden;
+  background: #1d1650;
+}
+.view3d {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.view3d.behind {
+  opacity: 0;
+  pointer-events: none;
+}
+.updating {
+  position: absolute;
+  top: 44px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 14px;
+  background: var(--panel);
+  font-size: 13px;
+  color: var(--dim);
+}
+.updating.first {
+  top: 50%;
+  font-size: 15px;
+  padding: 10px 18px;
+}
+.map [hidden] {
+  display: none;
+}
+.views {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  margin-right: 6px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.size .views button {
+  width: auto;
+  padding: 0 12px;
+  font-weight: 600;
+  color: var(--dim);
+  background: none;
+}
+.size .views button[aria-pressed='true'] {
+  background: var(--warm);
+  color: #1a1035;
+}
 .size {
   position: absolute;
   left: 14px;
@@ -302,6 +391,7 @@ label {
 }
 .hint {
   position: absolute;
+  z-index: 1;
   top: 0;
   left: 50%;
   transform: translateX(-50%);
@@ -585,6 +675,19 @@ code {
   }
   .hint {
     display: none;
+  }
+  .size {
+    left: 8px;
+    right: 8px;
+    gap: 6px;
+    justify-content: space-between;
+  }
+  .size > span {
+    font-size: 0;
+  }
+  .size > span::before {
+    content: attr(data-short);
+    font-size: 13px;
   }
   .tools {
     grid-template-columns: repeat(2, 1fr);
