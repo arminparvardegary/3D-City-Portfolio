@@ -18,8 +18,8 @@ const card=css`
   .role{margin:0;font-size:17px;color:${DIM};}
   .role b{color:${WARM};font-weight:600;}
   .hint{display:flex;align-items:center;gap:10px;margin:18px 0 0;font-size:15px;color:${DIM};}
-  .hint span{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:${WARM};color:#1a1035;font:900 17px ${FONT};}
-  .hint kbd{font:inherit;color:${INK};border:1px solid #ffffff33;border-radius:6px;padding:0 6px;}
+  .hint .p{flex:none;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:${WARM};color:#1a1035;font:900 17px ${FONT};}
+  .hint kbd{white-space:nowrap;font:inherit;color:${INK};border:1px solid #ffffff33;border-radius:6px;padding:0 6px;}
   .go{margin-top:24px;width:100%;height:56px;border-radius:28px;background:${WARM};color:#1a1035;font-family:${HAND};font-size:28px;font-weight:700;box-shadow:0 0 24px #ff9a4a66;transition:transform .3s ${SPRING};}
   .go:active{transform:scale(.97);}
   .links{display:flex;justify-content:center;margin-top:16px;}
@@ -41,7 +41,7 @@ export function createIntro({onPlace}){
   el.innerHTML=`<p class="label">Portfolio</p>
     <h1>${PROFILE.name}</h1>
     <p class="role">${PROFILE.role} · Founder of <b>Keel</b></p>
-    <p class="hint"><span>P</span>Park at any company and press <kbd>Enter</kbd></p>
+    <p class="hint"><span class="p">P</span><span>Park at any company and press <kbd>Enter</kbd></span></p>
     <button class="go">Start driving</button>
     <nav class="links"><button data-go="keel">See Keel ›</button></nav>`;
   const pill=document.createElement('button');pill.className=pillClass;pill.hidden=true;pill.textContent=PROFILE.name.split(' ')[0];

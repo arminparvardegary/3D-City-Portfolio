@@ -16,6 +16,7 @@ import { buildCampus } from './world/campus.js';
 import { createExperience } from './ui/experience.js';
 import { createIntro } from './ui/intro.js';
 import { createVisit } from './ui/visit.js';
+import { createMap } from './ui/map.js';
 import { startAnalytics, track } from './analytics.js';
 startAnalytics();
 import { buildNYCWorld } from './nyc/world.js';
@@ -267,6 +268,9 @@ const visit=world.parking?createVisit({
   onOpen:b=>{const side=Math.sign(b.z-b.store.z)||1;focus={x:b.store.x,z:b.store.z,y:3.2,dist:21,side,zoom};followHold=0;needsRender=true;},
   onClose:()=>{focus=null;needsRender=true;},
 }):null;
+// The map (top right): click a place to go to its parking bay, facing the way
+// traffic runs on that side of the street.
+if(world.parking)createMap({world,car,goTo:b=>{const h=b.z>b.store.z?-Math.PI/2:Math.PI/2;car.teleport(b.x,b.z,h,0);focus=null;followHold=0;needsRender=true;}});
 const parkedIn=()=>{const p=car.shown;if(!p||p.speed>.5)return null;return world.parking.find(b=>Math.abs(p.x-b.x)<b.w/2&&Math.abs(p.z-b.z)<b.d/2)||null;};
 // Speedometer, bottom right: km/h (a world unit is about 1.5 m).
 const speedo=CHASE?document.createElement('div'):null;
