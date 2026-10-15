@@ -114,7 +114,7 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
     // A manhole mid block in a travel lane (lane arrows stop well before the middle).
     for(let m=0;m<1;m++){const t=len/2+(rand()-.5)*1.5,sd=rand()<.5?-1:1;add(new THREE.CylinderGeometry(.45,.45,.03,20),iron,[e.a.x+fx*t+rx*sd*LANE*.9,G+.005,e.a.z+fz*t+rz*sd*LANE*.9]);}
     // Parking along both curbs (not on Armin's street, FDR Drive or the edge roads).
-    const edgeRoad=Math.abs(dx)<1&&(e.a.x===AV[0]||e.a.x===AV.at(-1))||Math.abs(dz)<1&&(e.a.z===ST[0]||e.a.z===ST.at(-1));
+    const edgeRoad=Math.abs(dx)<1&&(e.a.x===AV[0]||e.a.x===AV.at(-1)||e.a.x===BAV[0])||Math.abs(dz)<1&&(e.a.z===ST[0]||e.a.z===ST.at(-1));   // (the Brooklyn riverside road keeps its lane for the boutiques' bays)
     if(!(Math.abs(dz)<1&&e.a.z===ST[5])&&!edgeRoad)for(const sd of [-1,1])for(let t=s0+3;t<s1-3;t+=6.2)if(rand()<.55)
       parking.push({x:e.a.x+fx*t+rx*sd*PARK,z:e.a.z+fz*t+rz*sd*PARK,h:sd>0?ang:ang+Math.PI});
   }

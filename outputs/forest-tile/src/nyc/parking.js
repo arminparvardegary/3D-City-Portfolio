@@ -41,31 +41,34 @@ export function buildParking({places,top}){
   const pTex=imgTex('park-p',256,256,[],g=>{g.fillStyle='#ecebe6';g.font=`900 220px ${SANS}`;g.textAlign='center';g.textBaseline='middle';g.fillText('P',128,138);});
   const add=(geo,mat,x,y,z,ry=0)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.rotation.y=ry;m.receiveShadow=true;root.add(m);return m;};
   for(const P of places){
-    // A parallel bay in the street's parking lane, right in front of the place.
-    // side: +1 the curb (and the place) is toward +z, -1 toward -z.
-    // The bay fills the parking lane exactly: from the white edge line to the curb.
-    const {id,name,x,z,side}=P,LX=6.2,LZ=HALF-EDGE-.1,y=top-.25+.012;   // street level (top is the sidewalk)
-    // Paint: T marks at both ends and the outer lane line, a big P.
-    for(const s2 of [-1,1])add(new THREE.BoxGeometry(.14,.02,LZ),paint,x+s2*LX/2,y,z);   // end marks; the edge line and the curb are the sides
-    const p=add(new THREE.PlaneGeometry(1.4,1.4),new THREE.MeshStandardMaterial({map:pTex,transparent:true,roughness:.6}),x,y+.005,z);
-    p.rotation.set(-Math.PI/2,0,side>0?Math.PI:0);
-    // Glowing outline, its own material so it can pulse.
+    // A parallel bay in a parking lane, right in front of the place. Built in its
+    // own frame (length along local x, the curb and the place toward local +z),
+    // then turned: axis 'x' for streets, 'z' for avenues; side +1 / -1 says which
+    // way the place is. The bay fills the lane exactly: white edge line to curb.
+    const {id,name,x,z,side,axis='x',store}=P,LX=6.2,LZ=HALF-EDGE-.1,y=top-.25+.012;   // street level (top is the sidewalk)
+    const G=new THREE.Group();G.position.set(x,0,z);G.rotation.y=axis==='x'?(side>0?0:Math.PI):(side>0?Math.PI/2:-Math.PI/2);root.add(G);
+    const put=(geo,mat,lx,ly,lz)=>{const m=new THREE.Mesh(geo,mat);m.position.set(lx,ly,lz);m.receiveShadow=true;G.add(m);return m;};
+    for(const s2 of [-1,1])put(new THREE.BoxGeometry(.14,.02,LZ),paint,s2*LX/2,y,0);   // end marks; the edge line and the curb are the sides
+    const p=put(new THREE.PlaneGeometry(1.4,1.4),new THREE.MeshStandardMaterial({map:pTex,transparent:true,roughness:.6}),0,y+.005,0);
+    p.rotation.set(-Math.PI/2,0,Math.PI);
+    // Glowing outline, its own material so it can pulse; inside the lane, never over the lines.
     const glow=new THREE.MeshStandardMaterial({color:'#ffb05a',emissive:'#ff9a3c',emissiveIntensity:1.2,transparent:true,opacity:.9,depthWrite:false});
-    for(const s2 of [-1,1])add(new THREE.BoxGeometry(.08,.03,LZ-.2),glow,x+s2*(LX/2-.2),y+.004,z);
-    for(const s2 of [-1,1])add(new THREE.BoxGeometry(LX-.32,.03,.08),glow,x,y+.004,z+s2*(LZ/2-.14));   // inside the lane, never over the lines
-    // "PARK HERE" above the bay.
-    // Colour just under the bloom threshold: the label glows softly but its edges stay sharp.
+    for(const s2 of [-1,1])put(new THREE.BoxGeometry(.08,.03,LZ-.2),glow,s2*(LX/2-.2),y+.004,0);
+    for(const s2 of [-1,1])put(new THREE.BoxGeometry(LX-.32,.03,.08),glow,0,y+.004,s2*(LZ/2-.14));
+    // "PARK HERE" above the bay, its colour just under the bloom so the edges stay sharp.
     const label=new THREE.Sprite(new THREE.SpriteMaterial({map:parkLabel(name),color:'#b8b2d0',transparent:true,depthWrite:false,fog:false}));
-    label.scale.set(3.6,1.8,1);label.position.set(x,top+3.1,z);label.renderOrder=5;root.add(label);
-    // A logo sign on the sidewalk only for Keel (the four companies' stores carry their own logos).
+    label.scale.set(3.6,1.8,1);label.position.set(0,top+3.1,0);label.renderOrder=5;G.add(label);
+    // A logo sign on the sidewalk only for Keel (the companies' stores carry their own logos).
     if(id==='keel'){
-    const sx=x+LX/2-.4,sz=z+side*(LZ/2+1.25+.9);
-    add(new THREE.CylinderGeometry(.09,.11,2.66,10),post,sx,top+1.33,sz).castShadow=true;   // ends under the panel, never across the logo
-    const tex=keelPanel(),panel=new THREE.MeshStandardMaterial({map:tex,emissiveMap:tex,emissive:'#ffffff',emissiveIntensity:.55,roughness:.5});
-    const sign=add(new THREE.BoxGeometry(1.9,1.9,.14),[post,post,post,post,panel,panel],sx,top+3.6,sz);sign.castShadow=true;
-    solids.push([sx,sz,.2,.2]);
+      const lx=LX/2-.4,lz=LZ/2+2.15;
+      put(new THREE.CylinderGeometry(.09,.11,2.66,10),post,lx,top+1.33,lz).castShadow=true;   // ends under the panel, never across the logo
+      const tex=keelPanel(),panel=new THREE.MeshStandardMaterial({map:tex,emissiveMap:tex,emissive:'#ffffff',emissiveIntensity:.55,roughness:.5});
+      put(new THREE.BoxGeometry(1.9,1.9,.14),[post,post,post,post,panel,panel],lx,top+3.6,lz).castShadow=true;
+      G.updateMatrixWorld(true);const w=G.localToWorld(new THREE.Vector3(lx,0,lz));solids.push([w.x,w.z,.2,.2]);
     }
-    bays.push({id,name,x,z,w:LX,d:LZ+.6,glow,label,base:top+3.1,phase:Math.random()*6,near:0,fade:1});
+    // Heading for a car parked here: along the lane, the way traffic runs on that side.
+    const h=axis==='x'?(side>0?Math.PI/2:-Math.PI/2):(side>0?Math.PI:0);
+    bays.push({id,name,x,z,w:axis==='x'?LX:LZ+.6,d:axis==='x'?LZ+.6:LX,axis,h,store,glow,label,base:top+3.1,phase:Math.random()*6,near:0,fade:1});
   }
   let clock=0;
   return {root,bays,solids,

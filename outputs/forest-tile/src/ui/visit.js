@@ -57,6 +57,9 @@ export function createVisit({onOpen,onClose}){
       card.innerHTML=`${logoHtml}<p class="label">Experience</p><h2>${b.name}</h2><p class="role">${job.role}</p>
         <div class="meta"><div><b>${duration(job)}</b><span>${span(job)}</span></div><div><b>${job.place.split(' · ')[0]}</b><span>${job.place.includes('·')?job.place.split(' · ')[1]:'On site'}</span></div></div>
         ${job.note?`<p class="note">${job.note}</p>`:''}<div class="row"><span></span><button data-close>Close ×</button></div>`;
+    }else if(b.id.startsWith('lux')){   // a Brooklyn boutique: no branding
+      card.innerHTML=`<p class="label">Brooklyn</p><h2>Boutique</h2><p class="role">Glass, gold and marble on the river</p>
+        <p class="note">One of six boutiques along the Brooklyn waterfront. Walk round the glass and look inside.</p><div class="row"><span></span><button data-close>Close ×</button></div>`;
     }else{   // Keel
       card.innerHTML=`${logoHtml}<p class="label">My company</p><h2>Keel</h2><p class="role">Founder</p>
         <p class="note">The AI assistant you text like a friend. It remembers the small stuff, plans your day and keeps your money straight, on iMessage and Telegram.</p>
@@ -78,7 +81,7 @@ export function createVisit({onOpen,onClose}){
     // Every frame: the bay the car stands still in (or null).
     update(b){
       if(open&&(!b||b.id!==open.id))close();   // drove away
-      if(b!==bay){bay=b;if(b&&!open){prompt.innerHTML=`<kbd>Enter</kbd><span>${b.id==='keel'?'Visit':'See'}</span><b>${b.name}</b>`;prompt.hidden=false;
+      if(b!==bay){bay=b;if(b&&!open){prompt.innerHTML=`<kbd>Enter</kbd><span>${b.id==='keel'?'Visit':'See'}</span><b>${b.name||'Boutique'}</b>`;prompt.hidden=false;
           if(!reduced.matches)gsap.fromTo(prompt,{y:12,opacity:0},{y:0,opacity:1,duration:.35,ease:'power2.out'});}
         else prompt.hidden=true;}
     },

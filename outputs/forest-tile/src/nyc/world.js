@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { THEME } from '../world/theme.js';
 import { buildKeelSign } from './keel.js';
 import { buildParking, experienceBoard } from './parking.js';
+import { buildLux } from './lux.js';
 import { mountStores } from '../stores/mount.tsx';
 import AppleBlock from '../stores/AppleBlock.tsx';
 import NikeBlock from '../stores/NikeBlock.tsx';
@@ -12,7 +13,7 @@ import { createPeople } from './people.js';
 import { buildCity } from './drive/build.js';
 import { buildBridge } from './drive/bridge.js';
 import { createTraffic } from './drive/traffic.js';
-import { G,CURB,HALF,LANE,PARK,EDGE,ST,AV,MAN,BKN,NS,BRIDGE,blocks,bridgeHeight,onBridgeBand,onLand } from './drive/layout.js';
+import { G,CURB,HALF,LANE,PARK,EDGE,ST,AV,BAV,MAN,BKN,NS,BRIDGE,blocks,bridgeHeight,onBridgeBand,onLand } from './drive/layout.js';
 
 // New York as the world you drive (world units, about 1.5 m each). The plan is
 // in drive/layout.js: Manhattan, the East River, a strip of Brooklyn, water all
@@ -25,7 +26,9 @@ export function buildNYCWorld({prep,materials,player}){
   // Armin's blocks: Keel's store at (1, 4); his four companies' stores in one row
   // across the street, on the long block (0, 5).
   const top=G+CURB;
-  const city=buildCity({reserved:new Set(['1,4','0,5']),pave:new Set(['1,4','0,5'])});
+  // Brooklyn (blocks 9,0 to 9,5) is all luxury boutiques: open plazas, no city buildings.
+  const BK=[0,1,2,3,4,5].map(j=>'9,'+j);
+  const city=buildCity({reserved:new Set(['1,4','0,5',...BK]),pave:new Set(['1,4','0,5',...BK])});
   group.add(city.root);
   // Keel's store (one floor, glass front, the "Meet Keel." banner inside), with
   // the giant name on its roof.
@@ -39,12 +42,16 @@ export function buildNYCWorld({prep,materials,player}){
   const spots=[0,1,2,3].map(i=>({x:rc+(1.5-i)*(PW+GAP),z:rz}));
   const stores=mountStores(group,[...[NikeBlock,MiBlock,GoogleBlock,McDonaldsBlock].map((C,i)=>({C,x:spots[i].x,y:top,z:spots[i].z,rot:Math.PI,scale:S})),{C:AppleBlock,x:kx,y:top,z:kz,rot:0,scale:KS}]);
   const storeSolids=spots.map(p=>[p.x,p.z,PW/2,PW/2]);
+  // Brooklyn: a big one floor glass boutique on every block, facing the river.
+  const lux=BK.map((key,j)=>{const b=find(9,j),cx=(b.x0+b.x1)/2,cz=(b.z0+b.z1)/2;const L=buildLux({x:cx,z:cz,top,w:9,d:17,facing:-1,style:j});group.add(L.root);return {...L,x:cx,z:cz,j};});
   // A parking bay in front of every place: park, press Enter.
   const IDS=['rush','hindra','aaq','bigup'],NAMES=['Rush Graphics','Hindra Studio','AAQ Properties','Big Uppetite'];
   // Parallel bays in the parking lane of street 78, in front of each store; Keel's
   // on the other side of the same street.
-  const parking=buildParking({top,places:[...spots.map((p,i)=>({id:IDS[i],name:NAMES[i],x:p.x,z:ST[5]+(EDGE+HALF)/2,side:1})),
-    {id:'keel',name:'Keel',x:kx,z:ST[5]-(EDGE+HALF)/2,side:-1}]});
+  const parking=buildParking({top,places:[...spots.map((p,i)=>({id:IDS[i],name:NAMES[i],x:p.x,z:ST[5]+(EDGE+HALF)/2,side:1,store:{x:p.x,z:p.z}})),
+    {id:'keel',name:'Keel',x:kx,z:ST[5]-(EDGE+HALF)/2,side:-1,store:{x:kx,z:kz}},
+    // Each Brooklyn boutique: a bay on the riverside road, right in front of it.
+    ...lux.map(L=>({id:'lux'+L.j,name:'',x:BAV[0]+(EDGE+HALF)/2,z:L.z,side:1,axis:'z',store:{x:L.x,z:L.z}}))]});
   group.add(parking.root);
   // A smart board on the plaza at the start of the row, turned toward the crossing
   // you come from (east, on street 78).
@@ -83,7 +90,7 @@ export function buildNYCWorld({prep,materials,player}){
       const w=120+rnd()*160;sp.scale.set(w,w*.55,1);sp.position.set(-330+rnd()*660,110+rnd()*60,-330+rnd()*660);sp.renderOrder=-1;group.add(sp);clouds.push(sp);}}
   const steamMat=new THREE.SpriteMaterial({map:puffTex,transparent:true,depthWrite:false,opacity:.5,color:'#f2f3f5'});
   const steam=city.steam.flatMap(p=>Array.from({length:7},(_,i)=>{const sp=new THREE.Sprite(steamMat.clone());sp.userData={x:p.x,z:p.z,age:i/7*3};group.add(sp);return sp;}));
-  const solids=[...city.solids,...keel.solids,...storeSolids,...bridge.solids,...parking.solids,board.solid];
+  const solids=[...city.solids,...keel.solids,...storeSolids,...bridge.solids,...parking.solids,board.solid,...lux.map(L=>L.solid)];
   const occluders=[...city.occluders,...bridge.occluders,...keel.occluders];
   const places={keel:keel.place};
   // Where the car can drive and how high: the streets and sidewalks on land, and
@@ -94,7 +101,7 @@ export function buildNYCWorld({prep,materials,player}){
     return deck!==null?deck:ground;
   }
   return {
-    parking:parking.bays.map((b,i)=>({...b,store:i<4?spots[i]:{x:kx,z:kz}})),
+    parking:parking.bays,
     group,solids,places,labels:[keelSign.userData.cta],row:null,lot:null,occluders,surface,trafficCars:traffic.cars,
     obstacles:()=>traffic.obstacles(),circles:bridge.circles,
     bounds:{x0:MAN.x0-6,x1:BKN.x1+6,z0:NS.z0-6,z1:NS.z1+6},

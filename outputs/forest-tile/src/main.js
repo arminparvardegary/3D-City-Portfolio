@@ -267,12 +267,12 @@ const audio=createAudio({car,world,maxSpeed:()=>FEEL.car.maxSpeed});
 // Parking: stop in a bay in front of a place and press Enter for its card; the
 // camera turns to the store while the card is open.
 const visit=world.parking?createVisit({
-  onOpen:b=>{const side=Math.sign(b.z-b.store.z)||1;focus={x:b.store.x,z:b.store.z,y:3.2,dist:21,side,zoom};followHold=0;needsRender=true;},
+  onOpen:b=>{const ax=b.axis==='z'?'x':'z',side=Math.sign(ax==='x'?b.x-b.store.x:b.z-b.store.z)||1;focus={x:b.store.x,z:b.store.z,y:3.2,dist:21,side,axis:ax,zoom};followHold=0;needsRender=true;},
   onClose:()=>{focus=null;needsRender=true;},
 }):null;
 // The map (top right): click a place to go to its parking bay, facing the way
 // traffic runs on that side of the street.
-if(world.parking)createMap({world,car,goTo:b=>{const h=b.z>b.store.z?-Math.PI/2:Math.PI/2;car.teleport(b.x,b.z,h,0);focus=null;followHold=0;needsRender=true;}});
+if(world.parking)createMap({world,car,goTo:b=>{car.teleport(b.x,b.z,b.h,0);focus=null;followHold=0;needsRender=true;}});
 const parkedIn=()=>{const p=car.shown;if(!p||p.speed>.5)return null;return world.parking.find(b=>Math.abs(p.x-b.x)<b.w/2&&Math.abs(p.z-b.z)<b.d/2)||null;};
 // Speedometer, bottom right: km/h (a world unit is about 1.5 m).
 const speedo=CHASE?document.createElement('div'):null;
@@ -350,7 +350,7 @@ function chaseView(dt){
   const C=FEEL.chase,p=car.shown,py=p.y??.12;
   if(focus&&p.speed>.6)focus=null;
   if(chaseYaw===null)chaseYaw=p.h;
-  if(focus){const fd=focus.dist??16,sd=focus.side??1;look.set(focus.x,focus.y??4,focus.z-3*sd);eye.set(focus.x+2.5*fd/16,(focus.y??4)+4.5*fd/16,focus.z+fd*sd);}   // side: -1 looks from the north
+  if(focus){const fd=focus.dist??16,sd=focus.side??1,fy=focus.y??4;if(focus.axis==='x'){look.set(focus.x-3*sd,fy,focus.z);eye.set(focus.x+fd*sd,fy+4.5*fd/16,focus.z+2.5*fd/16);}else{look.set(focus.x,fy,focus.z-3*sd);eye.set(focus.x+2.5*fd/16,fy+4.5*fd/16,focus.z+fd*sd);}}   // side: -1 looks from the north
   else{
     chaseYaw=dampAngle(chaseYaw,p.h,C.turnLag*(1+p.speed*.05),dt);
     const side=glance.KeyQ-glance.KeyE,back=glance.KeyQ&&glance.KeyE;

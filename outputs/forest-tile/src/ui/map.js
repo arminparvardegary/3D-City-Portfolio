@@ -44,7 +44,7 @@ export function createMap({world,car,goTo}){
   const k=CW/(X1-X0),px=x=>(x-X0)*k,pz=z=>(z-Z0)*k;
   const logos={};for(const [id,b] of Object.entries(BRAND))if(b.logo){const im=new Image();im.src=url(b.logo);im.onload=()=>open&&draw();logos[id]=im;}
 
-  const places=world.parking.map(b=>({id:b.id,name:b.name,x:b.store.x,z:b.store.z,bay:b}));
+  const places=world.parking.map(b=>({id:b.id,name:b.name||'Boutique',x:b.store.x,z:b.store.z,bay:b,lux:b.id.startsWith('lux')}));
   const LANDMARK={'1,3':'Empire State','2,2':'Chrysler','3,5':'World Trade','3,1':'The Dome'};
   let open=false,hover=null,raf=0;
 
@@ -92,6 +92,10 @@ export function createMap({world,car,goTo}){
     g.fillStyle='#b3a8f0';g.font=`700 36px ${HAND}`;g.fillText('Liberty Island',px(68),pz(150)-11*k-24);
     // Armin's places: a glowing pin with the logo, the name, and the P bay.
     for(const P of places){const x=px(P.x),y=pz(P.z),r=P.id==='keel'?40:30,hot=hover===P;
+      if(P.lux){   // Brooklyn boutiques: a gold diamond, no branding
+        g.fillStyle=WARM;g.beginPath();g.roundRect(px(P.bay.x)-15,pz(P.bay.z)-15,30,30,8);g.fill();g.fillStyle='#1a1035';g.font=`900 24px ${FONT}`;g.textAlign='center';g.textBaseline='middle';g.fillText('P',px(P.bay.x),pz(P.bay.z)+1);
+        g.save();g.translate(x,y);g.rotate(Math.PI/4);g.shadowColor='#e8c98a';g.shadowBlur=hot?26:12;g.fillStyle='#e8c98a';g.fillRect(-14,-14,28,28);g.restore();
+        if(hot){g.fillStyle=INK;g.font=`700 40px ${HAND}`;g.fillText('Boutique',x,y-40);}continue;}
       g.fillStyle='#ffd08a';g.font=`900 24px ${FONT}`;g.textAlign='center';g.textBaseline='middle';
       g.fillStyle=WARM;g.beginPath();g.roundRect(px(P.bay.x)-15,pz(P.bay.z)-15,30,30,8);g.fill();g.fillStyle='#1a1035';g.fillText('P',px(P.bay.x),pz(P.bay.z)+1);
       g.shadowColor=WARM;g.shadowBlur=hot?30:16;g.fillStyle='#ffffff';g.beginPath();g.arc(x,y,r+(hot?4:0),0,7);g.fill();g.shadowBlur=0;
@@ -102,7 +106,7 @@ export function createMap({world,car,goTo}){
       else if(P.id==='rush'){g.fillStyle='#141416';g.beginPath();g.arc(x,y,r-3,0,7);g.fill();g.fillStyle=BRAND.rush.color;g.font=`italic 900 15px ${FONT}`;g.fillText('RUSH',x,y+1);}
       if(P.id==='keel'||hot){g.fillStyle=INK;g.font=`700 ${P.id==='keel'?50:40}px ${HAND}`;g.fillText(P.name,x,y-r-28);}}
     // The row's label.
-    const row=places.filter(p=>p.id!=='keel');if(row.length){g.fillStyle=WARM;g.font=`700 46px ${HAND}`;g.fillText('MY WORK EXPERIENCE',px((row[0].x+row.at(-1).x)/2),pz(row[0].z)+70);}
+    const row=places.filter(p=>['rush','hindra','aaq','bigup'].includes(p.id));if(row.length){g.fillStyle=WARM;g.font=`700 46px ${HAND}`;g.fillText('MY WORK EXPERIENCE',px((row[0].x+row.at(-1).x)/2),pz(row[0].z)+70);}
     // The car: a live arrow.
     const c=car.shown;if(c){g.save();g.translate(px(c.x),pz(c.z));g.rotate(Math.PI-c.h);g.shadowColor='#ff5a4a';g.shadowBlur=18;
       g.fillStyle='#ff5a4a';g.beginPath();g.moveTo(0,-24);g.lineTo(16,18);g.lineTo(0,9);g.lineTo(-16,18);g.closePath();g.fill();g.restore();
