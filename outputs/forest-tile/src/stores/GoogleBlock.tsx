@@ -1,4 +1,3 @@
-"use client";
 
 import { RoundedBox } from "@react-three/drei";
 import { Block, Mat, Person, ctex, stucco } from "./kit";

@@ -1,4 +1,3 @@
-"use client";
 
 import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
