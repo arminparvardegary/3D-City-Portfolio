@@ -10,7 +10,7 @@
 const KEY='nyc-sound',MKEY='nyc-music';
 
 export function createAudio({car,world,maxSpeed=()=>9.6}){
-  let ctx=null,master=null,on=true,music=true,started=false;
+  let voice=null,ctx=null,master=null,on=true,music=true,started=false;
   try{on=localStorage.getItem(KEY)!=='off';music=localStorage.getItem(MKEY)!=='off';}catch{}
   const N={};
   // Mute button (top right).
@@ -52,10 +52,10 @@ export function createAudio({car,world,maxSpeed=()=>9.6}){
     tone.connect(body).connect(eng).connect(N.near);
     const pulse=ctx.createGain();pulse.gain.value=1;pulse.connect(tone);
     const lfo=ctx.createOscillator();lfo.type='sine';const lfoG=ctx.createGain();lfoG.gain.value=.12;lfo.connect(lfoG).connect(pulse.gain);lfo.start();
-    const partials=[[.5,.55],[1,1],[1.5,.35],[2,.5],[3,.22],[4,.12],[6,.05]].map(([mul,amp])=>{const o=ctx.createOscillator();o.type='sine';const g=ctx.createGain();g.gain.value=amp*.22;o.connect(g).connect(pulse);o.start();return {o,mul};});
+    const partials=[.5,1,1.5,2,3,4,6].map(mul=>{const o=ctx.createOscillator();o.type='sine';const g=ctx.createGain();g.gain.value=0;o.connect(g).connect(pulse);o.start();return {o,mul,g};});
     // Intake: soft filtered pink noise that breathes with the throttle.
     const intake=loopNoise('pink','bandpass',600,.9,N.near);
-    N.engine={eng,tone,partials,lfo,intake,rpm:.12,gear:0,shift:0};
+    N.engine={eng,tone,partials,lfo,lfoG,intake,rpm:.12,gear:0,shift:0};
     // Cabin: calm tyre roll, wind; tyre squeal kept soft.
     N.roll=loopNoise('brown','lowpass',260,.7,N.near);
     N.wind=loopNoise('pink','lowpass',900,.5,N.near);
@@ -65,13 +65,46 @@ export function createAudio({car,world,maxSpeed=()=>9.6}){
     N.traffic=loopNoise('brown','lowpass',200,.8,N.space);
     N.water=loopNoise('pink','lowpass',650,.5,N.space);
     const sir=ctx.createOscillator();sir.type='sine';const sirG=ctx.createGain();sirG.gain.value=0;sir.connect(sirG).connect(N.space);sir.start();N.siren={o:sir,g:sirG};
-    // Horn: two warm tones (a major third), slightly filtered.
-    const hornG=ctx.createGain();hornG.gain.value=0;const hornF=ctx.createBiquadFilter();hornF.type='lowpass';hornF.frequency.value=1300;hornF.connect(hornG).connect(N.space);
-    for(const f of [392,494]){for(const det of [-4,4]){const o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=f;o.detune.value=det;const g=ctx.createGain();g.gain.value=.05;o.connect(g).connect(hornF);o.start();}}
-    N.horn=hornG;
+    // Horn (H): built for the car you drive, see setHorn.
+    const hornG=ctx.createGain();hornG.gain.value=0;const hornF=ctx.createBiquadFilter();hornF.type='lowpass';hornF.connect(hornG).connect(N.space);
+    N.horn=hornG;N.hornF=hornF;N.hornOsc=[];voice=null;
     // Music: a slow pad of warm chords, with now and then a soft bell note.
     const mus=ctx.createGain();mus.gain.value=music?.55:0;const musF=ctx.createBiquadFilter();musF.type='lowpass';musF.frequency.value=1800;musF.connect(mus).connect(N.space);N.music=mus;N.musicIn=musF;
     N.voices=[0,1,2,3].map(()=>{const g=ctx.createGain();g.gain.value=0;g.connect(musF);const os=[-6,6].map(det=>{const o=ctx.createOscillator();o.type='triangle';o.detune.value=det;o.connect(g);o.start();return o;});return {g,os};});
+  }
+  // Each car has its own engine and horn (MODELS in cars/models.js names them).
+  // Engine: idle and top firing frequency (Hz), the loudness of each harmonic
+  // (½, 1, 1½, 2, 3, 4, 6 × firing), how lumpy it runs, how bright and how loud.
+  const ENGINES={
+    v8:    {base:26,range:120,amps:[.55,1,.35,.5,.22,.12,.05],lump:.12,lumpDiv:8,bright:1,  loud:1},     // muscle burble
+    flat6: {base:42,range:200,amps:[.12,.8,.5,.75,.5,.32,.18],lump:.05,lumpDiv:6,bright:1.45,loud:.95},  // sports wail
+    i4:    {base:38,range:165,amps:[.04,.55,.08,1,.28,.38,.12],lump:.03,lumpDiv:4,bright:1.2,loud:.8},   // buzzy four
+    v6:    {base:32,range:140,amps:[.25,1,.3,.6,.3,.16,.06],lump:.07,lumpDiv:6,bright:1.05,loud:.9},     // smooth SUV
+    v12:   {base:46,range:170,amps:[.04,.7,.2,.6,.45,.4,.28],lump:.015,lumpDiv:12,bright:1.3,loud:.75},  // silky limo
+    diesel:{base:15,range:62,amps:[.75,1,.65,.55,.35,.25,.12],lump:.32,lumpDiv:2,bright:.65,loud:1.25}, // big clattering diesel
+  };
+  // Horns: tones (Hz), wave and filter; sirens sweep while H is held.
+  const HORNS={
+    car:   {f:[392,494],wave:'sawtooth',cut:1300,gain:.05},
+    sport: {f:[523,659],wave:'square',cut:2400,gain:.035},
+    muscle:{f:[311,392],wave:'sawtooth',cut:1050,gain:.06},
+    taxi:  {f:[440,554],wave:'square',cut:1700,gain:.04},
+    van:   {f:[370,466],wave:'sawtooth',cut:1150,gain:.05},
+    limo:  {f:[349,440,523],wave:'sawtooth',cut:1500,gain:.04},
+    bus:   {f:[175,220],wave:'sawtooth',cut:900,gain:.08},
+    truck: {f:[155,196,233],wave:'sawtooth',cut:850,gain:.08},
+    fire:  {f:[131,165,196],wave:'sawtooth',cut:800,gain:.09},
+    police:   {f:[1000],wave:'triangle',cut:3000,gain:.12,sweep:{rate:5.5,depth:380}},   // yelp
+    ambulance:{f:[810],wave:'square',cut:2200,gain:.05,sweep:{rate:.9,depth:150,step:true}}, // hi lo
+  };
+  function setVoice(drive){
+    if(!ctx)return;const T=ctx.currentTime,eng=ENGINES[drive?.engine]??ENGINES.v8,horn=HORNS[drive?.horn]??HORNS.car,E=N.engine;
+    voice={eng,horn};
+    E.partials.forEach((q,i)=>q.g.gain.setTargetAtTime(eng.amps[i]*.22,T,.1));E.lfoG.gain.setTargetAtTime(eng.lump,T,.1);
+    for(const o of N.hornOsc)o.stop();N.hornOsc=[];N.hornF.frequency.value=horn.cut;
+    let mod=null;if(horn.sweep){mod=ctx.createOscillator();mod.type=horn.sweep.step?'square':'sine';mod.frequency.value=horn.sweep.rate;const d=ctx.createGain();d.gain.value=horn.sweep.depth;mod.connect(d);mod.start();N.hornOsc.push(mod);mod=d;}
+    for(const f of horn.f)for(const det of horn.sweep?[0]:[-4,4]){const o=ctx.createOscillator();o.type=horn.wave;o.frequency.value=f;o.detune.value=det;if(mod)mod.connect(o.frequency);
+      const g=ctx.createGain();g.gain.value=horn.gain;o.connect(g).connect(N.hornF);o.start();N.hornOsc.push(o);}
   }
   // One shots.
   const tone1=(freq,len,gain,{type='sine',slide=0,delay=0,dest}={})=>{if(!ctx||!on)return;const t=ctx.currentTime+delay,o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.setValueAtTime(freq,t);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(30,freq*slide),t+len);
@@ -97,7 +130,7 @@ export function createAudio({car,world,maxSpeed=()=>9.6}){
   // Lounge chords (MIDI notes): Dmaj9, Bm9, Gmaj7#11, A13sus.
   const CHORDS=[[50,57,61,64,66],[47,54,57,61,62],[43,50,54,59,61],[45,52,55,59,62]];
   const midi=n=>440*Math.pow(2,(n-69)/12);
-  let time=0,nextHorn=5,nextSiren=25,nextChirp=0,chord=-1,nextChord=0,nextBell=6,lastThr=0;
+  let shown={},time=0,nextHorn=5,nextSiren=25,nextChirp=0,chord=-1,nextChord=0,nextBell=6,lastThr=0;
   function update(dt){
     if(!ctx||!on||ctx.state!=='running'){if(ctx&&on&&ctx.state==='suspended'&&!document.hidden)ctx.resume();return;}
     time+=dt;const T=ctx.currentTime,p=car.pose(),v=Math.abs(car.speed),k=Math.min(1,v/maxSpeed()),thr=Math.max(0,car.throttle),set=(param,val,tc=.08)=>param.setTargetAtTime(val,T,tc);
@@ -106,9 +139,10 @@ export function createAudio({car,world,maxSpeed=()=>9.6}){
     if(g!==E.gear){E.shift=.18;E.gear=g;}E.shift=Math.max(0,E.shift-dt);
     const lo=g?GEARS[g-1]:0,inGear=(k-lo)/(GEARS[g]-lo),target=.16+.7*inGear*(1-g*.035)+thr*.06;
     E.rpm+=(target-E.rpm)*Math.min(1,dt*(E.shift>0?4:7));
-    const fire=26+E.rpm*120;for(const {o,mul} of E.partials)set(o.frequency,fire*mul,.04);set(E.lfo.frequency,fire/8,.1);
-    set(E.tone.frequency,520+E.rpm*900+thr*1100);
-    set(E.eng.gain,(.22+E.rpm*.28+thr*.18)*(E.shift>0?.65:1),.07);
+    if(car.vehicle!==shown){shown=car.vehicle;setVoice(shown?.drive);}const V=voice.eng;
+    const fire=V.base+E.rpm*V.range;for(const {o,mul} of E.partials)set(o.frequency,fire*mul,.04);set(E.lfo.frequency,fire/V.lumpDiv,.1);
+    set(E.tone.frequency,(520+E.rpm*900+thr*1100)*V.bright);
+    set(E.eng.gain,(.22+E.rpm*.28+thr*.18)*(E.shift>0?.65:1)*V.loud,.07);
     set(E.intake.g.gain,thr*(.02+E.rpm*.05));set(E.intake.f.frequency,420+E.rpm*900);
     if(lastThr>.5&&thr<.5&&v>3)for(let i=0;i<3;i++)setTimeout(burble,60+i*90+Math.random()*60);lastThr=thr;
     // Cabin noise.
@@ -116,7 +150,7 @@ export function createAudio({car,world,maxSpeed=()=>9.6}){
     set(N.wind.g.gain,k*k*.08);set(N.wind.f.frequency,600+k*1200);
     set(N.squeal.g.gain,Math.min(.06,Math.max(0,car.slide-.5)*.12*Math.min(1,v/3)),.05);
     // Traffic nearby, the police siren when close.
-    let near=1e9,police=1e9;for(const c of world.trafficCars??[]){const d=Math.hypot(c.x-p.x,c.z-p.z);if(d<near)near=d;if(c.type==='police')police=d;}
+    let near=1e9,police=1e9;for(const c of world.trafficCars??[]){const d=Math.hypot(c.x-p.x,c.z-p.z);if(d<near)near=d;if(String(c.type).startsWith('police')&&d<police)police=d;}
     set(N.traffic.g.gain,.14/(1+near/7),.3);
     set(N.siren.o.frequency,650+Math.sin(time*2)*230,.06);set(N.siren.g.gain,police<40?.025*(1-police/40):0,.3);
     // Water at the edge of the island, birds in Central Park.

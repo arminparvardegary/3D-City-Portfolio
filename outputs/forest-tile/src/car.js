@@ -31,7 +31,14 @@ let AMBULANCE=-1;   // the siren flashes only on the built-in ambulance (set whe
 export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
   AMBULANCE=VEHICLES.findIndex(q=>q.name==='Ambulance'&&!q.model);
   const home=start??{x:ART.car.position[0],z:ART.car.position[2],h:ART.car.rotation};
-  const C=FEEL.car,S=FEEL.suspension;
+  // This car's own feel: Armin's tuned feel scaled by the vehicle's profile
+  // (speed, power, brakes, grip, steering, weight on its springs).
+  const C={...FEEL.car},S={...FEEL.suspension};
+  const tune=i=>{const d=VEHICLES[i]?.drive;Object.assign(C,FEEL.car);Object.assign(S,FEEL.suspension);if(!d)return;
+    C.maxSpeed*=d.speed;C.maxReverse*=Math.min(1,d.speed+.1);C.engine*=d.power;C.brake*=d.brake;C.grip*=d.grip;C.steerIn*=d.steer;C.steerOut*=d.steer;C.handSwing*=d.swing;
+    C.coast*=Math.min(1.3,Math.max(.7,1350/d.mass*1.0+.3));
+    const heavy=Math.min(1,Math.max(0,(d.mass-1350)/12000));S.stiffness*=1-heavy*.45;S.damping*=1-heavy*.25;S.pitch*=1+heavy*.6;S.roll*=1+heavy*.5;};
+  tune(index);
   let cy=0,x=home.x,z=home.z,h=home.h,v=0,vy=0,yaw=0,steer=0,a=0,lat=0,brakeRamp=0,head=.55,tail=.45,slide=0,rollAngle=0;
   // Sprung body: angles (rad) and heave (units), each with its own velocity.
   let pitch=0,pitchV=0,roll=0,rollV=0,heave=0,heaveV=0;
@@ -135,8 +142,11 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
     get length(){return parts.length;},
     setBounds(b){BOUNDS={x0:b.x0+.05,x1:b.x1-.05,z0:b.z0+.05,z1:b.z1-.05};},
     count:VEHICLES.length,
+    get spec(){return C;},
+    get vehicle(){return VEHICLES[current];},
     select(i){
       if(i===current)return;
+      tune(i);
       disposeVehicle(parts,m);parts=buildVehicle(i,parent,m,prep);addContact(parts);current=i;bodyY=parts.car.position.y;rigY=parts.rig.position.y-SEAT;parts.rig.rotation.order='YXZ';footprint();
       v=0;if(blocked(x,z,h)){x=home.x;z=home.z;h=home.h;}rollAngle=0;snapshot();place();
     },

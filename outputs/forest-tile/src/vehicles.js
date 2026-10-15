@@ -222,7 +222,7 @@ export const VEHICLES=[
 // the vehicle list becomes those 21 cars.
 export function useModelVehicles(){
   VEHICLES.length=0;
-  for(const M of MODELS){const C=modelInfo(M.id);if(C)VEHICLES.push({name:M.name,color:C.paintColor,model:M.id,real:true});}
+  for(const M of MODELS){const C=modelInfo(M.id);if(C)VEHICLES.push({name:M.name,color:C.paintColor,model:M.id,real:true,drive:M.drive});}
 }
 
 export function buildVehicle(i,parent,m,prep,{merge=true}={}){

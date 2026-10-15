@@ -7,14 +7,34 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 // four separate wheels each. Loaded once at start; each model is turned into
 // real materials (clearcoat paint, reflective glass, glowing head and tail
 // lights) and measured (length, width, wheel radius, axles) for the driving.
+// Each car drives and sounds like what it is. Driving is relative to Armin's tuned
+// feel (the Sports car is 1): speed = top speed, power = engine pull, brake,
+// grip, steer = how quickly the wheel turns, swing = handbrake tail swing, mass
+// (kg, for the body's weight on its springs). Sound: the engine voice and the horn.
+const D=(speed,power,brake,grip,steer,mass,engine,horn,swing=1)=>({speed,power,brake,grip,steer,mass,engine,horn,swing});
 export const MODELS=[
-  {id:'sports',name:'Sports',speed:9},{id:'roadster',name:'Roadster',speed:8.6},{id:'muscle',name:'Muscle',speed:8.4},{id:'muscle-2',name:'Muscle 2',speed:8.2},
-  {id:'sedan',name:'Sedan',speed:7},{id:'hatchback',name:'Hatchback',speed:6.6},{id:'limousine',name:'Limousine',speed:6},{id:'suv',name:'SUV',speed:6.8},
-  {id:'pickup',name:'Pickup',speed:6.4},{id:'van',name:'Van',speed:5.8},{id:'taxi',name:'Taxi',speed:7},{id:'police-sedan',name:'Police Sedan',speed:7.6},
-  {id:'police-sports',name:'Police Sports',speed:8.6},{id:'police-suv',name:'Police SUV',speed:7.2},{id:'police-muscle',name:'Police Muscle',speed:8.2},
-  {id:'ambulance',name:'Ambulance',speed:6.4},{id:'firetruck',name:'Firetruck',speed:5.4},{id:'bus',name:'Bus',speed:4.8},{id:'truck',name:'Truck',speed:5},
-  {id:'truck-with-trailer',name:'Truck with trailer',speed:4.6},{id:'monster-truck',name:'Monster Truck',speed:6.2},
-];
+  {id:'sports',name:'Sports',drive:D(1,1,1,1,1,1350,'flat6','sport')},
+  {id:'roadster',name:'Roadster',drive:D(.95,.92,1,1.06,1.08,1150,'flat6','sport',1.05)},
+  {id:'muscle',name:'Muscle',drive:D(.96,1.08,.88,.86,.92,1650,'v8','muscle',1.2)},
+  {id:'muscle-2',name:'Muscle 2',drive:D(.94,1.04,.88,.86,.92,1700,'v8','muscle',1.2)},
+  {id:'sedan',name:'Sedan',drive:D(.8,.74,.92,.92,.95,1450,'i4','car')},
+  {id:'hatchback',name:'Hatchback',drive:D(.74,.78,.95,.95,1.12,1150,'i4','car',1.1)},
+  {id:'limousine',name:'Limousine',drive:D(.74,.6,.72,.85,.62,2600,'v12','limo',.7)},
+  {id:'suv',name:'SUV',drive:D(.76,.72,.82,.86,.85,2100,'v6','car',.85)},
+  {id:'pickup',name:'Pickup',drive:D(.74,.74,.82,.84,.85,2200,'v8','muscle',.9)},
+  {id:'van',name:'Van',drive:D(.66,.6,.76,.82,.8,2300,'i4','van',.75)},
+  {id:'taxi',name:'Taxi',drive:D(.8,.76,.92,.92,.98,1500,'i4','taxi')},
+  {id:'police-sedan',name:'Police Sedan',drive:D(.92,.95,1,.96,1,1650,'v8','police')},
+  {id:'police-sports',name:'Police Sports',drive:D(1.02,1.02,1.02,1,1,1450,'flat6','police')},
+  {id:'police-suv',name:'Police SUV',drive:D(.86,.86,.9,.9,.9,2200,'v8','police',.85)},
+  {id:'police-muscle',name:'Police Muscle',drive:D(.97,1.06,.92,.88,.94,1700,'v8','police',1.15)},
+  {id:'ambulance',name:'Ambulance',drive:D(.72,.64,.74,.82,.75,3200,'diesel','ambulance',.7)},
+  {id:'firetruck',name:'Firetruck',drive:D(.6,.5,.6,.78,.6,11000,'diesel','fire',.55)},
+  {id:'bus',name:'Bus',drive:D(.52,.44,.56,.78,.52,12000,'diesel','bus',.5)},
+  {id:'truck',name:'Truck',drive:D(.6,.5,.6,.78,.6,8000,'diesel','truck',.55)},
+  {id:'truck-with-trailer',name:'Truck with trailer',drive:D(.5,.4,.5,.74,.5,16000,'diesel','truck',.45)},
+  {id:'monster-truck',name:'Monster Truck',drive:D(.74,.95,.72,.7,.8,4500,'v8','muscle',1.3)},
+].map(M=>({...M,speed:M.drive.speed*9}));   // traffic cruising speed follows the car
 const SCALE=1/150;   // centimetres to world units (one unit is about 1.5 m)
 const cache=new Map();
 

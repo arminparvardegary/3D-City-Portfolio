@@ -117,3 +117,8 @@ html,body,#app{background:linear-gradient(180deg,var(--sky-top,#bfe3ff) 0%,var(-
 /* Everything you can press shows the pointer (goober-styled controls included). */
 button:not(:disabled),a[href],summary,[role="button"],label[for],select{cursor:pointer}
 button:disabled{cursor:default}
+
+/* Camera name after pressing V. */
+.view-tag{position:absolute;left:50%;bottom:32px;z-index:8;transform:translate(-50%,8px);padding:8px 22px 10px;border-radius:999px;background:rgba(22,16,56,.82);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:#f4f0ff;font:700 30px/1 "Amatic SC","Marker Felt",cursive;opacity:0;pointer-events:none;transition:opacity .3s cubic-bezier(.28,.11,.32,1),transform .3s cubic-bezier(.28,.11,.32,1)}
+.view-tag.on{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion:reduce){.view-tag{transition:none}}

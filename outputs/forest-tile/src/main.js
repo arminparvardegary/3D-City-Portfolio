@@ -266,7 +266,7 @@ prompt.onclick=startStory;
 addEventListener('keydown',e=>{if(e.key==='Enter'&&!prompt.hidden&&!e.repeat){e.preventDefault();startStory();}});
 
 // Sound: engine, tyres, wind, horn (H), the city round you; M or the button mutes.
-const audio=createAudio({car,world,maxSpeed:()=>FEEL.car.maxSpeed});
+const audio=createAudio({car,world,maxSpeed:()=>car.spec.maxSpeed});
 // Night driving: two warm headlight beams that light the road ahead (added again when the car changes).
 function addHeadlights(){if(!CHASE||car.rig.userData.beam)return;const beam=new THREE.SpotLight('#ffd7a1',60,38,.42,.55,1.3);beam.position.set(0,.75,1.7);beam.target.position.set(0,0,14);car.rig.add(beam,beam.target);car.rig.userData.beam=beam;}
 addHeadlights();
@@ -354,6 +354,19 @@ const glance={KeyQ:0,KeyE:0};
 addEventListener('keydown',e=>{if(e.code in glance&&!e.metaKey&&!e.ctrlKey&&!/INPUT|TEXTAREA/.test(e.target.tagName))glance[e.code]=1;});
 addEventListener('keyup',e=>{if(e.code in glance)glance[e.code]=0;});
 addEventListener('blur',()=>{glance.KeyQ=glance.KeyE=0;});
+// V cycles three cameras: Chase (behind), Far (high and wide) and Hood (on the
+// car's nose, looking down the road). A short label says which one is on.
+const VIEWS=['Chase','Far','Hood'];let view=0;try{view=Math.max(0,VIEWS.indexOf(localStorage.getItem('nyc-view')));}catch{}
+const viewTag=CHASE?document.createElement('div'):null;let viewTagTimer=0;
+if(viewTag){viewTag.className='view-tag';viewTag.setAttribute('aria-live','polite');document.querySelector('.scene').append(viewTag);}
+addEventListener('keydown',e=>{if(!CHASE||e.code!=='KeyV'||e.repeat||e.metaKey||e.ctrlKey||/INPUT|TEXTAREA/.test(e.target.tagName))return;
+  view=(view+1)%VIEWS.length;try{localStorage.setItem('nyc-view',VIEWS[view]);}catch{}
+  viewTag.textContent=VIEWS[view]+' camera';viewTag.classList.add('on');clearTimeout(viewTagTimer);viewTagTimer=setTimeout(()=>viewTag.classList.remove('on'),1400);});
+// The size of the car you drive: big vehicles (bus, trucks) get a camera further
+// back and higher so you always see the road over them.
+let sizeOf=null;const size={L:4,H:1.4},box=new THREE.Box3(),boxSize=new THREE.Vector3();
+function carSize(){if(sizeOf===car.vehicle)return size;sizeOf=car.vehicle;const r=car.rig,q=r.quaternion.clone(),pos=r.position.clone();r.quaternion.identity();r.position.set(0,0,0);r.updateMatrixWorld(true);
+  box.setFromObject(r,true).getSize(boxSize);r.quaternion.copy(q);r.position.copy(pos);r.updateMatrixWorld(true);size.L=boxSize.z;size.H=boxSize.y;return size;}
 const eyeS=[{x:0,v:0},{x:0,v:0},{x:0,v:0}],lookS=[{x:0,v:0},{x:0,v:0},{x:0,v:0}];
 const eye=new THREE.Vector3(),look=new THREE.Vector3(),pull=new THREE.Ray(),hit=new THREE.Vector3(),camRight=new THREE.Vector3(),camUp=new THREE.Vector3();
 function chaseView(dt){
@@ -367,18 +380,22 @@ function chaseView(dt){
     if(back)lookYaw=damp(lookYaw,lookYaw<0?-Math.PI:Math.PI,8,dt);   // Q and E together: look behind
     else if(side)lookYaw=damp(lookYaw,side*1.45,7,dt);
     else if(!looking){lookYaw=damp(lookYaw,0,side?7:3.2,dt);lookPitch=damp(lookPitch,0,2.4,dt);}
-    const yaw=chaseYaw+lookYaw,D=C.distance+p.speed*C.speedPull,H=C.height+lookPitch*D;
+    // Scale by the car: a sports car is about 4 long and 1.3 tall; a bus is far bigger.
+    const sz=carSize(),grow=Math.max(1,Math.max(sz.L/4.2,sz.H/1.35)*.85),far=view===1;
+    const yaw=chaseYaw+lookYaw,D=(C.distance*grow+p.speed*C.speedPull)*(far?1.7:1),H=(C.height*grow+(sz.H>1.6?sz.H-1.2:0))*(far?2.6:1)+lookPitch*D;
     const lh=p.h+lookYaw;   // look the way the camera is turned
-    look.set(p.x+Math.sin(lh)*C.lookAhead,py+1.1,p.z+Math.cos(lh)*C.lookAhead);
+    look.set(p.x+Math.sin(lh)*C.lookAhead*(far?1.3:1),py+1.1+(grow-1)*.8,p.z+Math.cos(lh)*C.lookAhead*(far?1.3:1));
     eye.set(p.x-Math.sin(yaw)*D,py+H,p.z-Math.cos(yaw)*D);
+    if(view===2){   // Hood: just above the front of the roof, looking down the road
+      const f=sz.L*.32;eye.set(p.x+Math.sin(p.h)*f,py+sz.H+.25,p.z+Math.cos(p.h)*f);look.set(p.x+Math.sin(lh)*30,py+sz.H*.6,p.z+Math.cos(lh)*30);}
     // Keep the car in view: stop short of any tall building on the line.
     if(world.occluders){pull.origin.set(p.x,py+1.2,p.z);pull.direction.subVectors(eye,pull.origin);const len=pull.direction.length();pull.direction.multiplyScalar(1/len);
       let near=len;for(const b of world.occluders)if(pull.intersectBox(b,hit)){const d=hit.distanceTo(pull.origin);if(d<near)near=d;}
-      if(near<len)eye.copy(pull.origin).addScaledVector(pull.direction,Math.max(2.2,near-.7));}
+      if(near<len&&view!==2)eye.copy(pull.origin).addScaledVector(pull.direction,Math.max(2.2,near-.7));}
   }
   // Smooth both points (a critically damped spring each), snapping on the first frame.
   const first=eyeS[0].x===0&&eyeS[2].x===0;
-  ['x','y','z'].forEach((k,i)=>{if(first){eyeS[i].x=eye[k];lookS[i].x=look[k];}eye[k]=spring(eyeS[i],eye[k],focus?.6:C.follow,dt);look[k]=spring(lookS[i],look[k],focus?.6:C.follow*.7,dt);});
+  ['x','y','z'].forEach((k,i)=>{if(first){eyeS[i].x=eye[k];lookS[i].x=look[k];}const fo=focus?.6:view===2?.03:C.follow;eye[k]=spring(eyeS[i],eye[k],fo,dt);look[k]=spring(lookS[i],look[k],focus?.6:view===2?.05:C.follow*.7,dt);});
   // Never under the road: on a slope (down off the bridge) the camera behind the
   // car would sink into the deck. Keep it above the surface the car drives on there.
   if(world.surface&&!focus){const g=world.surface(eye.x,eye.z,py-.12);if(g!==null){const floor=g+.12+1.6;if(eye.y<floor){eye.y=floor;eyeS[1].x=Math.max(eyeS[1].x,floor);}}}
