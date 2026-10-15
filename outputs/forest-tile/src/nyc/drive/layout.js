@@ -23,6 +23,7 @@ export const MAN={x0:-120,x1:54},RIVER={x0:54,x1:82},BKN={x0:82,x1:132},NS={z0:-
 export const AV=[-112,-72,-32,8,46];          // 46: FDR Drive along the river
 export const BAV=[90,116];                    // Brooklyn: riverside road and an avenue
 export const ST=[-112,-74,-36,2,40,78,112];
+export const ROW_AV=-72;   // this avenue stops at street 78: south of it is Armin's experience row
 // The bridge is on the last street (z = 112): from the FDR Drive crossing straight
 // over the river to the Brooklyn riverside road. Only sea under it, no road. The
 // deck is one gentle arch, highest over the middle of the river.
@@ -34,6 +35,10 @@ export function blocks(){
   for(let i=0;i<AV.length-1;i++)for(let j=0;j<ST.length-1;j++)
     out.push({x0:AV[i]+HALF,x1:AV[i+1]-HALF,z0:ST[j]+HALF,z1:ST[j+1]-HALF,i,j,borough:'man'});
   for(let j=0;j<ST.length-1;j++)out.push({x0:BAV[0]+HALF,x1:BAV[1]-HALF,z0:ST[j]+HALF,z1:ST[j+1]-HALF,i:9,j,borough:'bkn'});
+  // Armin's experience row: blocks (0, 5) and (1, 5) are one long block (the
+  // avenue between them stops at the street), so his companies stand together.
+  const a=out.findIndex(b=>b.i===0&&b.j===5),b=out.findIndex(b=>b.i===1&&b.j===5);
+  out[a]={...out[a],x1:out[b].x1,wide:true};out.splice(b,1);
   return out;
 }
 
@@ -44,7 +49,7 @@ export function network(){
   const edges=[];
   const link=(a,b,kind='road')=>{const e1={a,b,kind},e2={a:b,b:a,kind};a.out.push(e1);b.out.push(e2);edges.push(e1,e2);};
   // Manhattan avenues and streets.
-  for(const x of AV)for(let j=0;j<ST.length-1;j++)link(node(x,ST[j]),node(x,ST[j+1]));
+  for(const x of AV)for(let j=0;j<ST.length-1;j++){if(x===ROW_AV&&j===ST.length-2)continue;link(node(x,ST[j]),node(x,ST[j+1]));}
   for(const z of ST)for(let i=0;i<AV.length-1;i++){if(z===BRIDGE.z&&AV[i]>=BRIDGE.x0)continue;link(node(AV[i],z),node(AV[i+1],z));}
   // Brooklyn.
   for(const x of BAV)for(let j=0;j<ST.length-1;j++)link(node(x,ST[j]),node(x,ST[j+1]));

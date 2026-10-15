@@ -21,10 +21,10 @@ import { G,CURB,HALF,LANE,ST,AV,MAN,BKN,NS,BRIDGE,blocks,bridgeHeight,onBridgeBa
 export function buildNYCWorld({prep,materials,player}){
   const group=new THREE.Group();group.name='new-york';
   const bl=blocks(),find=(i,j)=>bl.find(b=>b.i===i&&b.j===j);
-  // Armin's blocks: Keel's store at (1, 4); his four companies' stores across the
-  // street at (0, 5) and (1, 5).
+  // Armin's blocks: Keel's store at (1, 4); his four companies' stores in one row
+  // across the street, on the long block (0, 5).
   const top=G+CURB;
-  const city=buildCity({reserved:new Set(['1,4','0,5','1,5']),pave:new Set(['1,4','0,5','1,5'])});
+  const city=buildCity({reserved:new Set(['1,4','0,5']),pave:new Set(['1,4','0,5'])});
   group.add(city.root);
   // Keel's store (one floor, glass front, the "Meet Keel." banner inside), with
   // the giant name on its roof.
@@ -33,8 +33,9 @@ export function buildNYCWorld({prep,materials,player}){
   group.add(buildKeelSign({x:kx,z:kz,y:top+2.25*KS,width:12}));
   // Work experience stores across the street, facing Keel (north). A block's origin
   // is the top of its platform: set at the sidewalk, the plinth sits in the ground.
-  const S=1.7,PW=6.4*S,row=(b,i)=>({x:(b.x0+b.x1)/2+(i?1:-1)*(PW/2+.3),z:(b.z0+b.z1)/2});
-  const b15=find(1,5),b05=find(0,5),spots=[row(b15,0),row(b15,1),row(b05,0),row(b05,1)];
+  // All four in one row, newest on the left as you look from Keel: Rush, Hindra, AAQ, Big Uppetite.
+  const S=1.7,PW=6.4*S,GAP=1.4,rb=find(0,5),rc=(rb.x0+rb.x1)/2,rz=(rb.z0+rb.z1)/2;
+  const spots=[0,1,2,3].map(i=>({x:rc+(1.5-i)*(PW+GAP),z:rz}));
   const stores=mountStores(group,[...[NikeBlock,MiBlock,GoogleBlock,McDonaldsBlock].map((C,i)=>({C,x:spots[i].x,y:top,z:spots[i].z,rot:Math.PI,scale:S})),{C:AppleBlock,x:kx,y:top,z:kz,rot:0,scale:KS}]);
   const storeSolids=spots.map(p=>[p.x,p.z,PW/2,PW/2]);
   const bridge=buildBridge({prep});group.add(bridge.root);
