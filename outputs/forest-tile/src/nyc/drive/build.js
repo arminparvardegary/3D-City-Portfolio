@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { createKit } from '../../diorama/kit.js';
 import { FACADE, storyFacade, towerFacade,storyGlow,towerGlow } from './facades.js';
-import { G,CURB,HALF,LANE,EDGE,PARK,WALK,MAN,BKN,NS,AV,BAV,ST,BRIDGE,blocks,network,CORNER_R } from './layout.js';
+import { G,CURB,HALF,LANE,EDGE,PARK,WALK,MAN,BKN,NS,AV,BAV,ST,BRIDGE,DECK_HALF,blocks,network,CORNER_R } from './layout.js';
 
 // The city itself (world units): land and water, sidewalks with curbs, street
 // markings and crosswalks, traffic lights, street lamps and trees, Central Park,
@@ -73,8 +73,8 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
     for(let i=0;i<=n;i++){const t=i/n;box(.1,1.05,.1,x0+(x1-x0)*t,top,z0+(z1-z0)*t,metal);}};
   {const e=AV[0]-HALF;walkRect(MAN.x0,e,NS.z0,NS.z1);rail(MAN.x0+.3,NS.z0,MAN.x0+.3,NS.z1);
     walkRect(e,MAN.x1,NS.z0,ST[0]-HALF);walkRect(e,MAN.x1,ST.at(-1)+HALF,NS.z1);rail(MAN.x0,NS.z0+.3,MAN.x1,NS.z0+.3);rail(MAN.x0,NS.z1-.3,MAN.x1,NS.z1-.3);
-    walkRect(AV.at(-1)+HALF,MAN.x1,ST[0]-HALF,ST.at(-1)+HALF,true);rail(MAN.x1-.3,NS.z0,MAN.x1-.3,NS.z1);
-    walkRect(BKN.x0,BAV[0]-HALF,ST[0]-HALF,ST.at(-1)+HALF,true);rail(BKN.x0+.3,NS.z0,BKN.x0+.3,NS.z1);
+    walkRect(AV.at(-1)+HALF,MAN.x1,ST[0]-HALF,ST.at(-1)+HALF,true);rail(MAN.x1-.3,NS.z0,MAN.x1-.3,BRIDGE.z-DECK_HALF-.4);rail(MAN.x1-.3,BRIDGE.z+DECK_HALF+.4,MAN.x1-.3,NS.z1);   // open where the bridge leaves the shore
+    walkRect(BKN.x0,BAV[0]-HALF,ST[0]-HALF,ST.at(-1)+HALF,true);rail(BKN.x0+.3,NS.z0,BKN.x0+.3,BRIDGE.z-DECK_HALF-.4);rail(BKN.x0+.3,BRIDGE.z+DECK_HALF+.4,BKN.x0+.3,NS.z1);
     walkRect(BKN.x0,BKN.x1,NS.z0,ST[0]-HALF);walkRect(BKN.x0,BKN.x1,ST.at(-1)+HALF,NS.z1);walkRect(BAV[1]+HALF,BKN.x1,ST[0]-HALF,ST.at(-1)+HALF);}
 
   // --- Street engineering: markings, crosswalks, stop bars, arrows, drainage, parking --
@@ -342,7 +342,8 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
     for(const sd of [-1,1]){cyl(.05,.05,1.5,8,x-1.6,top,z+sd*.8,subwayGreen);add(new THREE.SphereGeometry(.17,14,10),globe,[x-1.6,top+1.62,z+sd*.8]);}};
   const SUBWAY=new Set(['1,2','2,3','3,4','2,0','3,2','2,5']);
   for(const b of blocks()){const key=b.i+','+b.j;if(reserved.has(key)||(b.borough==='man'&&b.i<=1&&b.j<=1))continue;
-    const corners=[[b.x0+1.5,b.z0+1.5],[b.x1-1.5,b.z0+1.5],[b.x1-1.5,b.z1-1.5],[b.x0+1.5,b.z1-1.5]],c=(b.i+b.j)%4;
+    // 2.2 in from the corner: on the sidewalk even at the big curved corners.
+    const corners=[[b.x0+2.2,b.z0+2.2],[b.x1-2.2,b.z0+2.2],[b.x1-2.2,b.z1-2.2],[b.x0+2.2,b.z1-2.2]],c=(b.i+b.j)%4;
     hydrant(...corners[c]);bin(...corners[(c+2)%4]);
     if(SUBWAY.has(key))subway(b.x0+WALK+4,b.z1-1.3);
   }
@@ -350,7 +351,8 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
     cyl(.32,.42,1.5,16,p.x,G,p.z,orange);for(const y of [.35,.9])cyl(.37-y*.06,.4-y*.06,.18,16,p.x,G+y,p.z,cap);}
 
   // --- Liberty Island, in the harbour south of the bridge -----------------------------
-  {const x=68,z=104,grass=mat('#5f8f3f',{roughness:.95});
+  // Out in the harbour, south of the bridge.
+  {const x=68,z=150,grass=mat('#5f8f3f',{roughness:.95});
     const isl=new THREE.CylinderGeometry(11,12.5,2.2,40);add(isl,stone,[x,-1.6,z]);add(new THREE.CylinderGeometry(10.6,10.6,.2,40),grass,[x,-.45,z]);
     const star=new THREE.Shape();for(let i=0;i<22;i++){const a=i/22*Math.PI*2,r=i%2?5.4:7.6;star[i?'lineTo':'moveTo'](Math.sin(a)*r,Math.cos(a)*r);}
     add(new THREE.ExtrudeGeometry(star,{depth:1.6,bevelEnabled:false}).rotateX(-Math.PI/2),stone,[x,-.35,z]);

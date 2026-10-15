@@ -338,6 +338,9 @@ function chaseView(dt){
   // Smooth both points (a critically damped spring each), snapping on the first frame.
   const first=eyeS[0].x===0&&eyeS[2].x===0;
   ['x','y','z'].forEach((k,i)=>{if(first){eyeS[i].x=eye[k];lookS[i].x=look[k];}eye[k]=spring(eyeS[i],eye[k],focus?.6:C.follow,dt);look[k]=spring(lookS[i],look[k],focus?.6:C.follow*.7,dt);});
+  // Never under the road: on a slope (down off the bridge) the camera behind the
+  // car would sink into the deck. Keep it above the surface the car drives on there.
+  if(world.surface&&!focus){const g=world.surface(eye.x,eye.z,py-.12);if(g!==null){const floor=g+.12+1.6;if(eye.y<floor){eye.y=floor;eyeS[1].x=Math.max(eyeS[1].x,floor);}}}
   camera.position.copy(eye);camera.lookAt(look);
   const wantFov=C.fov+C.fovBoost*Math.min(1,p.speed/FEEL.car.maxSpeed);
   if(Math.abs(wantFov-fov)>.01){fov=damp(fov,wantFov,3,dt);camera.fov=fov;camera.updateProjectionMatrix();}

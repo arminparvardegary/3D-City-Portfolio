@@ -23,9 +23,10 @@ export const MAN={x0:-120,x1:54},RIVER={x0:54,x1:82},BKN={x0:82,x1:132},NS={z0:-
 export const AV=[-112,-72,-32,8,46];          // 46: FDR Drive along the river
 export const BAV=[90,116];                    // Brooklyn: riverside road and an avenue
 export const ST=[-112,-74,-36,2,40,78,112];
-// The Brooklyn Bridge runs along street z = 2: up from the avenue at x = 8, over
-// FDR Drive and the river, over the Brooklyn riverside road, down to x = 116.
-export const BRIDGE={z:2,x0:AV[3],x1:BAV[1],landM:14,landB:110,deck:6.6,river:[56,80]};
+// The bridge is on the last street (z = 112): from the FDR Drive crossing straight
+// over the river to the Brooklyn riverside road. Only sea under it, no road. The
+// deck is one gentle arch, highest over the middle of the river.
+export const BRIDGE={z:ST.at(-1),x0:AV.at(-1),x1:BAV[0],landM:50,landB:86,deck:3.6};
 
 // Blocks between the roads, with their place in the grid.
 export function blocks(){
@@ -37,7 +38,7 @@ export function blocks(){
 }
 
 // The road network: nodes at crossings, edges along roads. The bridge is one
-// edge from (8, 2) to (116, 2); the ground street under its ramps is not a road.
+// edge from the FDR Drive crossing to the Brooklyn riverside road.
 export function network(){
   const nodes=new Map(),key=(x,z)=>x+','+z,node=(x,z)=>{const k=key(x,z);if(!nodes.has(k))nodes.set(k,{x,z,k,out:[]});return nodes.get(k);};
   const edges=[];
@@ -47,7 +48,7 @@ export function network(){
   for(const z of ST)for(let i=0;i<AV.length-1;i++){if(z===BRIDGE.z&&AV[i]>=BRIDGE.x0)continue;link(node(AV[i],z),node(AV[i+1],z));}
   // Brooklyn.
   for(const x of BAV)for(let j=0;j<ST.length-1;j++)link(node(x,ST[j]),node(x,ST[j+1]));
-  for(const z of ST){if(z===BRIDGE.z)continue;link(node(BAV[0],z),node(BAV[1],z));}
+  for(const z of ST)link(node(BAV[0],z),node(BAV[1],z));
   // The bridge.
   link(node(BRIDGE.x0,BRIDGE.z),node(BRIDGE.x1,BRIDGE.z),'bridge');
   for(const n of nodes.values()){n.degree=n.out.length;
@@ -56,16 +57,12 @@ export function network(){
   return {nodes:[...nodes.values()],edges};
 }
 
-// Height of the bridge road above the street along x (0 off the bridge): a
-// smooth climb from the Manhattan landing, flat over the river, a smooth descent
-// to the Brooklyn landing.
-const smooth=t=>t<=0?0:t>=1?1:t*t*(3-2*t);
+// Height of the bridge road above the street along x (0 off the bridge): one
+// smooth arch from landing to landing.
 export function bridgeHeight(x){
-  const {landM,landB,deck,river}=BRIDGE;
+  const {landM,landB,deck}=BRIDGE;
   if(x<=landM||x>=landB)return 0;
-  if(x<river[0])return deck*smooth((x-landM)/(river[0]-landM));
-  if(x>river[1])return deck*smooth((landB-x)/(landB-river[1]));
-  return deck;
+  return deck*Math.sin(Math.PI*(x-landM)/(landB-landM));
 }
 export const DECK_HALF=5.2;      // the bridge deck is narrower than a street: two lanes, no parking
 export const onBridgeBand=(x,z)=>Math.abs(z-BRIDGE.z)<=DECK_HALF&&x>BRIDGE.landM-1&&x<BRIDGE.landB+1;

@@ -1,6 +1,12 @@
 import * as THREE from 'three';
 import { THEME } from '../world/theme.js';
 import { buildKeel } from './keel.js';
+import { mountStores } from '../stores/mount.tsx';
+import AppleBlock from '../stores/AppleBlock.tsx';
+import NikeBlock from '../stores/NikeBlock.tsx';
+import MiBlock from '../stores/MiBlock.tsx';
+import GoogleBlock from '../stores/GoogleBlock.tsx';
+import McDonaldsBlock from '../stores/McDonaldsBlock.tsx';
 import { createPeople } from './people.js';
 import { buildCity } from './drive/build.js';
 import { buildBridge } from './drive/bridge.js';
@@ -18,9 +24,14 @@ export function buildNYCWorld({prep,materials,player}){
   // Armin's block: Keel HQ at (1, 4). Experience and skills are off for now; their
   // blocks are ordinary city.
   const top=G+CURB;
-  const city=buildCity({reserved:new Set(['1,4']),pave:new Set(['1,4'])});
+  const city=buildCity({reserved:new Set(['1,4','0,5','1,5']),pave:new Set(['1,4','0,5','1,5'])});
   group.add(city.root);
   const keel=buildKeel({block:find(1,4),top});group.add(keel.root);
+  // Work experience stores across the street, facing Keel (north).
+  const S=1.7,PW=6.4*S,row=(b,i)=>({x:(b.x0+b.x1)/2+(i?1:-1)*(PW/2+.3),z:(b.z0+b.z1)/2});
+  const b15=find(1,5),b05=find(0,5),spots=[row(b15,0),row(b15,1),row(b05,0),row(b05,1)];
+  const stores=mountStores(group,[NikeBlock,MiBlock,GoogleBlock,McDonaldsBlock].map((C,i)=>({C,x:spots[i].x,y:top,z:spots[i].z,rot:Math.PI,scale:S})));
+  const storeSolids=spots.map(p=>[p.x,p.z,PW/2,PW/2]);
   const bridge=buildBridge({prep});group.add(bridge.root);
   for(const o of [city.root])o.traverse(m=>{if(m.isMesh)[].concat(m.material).forEach(x=>prep?.(x));});
   keel.root.traverse(m=>{if(m.isMesh)[].concat(m.material).forEach(x=>prep?.(x));});
@@ -55,14 +66,13 @@ export function buildNYCWorld({prep,materials,player}){
       const w=120+rnd()*160;sp.scale.set(w,w*.55,1);sp.position.set(-480+rnd()*960,120+rnd()*80,-480+rnd()*960);sp.renderOrder=-1;group.add(sp);clouds.push(sp);}}
   const steamMat=new THREE.SpriteMaterial({map:puffTex,transparent:true,depthWrite:false,opacity:.5,color:'#f2f3f5'});
   const steam=city.steam.flatMap(p=>Array.from({length:7},(_,i)=>{const sp=new THREE.Sprite(steamMat.clone());sp.userData={x:p.x,z:p.z,age:i/7*3};group.add(sp);return sp;}));
-  const solids=[...city.solids,...keel.solids];
+  const solids=[...city.solids,...keel.solids,...storeSolids,...bridge.solids];
   const occluders=[...city.occluders,...bridge.occluders,...keel.occluders];
   const places={keel:keel.place};
-  // Where the car can drive and how high: the streets on land (not under the
-  // low parts of the bridge ramps, which stand on a solid viaduct), and the bridge.
-  const viaduct=(x,z)=>onBridgeBand(x,z)&&((x>BRIDGE.landM+.5&&x<39.6)||(x>96.4&&x<BRIDGE.landB-.5));
+  // Where the car can drive and how high: the streets and sidewalks on land, and
+  // the bridge deck (over the river, so wherever the deck is the closer surface wins).
   function surface(x,z,y=0){
-    const ground=onLand(x,z)&&!viaduct(x,z)?city.walkHeight(x,z):null,deck=onBridgeBand(x,z)?bridgeHeight(x):null;
+    const ground=onLand(x,z)?city.walkHeight(x,z):null,deck=onBridgeBand(x,z)?bridgeHeight(x):null;
     if(ground===null)return deck;if(deck===null)return ground;
     return Math.abs(deck-y)<Math.abs(ground-y)?deck:ground;
   }
@@ -74,7 +84,7 @@ export function buildNYCWorld({prep,materials,player}){
     start:{x:AV[2]+12,z:ST[5]-LANE,h:-Math.PI/2},
     vehicle:'Sport',carColor:'#b5121b',zoom:.62,fixedZoom:true,
     placeAt(){return null;},
-    update(t,dt,camera){city.update(dt);city.sea.value+=dt;traffic.update(dt);people.update(dt);
+    update(t,dt,camera){city.update(dt);stores.update(dt);city.sea.value+=dt;traffic.update(dt);people.update(dt);
       if(camera)sky.position.copy(camera.position);
       for(const c of clouds){c.position.x+=dt*1.6;if(c.position.x>500)c.position.x-=1000;}
       for(const sp of steam){const u=sp.userData;u.age=(u.age+dt)%3;const k=u.age/3;sp.position.set(u.x+k*1.2,G+1.6+k*6,u.z);sp.scale.setScalar(.8+k*4);sp.material.opacity=.45*(1-k)*Math.min(1,k*6);}

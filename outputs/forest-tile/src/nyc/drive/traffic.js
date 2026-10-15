@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { G,HALF,LANE,network,bridgeHeight,CORNER_R } from './layout.js';
+import { G,HALF,LANE,network,bridgeHeight,onBridgeBand,CORNER_R } from './layout.js';
 import { TYPES, createFleet } from './carfamily.js';
 import { dampAngle } from '../../motion.js';
 
@@ -40,7 +40,7 @@ export function createTraffic({phase,player,prep,count=MIX.length,parked=[],seed
     const L=lane(e);state.push({...cars[i],id:i,wait:0,L,s:L.len*(.15+rand()*.6),v:cars[i].cruise*.5,turn:null,ts:0,nextE:null,x:0,y:G,z:0,h:0,hr:null});}
   // Point and heading at distance d along the current piece (lane or turn).
   function pointAt(t,d,out){
-    if(t.turn){const {pts,cum,len}=t.turn,dd=Math.min(Math.max(d,0),len-1e-4);let i=1;while(cum[i]<dd)i++;const f=(dd-cum[i-1])/(cum[i]-cum[i-1]),a=pts[i-1],b=pts[i];out[0]=a[0]+(b[0]-a[0])*f;out[1]=a[1]+(b[1]-a[1])*f;out[2]=G;return;}
+    if(t.turn){const {pts,cum,len}=t.turn,dd=Math.min(Math.max(d,0),len-1e-4);let i=1;while(cum[i]<dd)i++;const f=(dd-cum[i-1])/(cum[i]-cum[i-1]),a=pts[i-1],b=pts[i];out[0]=a[0]+(b[0]-a[0])*f;out[1]=a[1]+(b[1]-a[1])*f;out[2]=G+(onBridgeBand(out[0],out[1])?bridgeHeight(out[0]):0);return;}   // turns onto the bridge start up its ramp
     const L=t.L;out[0]=L.x0+L.fx*d;out[1]=L.z0+L.fz*d;out[2]=G+height(L.e)(out[0]);
   }
   const p=[0,0,0],ahead=[0,0,0];

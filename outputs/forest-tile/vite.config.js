@@ -5,6 +5,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 // so they ship as separate chunks that stay cached between deploys. The physics
 // engine (Rapier, WASM inlined, about 1 MB gzipped) loads on its own after the scene shows.
 export default defineConfig({
+  // The store blocks are React Three Fiber components (.tsx): automatic JSX runtime.
+  esbuild: { jsx: 'automatic' },
   // Installable app with an offline cache (the 3D assets are cached as they load).
   plugins: [VitePWA({
     registerType: 'autoUpdate',
