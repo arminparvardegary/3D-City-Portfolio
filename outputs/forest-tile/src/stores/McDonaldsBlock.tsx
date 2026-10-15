@@ -26,48 +26,28 @@ function T() {
       g.fillStyle = M.yellow; g.beginPath(); g.arc(128, 128, 118, 0, Math.PI * 2); g.fill();
       if (im) { const sw = 336, sh = 337, k = 150 / sh; g.drawImage(im, 0, 0, sw, sh, 128 - (sw * k) / 2, 128 - 75, sw * k, 150); }
     }),
-    menu: ctex("bu-menu", 512, 160, (g) => {
+    // Big Uppetite is a marketing agency: a live campaign dashboard on the wall.
+    menu: ctex("bu-dashboard", 512, 160, (g) => {
       const r = rng(4);
-      g.fillStyle = "#1c1c1e";
-      g.fillRect(0, 0, 512, 160);
-      for (let i = 0; i < 4; i++) {
-        const x = 12 + i * 125;
-        g.fillStyle = "#2a2a2d";
-        g.fillRect(x, 10, 115, 140);
-        // burger / fries / drink photos as simple shapes
-        g.fillStyle = ["#d9973f", "#f2c230", "#c8352b", "#8a4b23"][i];
-        g.beginPath();
-        g.ellipse(x + 57, 66, 38, 26, 0, 0, 7);
-        g.fill();
-        g.fillStyle = "#6ab544";
-        g.fillRect(x + 22, 64, 70, 6);
-        g.fillStyle = "#fff";
-        g.font = `700 20px ${FONT}`;
-        g.textAlign = "center";
-        g.fillText(["Burger", "Fries", "Shake", "Wrap"][i], x + 57, 118);
-        g.fillStyle = M.yellow;
-        g.fillText(`$${(3 + r() * 4).toFixed(2)}`, x + 57, 140);
-      }
+      g.fillStyle = "#14161b"; g.fillRect(0, 0, 512, 160);
+      g.fillStyle = "#fff"; g.font = `700 20px ${FONT}`; g.textAlign = "left"; g.fillText("CAMPAIGN  LIVE", 14, 26);
+      g.fillStyle = M.yellow; g.beginPath(); g.arc(178, 19, 6, 0, 7); g.fill();
+      [["Reach", "+248%"], ["Clicks", "92K"], ["Leads", "1.4K"]].forEach(([k, v], i) => {
+        const x = 14 + i * 84; g.fillStyle = "#23262e"; g.fillRect(x, 40, 76, 50);
+        g.fillStyle = "#9aa0aa"; g.font = `600 13px ${FONT}`; g.fillText(k, x + 8, 58);
+        g.fillStyle = "#fff"; g.font = `800 22px ${FONT}`; g.fillText(v, x + 8, 82); });
+      g.fillStyle = "#23262e"; g.fillRect(270, 40, 228, 108);
+      for (let i = 0; i < 9; i++) { const h = 20 + r() * 70; g.fillStyle = i % 3 ? "#4a4f5c" : M.yellow; g.fillRect(282 + i * 24, 140 - h, 14, h); }
+      g.strokeStyle = "#fff"; g.lineWidth = 3; g.beginPath(); g.moveTo(14, 140);
+      for (let i = 1; i <= 8; i++) g.lineTo(14 + i * 30, 140 - i * 4 - r() * 14); g.stroke();
     }),
-    poster: ctex("bu-poster", 256, 384, (g) => {
+    poster: ctex("bu-campaign", 256, 384, (g) => {
       const grd = g.createLinearGradient(0, 0, 0, 384);
-      grd.addColorStop(0, "#ffcf3a");
-      grd.addColorStop(1, "#ffb000");
-      g.fillStyle = grd;
-      g.fillRect(0, 0, 256, 384);
-      g.fillStyle = "#c8352b";
-      g.beginPath(); g.ellipse(128, 170, 90, 30, 0, 0, 7); g.fill();
-      g.fillStyle = "#6a3a1e";
-      g.fillRect(48, 190, 160, 26);
-      g.fillStyle = "#d9973f";
-      g.beginPath(); g.ellipse(128, 236, 92, 26, 0, 0, Math.PI); g.fill();
-      g.beginPath(); g.ellipse(128, 160, 92, 50, 0, Math.PI, 0); g.fill();
-      g.fillStyle = "#fff";
-      g.font = `800 40px ${FONT}`;
-      g.textAlign = "center";
-      g.fillText("NEW", 128, 70);
-      g.font = `700 26px ${FONT}`;
-      g.fillText("big taste", 128, 330);
+      grd.addColorStop(0, "#1b1d23"); grd.addColorStop(1, "#3a2f1a");
+      g.fillStyle = grd; g.fillRect(0, 0, 256, 384);
+      g.fillStyle = M.yellow; g.beginPath(); g.arc(128, 150, 70, 0, 7); g.fill();
+      g.fillStyle = "#1b1d23"; g.font = `900 64px ${FONT}`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("BU", 128, 154);
+      g.fillStyle = "#fff"; g.font = `800 34px ${FONT}`; g.fillText("BRANDS", 128, 270); g.fillText("THAT GROW", 128, 308);
     }),
   };
 }
@@ -304,7 +284,6 @@ function Store({ t }: { t: Tex }) {
           <Mat c="#8b8f95" r={0.9} bump={stucco()} bs={1} />
         </mesh>
         <group position={[-0.55, 0.14, h - 0.3]}>
-          <GoldenArches h={1.05} />
         </group>
         <RoundedBox args={[0.7, 0.32, 0.5]} radius={0.03} smoothness={2} position={[0.6, 0.3, -0.7]}>
           <Mat c="#d9dce0" r={0.4} m={0.2} />
@@ -326,8 +305,6 @@ export default function McDonaldsBlock() {
       <group position={[0, 0.045, 0]}>
         <Planter position={[-1.3, 0, 2.15]} w={1.0} color="#7a5a42" seed={3} />
         <Planter position={[2.15, 0, -1.3]} w={1.0} color="#7a5a42" seed={4} rotation={Math.PI / 2} />
-        <Umbrella position={[2.35, 0, 1.25]} />
-        <Umbrella position={[1.1, 0, 2.5]} />
         {[-2.6, -2.1].map((x) => (
           <Bollard key={x} position={[x, 0, 2.9]} />
         ))}

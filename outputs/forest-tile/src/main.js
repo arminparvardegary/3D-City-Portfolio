@@ -15,6 +15,7 @@ import { createPlayground } from './world/playground.js';
 import { buildCampus } from './world/campus.js';
 import { createExperience } from './ui/experience.js';
 import { createIntro } from './ui/intro.js';
+import { createVisit } from './ui/visit.js';
 import { startAnalytics, track } from './analytics.js';
 startAnalytics();
 import { buildNYCWorld } from './nyc/world.js';
@@ -260,6 +261,13 @@ addEventListener('keydown',e=>{if(e.key==='Enter'&&!prompt.hidden&&!e.repeat){e.
 
 // Sound: engine, tyres, wind, horn (H), the city round you; M or the button mutes.
 const audio=createAudio({car,world,maxSpeed:()=>FEEL.car.maxSpeed});
+// Parking: stop in a bay in front of a place and press Enter for its card; the
+// camera turns to the store while the card is open.
+const visit=world.parking?createVisit({
+  onOpen:b=>{const side=Math.sign(b.z-b.store.z)||1;focus={x:b.store.x,z:b.store.z,y:3.2,dist:21,side,zoom};followHold=0;needsRender=true;},
+  onClose:()=>{focus=null;needsRender=true;},
+}):null;
+const parkedIn=()=>{const p=car.shown;if(!p||p.speed>.5)return null;return world.parking.find(b=>Math.abs(p.x-b.x)<b.w/2&&Math.abs(p.z-b.z)<b.d/2)||null;};
 // Night driving: two warm headlight beams that light the road ahead.
 if(CHASE){const beam=new THREE.SpotLight('#ffd7a1',60,38,.42,.55,1.3);beam.position.set(0,.75,1.7);beam.target.position.set(0,0,14);car.rig.add(beam,beam.target);}
 car.onHit=s=>{audio.hit(s);if(!reducedMotion.matches&&s>.2)trauma=Math.min(1,trauma+s*.8);};
@@ -331,7 +339,7 @@ function chaseView(dt){
   const C=FEEL.chase,p=car.shown,py=p.y??.12;
   if(focus&&p.speed>.6)focus=null;
   if(chaseYaw===null)chaseYaw=p.h;
-  if(focus){const fd=focus.dist??16;look.set(focus.x,focus.y??4,focus.z-3);eye.set(focus.x+2.5*fd/16,(focus.y??4)+4.5*fd/16,focus.z+fd);}
+  if(focus){const fd=focus.dist??16,sd=focus.side??1;look.set(focus.x,focus.y??4,focus.z-3*sd);eye.set(focus.x+2.5*fd/16,(focus.y??4)+4.5*fd/16,focus.z+fd*sd);}   // side: -1 looks from the north
   else{
     chaseYaw=dampAngle(chaseYaw,p.h,C.turnLag*(1+p.speed*.05),dt);
     const side=glance.KeyQ-glance.KeyE,back=glance.KeyQ&&glance.KeyE;
@@ -394,6 +402,7 @@ function render(time=0){
   // The car is driven by the visitor, so it keeps running even with the breeze paused.
   // The world animates (beacons, taxis, clouds); 2 means moving shadows too.
   {const w=world.update(time,frameDt/1000,camera);if(w){animating=true;if(w===2)renderer.shadowMap.needsUpdate=true;}}
+  if(visit)visit.update(parkedIn());
   parkedAt=story&&!story.active?parkedBay():null;if(prompt.hidden===!!parkedAt){prompt.hidden=!parkedAt;if(parkedAt)audio.ui.prompt();}
   audio.update(frameDt/1000);
   if(story?.update(frameDt/1000))animating=true;

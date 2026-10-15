@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { THEME } from '../world/theme.js';
 import { buildKeelSign } from './keel.js';
+import { buildParking } from './parking.js';
 import { mountStores } from '../stores/mount.tsx';
 import AppleBlock from '../stores/AppleBlock.tsx';
 import NikeBlock from '../stores/NikeBlock.tsx';
@@ -11,7 +12,7 @@ import { createPeople } from './people.js';
 import { buildCity } from './drive/build.js';
 import { buildBridge } from './drive/bridge.js';
 import { createTraffic } from './drive/traffic.js';
-import { G,CURB,HALF,LANE,ST,AV,MAN,BKN,NS,BRIDGE,blocks,bridgeHeight,onBridgeBand,onLand } from './drive/layout.js';
+import { G,CURB,HALF,LANE,PARK,ST,AV,MAN,BKN,NS,BRIDGE,blocks,bridgeHeight,onBridgeBand,onLand } from './drive/layout.js';
 
 // New York as the world you drive (world units, about 1.5 m each). The plan is
 // in drive/layout.js: Manhattan, the East River, a strip of Brooklyn, water all
@@ -38,6 +39,13 @@ export function buildNYCWorld({prep,materials,player}){
   const spots=[0,1,2,3].map(i=>({x:rc+(1.5-i)*(PW+GAP),z:rz}));
   const stores=mountStores(group,[...[NikeBlock,MiBlock,GoogleBlock,McDonaldsBlock].map((C,i)=>({C,x:spots[i].x,y:top,z:spots[i].z,rot:Math.PI,scale:S})),{C:AppleBlock,x:kx,y:top,z:kz,rot:0,scale:KS}]);
   const storeSolids=spots.map(p=>[p.x,p.z,PW/2,PW/2]);
+  // A parking bay in front of every place: park, press Enter.
+  const IDS=['rush','hindra','aaq','bigup'],NAMES=['Rush Graphics','Hindra Studio','AAQ Properties','Big Uppetite'];
+  // Parallel bays in the parking lane of street 78, in front of each store; Keel's
+  // on the other side of the same street.
+  const parking=buildParking({top,places:[...spots.map((p,i)=>({id:IDS[i],name:NAMES[i],x:p.x,z:ST[5]+PARK,side:1})),
+    {id:'keel',name:'Keel',x:kx,z:ST[5]-PARK,side:-1}]});
+  group.add(parking.root);
   const bridge=buildBridge({prep});group.add(bridge.root);
   for(const o of [city.root])o.traverse(m=>{if(m.isMesh)[].concat(m.material).forEach(x=>prep?.(x));});
   // Traffic: about twenty cars of every type, each with its own speed.
@@ -71,7 +79,7 @@ export function buildNYCWorld({prep,materials,player}){
       const w=120+rnd()*160;sp.scale.set(w,w*.55,1);sp.position.set(-330+rnd()*660,110+rnd()*60,-330+rnd()*660);sp.renderOrder=-1;group.add(sp);clouds.push(sp);}}
   const steamMat=new THREE.SpriteMaterial({map:puffTex,transparent:true,depthWrite:false,opacity:.5,color:'#f2f3f5'});
   const steam=city.steam.flatMap(p=>Array.from({length:7},(_,i)=>{const sp=new THREE.Sprite(steamMat.clone());sp.userData={x:p.x,z:p.z,age:i/7*3};group.add(sp);return sp;}));
-  const solids=[...city.solids,...keel.solids,...storeSolids,...bridge.solids];
+  const solids=[...city.solids,...keel.solids,...storeSolids,...bridge.solids,...parking.solids];
   const occluders=[...city.occluders,...bridge.occluders,...keel.occluders];
   const places={keel:keel.place};
   // Where the car can drive and how high: the streets and sidewalks on land, and
@@ -82,6 +90,7 @@ export function buildNYCWorld({prep,materials,player}){
     return deck!==null?deck:ground;
   }
   return {
+    parking:parking.bays.map((b,i)=>({...b,store:i<4?spots[i]:{x:kx,z:kz}})),
     group,solids,places,labels:[],row:null,lot:null,occluders,surface,trafficCars:traffic.cars,
     obstacles:()=>traffic.obstacles(),circles:bridge.circles,
     bounds:{x0:MAN.x0-6,x1:BKN.x1+6,z0:NS.z0-6,z1:NS.z1+6},
@@ -89,7 +98,7 @@ export function buildNYCWorld({prep,materials,player}){
     start:{x:AV[2]+12,z:ST[5]-LANE,h:-Math.PI/2},
     vehicle:'Sport',carColor:'#b5121b',zoom:.62,fixedZoom:true,
     placeAt(){return null;},
-    update(t,dt,camera){city.update(dt);stores.update(dt);city.sea.value+=dt;traffic.update(dt);people.update(dt);
+    update(t,dt,camera){city.update(dt);stores.update(dt);parking.update(t,player());city.sea.value+=dt;traffic.update(dt);people.update(dt);
       if(camera)sky.position.copy(camera.position);
       for(const c of clouds){c.position.x+=dt*1.6;if(c.position.x>340)c.position.x-=680;}
       for(const sp of steam){const u=sp.userData;u.age=(u.age+dt)%3;const k=u.age/3;sp.position.set(u.x+k*1.2,G+1.6+k*6,u.z);sp.scale.setScalar(.8+k*4);sp.material.opacity=.45*(1-k)*Math.min(1,k*6);}
