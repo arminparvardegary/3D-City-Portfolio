@@ -60,7 +60,7 @@ export function buildParking({places,top}){
     // A logo sign on the sidewalk only for Keel (the four companies' stores carry their own logos).
     if(id==='keel'){
     const sx=x+LX/2-.4,sz=z+side*(LZ/2+1.25+.9);
-    add(new THREE.CylinderGeometry(.09,.11,3.2,10),post,sx,top+1.6,sz).castShadow=true;
+    add(new THREE.CylinderGeometry(.09,.11,2.66,10),post,sx,top+1.33,sz).castShadow=true;   // ends under the panel, never across the logo
     const tex=keelPanel(),panel=new THREE.MeshStandardMaterial({map:tex,emissiveMap:tex,emissive:'#ffffff',emissiveIntensity:.55,roughness:.5});
     const sign=add(new THREE.BoxGeometry(1.9,1.9,.14),[post,post,post,post,panel,panel],sx,top+3.6,sz);sign.castShadow=true;
     solids.push([sx,sz,.2,.2]);
