@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createKit } from '../diorama/kit.js';
+import { BRAND, imgTex, contain, url } from '../stores/brand.ts';
 
 // Brooklyn's luxury boutiques: one tall floor, big footprint, standing on the
 // ground. Glass on every side with slim gold mullions and a glowing gold line at
@@ -18,8 +19,8 @@ const marble=(()=>{let tex=null;return()=>{if(tex)return tex;const c=document.cr
   g.strokeStyle='rgba(120,110,100,.35)';for(let i=0;i<=256;i+=64){g.beginPath();g.moveTo(i,0);g.lineTo(i,256);g.moveTo(0,i);g.lineTo(256,i);g.stroke();}
   tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;tex.wrapS=tex.wrapT=THREE.RepeatWrapping;return tex;};})();
 
-export function buildLux({x,z,top,w=9,d=15,h=5,facing=-1,style=0}){
-  const S=LUX[style%LUX.length],K=createKit({flat:false}),{box,cyl,add,mat}=K,root=new THREE.Group(),f=facing;
+export function buildLux({x,z,top,w=9,d=15,h=5,facing=-1,style=0,palette=null,band=true}){
+  const S=palette||LUX[style%LUX.length],K=createKit({flat:false}),{box,cyl,add,mat}=K,root=new THREE.Group(),f=facing;
   const gold=mat(S.gold,{metalness:.95,roughness:.25,envMapIntensity:1.6});
   const goldGlow=mat(S.gold,{emissive:S.gold,emissiveIntensity:2.2,roughness:.4});
   const black=mat('#111114',{roughness:.35,metalness:.4});
@@ -46,7 +47,7 @@ export function buildLux({x,z,top,w=9,d=15,h=5,facing=-1,style=0}){
   // above, a runner and two gold-lit planters.
   const ex=x+f*(hw+.01);
   box(.9,.18,4.6,x+f*(hw+.45),top+h-1.1,z,black);box(.86,.04,4.4,x+f*(hw+.45),top+h-1.12,z,warm);
-  box(.1,.5,4.4,ex+f*.05,top+h-.45,z,goldGlow);   // a plain gold band over the doors
+  if(band)box(.1,.5,4.4,ex+f*.05,top+h-.45,z,goldGlow);   // a plain gold band over the doors
   box(1.8,.02,2.2,x+f*(hw+.9),top+.25,z,mat('#5a1a22',{roughness:.9}));
   for(const s of [-1,1]){box(.8,.7,.8,x+f*(hw+.7),top+.25,z+s*1.8,black);add(new THREE.SphereGeometry(.45,12,10),mat('#3f7a4f',{roughness:.9}),[x+f*(hw+.7),top+1.35,z+s*1.8]);
     box(.82,.04,.82,x+f*(hw+.7),top+.95,z+s*1.8,goldGlow);}
@@ -59,5 +60,53 @@ export function buildLux({x,z,top,w=9,d=15,h=5,facing=-1,style=0}){
   for(const pz of [-1.4,1.4])box(1.6,.3,.7,x,top+h+.2,z+pz,mat('#f2ece2',{roughness:.8}));
   K.finish(root);
   root.traverse(o=>{if(o.isMesh&&o.material!==glass){o.castShadow=o.receiveShadow=true;}});
-  return {root,solid:[x,z,hw+.3,hd+.3]};
+  return {root,solid:[x,z,hw+.3,hd+.3],mat};
+}
+
+// Keel's flagship in Brooklyn: the same glass boutique in Keel's colours (white
+// pearl frames, Keel blue glass and glow), a lit "Keel." sign on the roof, the
+// Meet Keel. display wall and the character inside, iMessage style bubbles
+// floating slowly above, a glowing reflecting pool at the door, blue uplights.
+const SANS='-apple-system,"SF Pro Display","Helvetica Neue",Arial,sans-serif';
+export function buildKeelBoutique({x,z,top,w=9,d=18,h=5.4,facing=-1}){
+  const B=BRAND.keel,f=facing;
+  const base=buildLux({x,z,top,w,d,h,facing,band:false,palette:{gold:'#eef2fa',tint:'#16305e'}});
+  const root=base.root,hw=w/2,hd=d/2;
+  const blue=new THREE.MeshStandardMaterial({color:B.color,emissive:B.color,emissiveIntensity:2.4,roughness:.4});
+  const add=(geo,m,px,py,pz,ry=0)=>{const o=new THREE.Mesh(geo,m);o.position.set(px,py,pz);o.rotation.y=ry;root.add(o);return o;};
+  const face=f>0?Math.PI/2:-Math.PI/2;
+  // A Keel blue glow line round the roof and the base.
+  add(new THREE.BoxGeometry(w+.62,.1,d+.62),blue,x,top+h+.16,z);add(new THREE.BoxGeometry(w+.5,.05,d+.5),blue,x,top+.27,z);
+  // "Keel." on the roof, lit, facing the river.
+  const sign=imgTex('keel-roof',2048,600,[],g=>{g.clearRect(0,0,2048,600);g.font=`700 460px ${SANS}`;g.textBaseline='alphabetic';const t='Keel',tw=g.measureText(t).width,dw=g.measureText('.').width,x0=(2048-tw-dw)/2;
+    g.fillStyle='#ffffff';g.fillText(t,x0,500);g.fillStyle=B.color;g.fillText('.',x0+tw,500);});
+  const sm=new THREE.MeshStandardMaterial({map:sign,emissiveMap:sign,emissive:'#ffffff',emissiveIntensity:1.1,transparent:true,depthWrite:false,side:THREE.DoubleSide});
+  add(new THREE.PlaneGeometry(9,2.64),sm,x+f*(hw-.6),top+h+1.9,z,face);
+  // The Meet Keel. display wall inside, on the back wall, facing the doors.
+  const banner=imgTex('keel-flagship-banner',1600,900,[B.banner],(g,[pose])=>{const grd=g.createLinearGradient(0,0,0,900);grd.addColorStop(0,'#ffffff');grd.addColorStop(1,'#e6eeff');g.fillStyle=grd;g.fillRect(0,0,1600,900);
+    g.fillStyle='#1d1d1f';g.font=`700 190px ${SANS}`;g.textAlign='left';g.fillText('Meet',80,280);g.fillStyle=B.color;g.fillText('Keel.',80,470);
+    g.fillStyle='#6e6e73';g.font=`500 56px ${SANS}`;g.fillText('The AI assistant you text like a friend.',84,590);
+    g.fillStyle=B.color;g.beginPath();g.roundRect(80,660,600,110,55);g.fill();g.fillStyle='#fff';g.font=`600 50px ${SANS}`;g.fillText('Text Keel on iMessage ›',120,732);
+    contain(g,pose,900,20,680,880);});
+  add(new THREE.PlaneGeometry(7,3.94),new THREE.MeshStandardMaterial({map:banner,emissiveMap:banner,emissive:'#ffffff',emissiveIntensity:.75,roughness:.4}),x-f*(hw-.12),top+.4+2.2,z,face);
+  // The character, life size, inside by the glass.
+  const pose=new THREE.TextureLoader().load(url('keel/pose-win.webp'));pose.colorSpace=THREE.SRGBColorSpace;
+  add(new THREE.PlaneGeometry(1.75,3.55),new THREE.MeshStandardMaterial({map:pose,transparent:true,alphaTest:.4,side:THREE.DoubleSide,emissive:'#ffffff',emissiveMap:pose,emissiveIntensity:.25}),x+f*(hw-1.4),top+.25+1.78,z-hd*.45,face);
+  // Two reflecting pools either side of the door, glowing blue, white stone rims.
+  for(const sgn of [-1,1]){const pz=z+sgn*(2.9+(hd-3.6)/2),len=hd-3.6;
+    add(new THREE.BoxGeometry(1.9,.16,len+.3),new THREE.MeshStandardMaterial({color:'#f2f0ec',roughness:.4}),x+f*(hw+1.35),top+.0,pz);
+    const pool=new THREE.Mesh(new THREE.BoxGeometry(1.5,.06,len),new THREE.MeshStandardMaterial({color:'#0e2c66',emissive:B.color,emissiveIntensity:.9,roughness:.05,metalness:.3}));
+    pool.position.set(x+f*(hw+1.35),top+.1,pz);root.add(pool);}
+  // Blue uplights round the whole building.
+  const up=new THREE.MeshStandardMaterial({color:'#dfe8ff',emissive:B.color,emissiveIntensity:3});
+  for(let t=-hd+1;t<=hd-1;t+=1.8)for(const s of [-1,1])add(new THREE.BoxGeometry(.22,.06,.22),up,x+s*(hw+.3),top+.27,z+t);
+  // Chat bubbles floating slowly above the roof, as on keeltwin.com.
+  const bubble=(text,me,i)=>{const t=imgTex('keel-bubble-'+i,1024,256,[],g=>{g.clearRect(0,0,1024,256);g.font=`600 84px ${SANS}`;const tw=Math.min(940,g.measureText(text).width+90);
+      const bx=me?1024-tw-10:10;g.fillStyle=me?B.color:'#ffffff';g.beginPath();g.roundRect(bx,40,tw,170,85);g.fill();g.fillStyle=me?'#ffffff':'#1d1d1f';g.textBaseline='middle';g.textAlign='left';g.fillText(text,bx+45,128);});
+    const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthWrite:false,fog:false,color:'#c9c9d6'}));sp.scale.set(5.2,1.3,1);root.add(sp);return sp;};
+  const bubbles=[['Remind me in 3 minutes',true],['Done. Set for 4:32 PM ✓',false],['Plan my day',true]].map(([t,me],i)=>({sp:bubble(t,me,i),y:top+h+4+i*1.6,ph:i*2.1}));
+  let clock=0;
+  return {root,solid:base.solid,update(dt){clock+=Math.min(dt,.1);
+    bubbles.forEach((b,i)=>{b.sp.position.set(x+f*(hw-1.5)+Math.sin(clock*.5+b.ph)*.4,b.y+Math.sin(clock*1.1+b.ph)*.18,z+(i-1)*3.2);b.sp.material.opacity=.85+.15*Math.sin(clock*1.3+b.ph);});
+    blue.emissiveIntensity=2.1+Math.sin(clock*1.2)*.4;}};
 }

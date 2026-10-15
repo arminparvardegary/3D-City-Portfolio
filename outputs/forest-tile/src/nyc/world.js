@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { THEME } from '../world/theme.js';
 import { buildKeelSign } from './keel.js';
 import { buildParking, experienceBoard } from './parking.js';
-import { buildLux } from './lux.js';
+import { buildLux, buildKeelBoutique } from './lux.js';
 import { mountStores } from '../stores/mount.tsx';
 import AppleBlock from '../stores/AppleBlock.tsx';
 import NikeBlock from '../stores/NikeBlock.tsx';
@@ -43,7 +43,10 @@ export function buildNYCWorld({prep,materials,player}){
   const stores=mountStores(group,[...[NikeBlock,MiBlock,GoogleBlock,McDonaldsBlock].map((C,i)=>({C,x:spots[i].x,y:top,z:spots[i].z,rot:Math.PI,scale:S})),{C:AppleBlock,x:kx,y:top,z:kz,rot:0,scale:KS}]);
   const storeSolids=spots.map(p=>[p.x,p.z,PW/2,PW/2]);
   // Brooklyn: a big one floor glass boutique on every block, facing the river.
-  const lux=BK.map((key,j)=>{const b=find(9,j),cx=(b.x0+b.x1)/2,cz=(b.z0+b.z1)/2;const L=buildLux({x:cx,z:cz,top,w:9,d:17,facing:-1,style:j});group.add(L.root);return {...L,x:cx,z:cz,j};});
+  // The first one, where the bridge lands, is Keel's flagship.
+  const KEEL_BK=5;
+  const lux=BK.map((key,j)=>{const b=find(9,j),cx=(b.x0+b.x1)/2,cz=(b.z0+b.z1)/2;
+    const L=j===KEEL_BK?buildKeelBoutique({x:cx,z:cz,top,facing:-1}):buildLux({x:cx,z:cz,top,w:9,d:17,facing:-1,style:j});group.add(L.root);return {...L,x:cx,z:cz,j};});
   // A parking bay in front of every place: park, press Enter.
   const IDS=['rush','hindra','aaq','bigup'],NAMES=['Rush Graphics','Hindra Studio','AAQ Properties','Big Uppetite'];
   // Parallel bays in the parking lane of street 78, in front of each store; Keel's
@@ -51,7 +54,7 @@ export function buildNYCWorld({prep,materials,player}){
   const parking=buildParking({top,places:[...spots.map((p,i)=>({id:IDS[i],name:NAMES[i],x:p.x,z:ST[5]+(EDGE+HALF)/2,side:1,store:{x:p.x,z:p.z}})),
     {id:'keel',name:'Keel',x:kx,z:ST[5]-(EDGE+HALF)/2,side:-1,store:{x:kx,z:kz}},
     // Each Brooklyn boutique: a bay on the riverside road, right in front of it.
-    ...lux.map(L=>({id:'lux'+L.j,name:'',x:BAV[0]+(EDGE+HALF)/2,z:L.z,side:1,axis:'z',store:{x:L.x,z:L.z}}))]});
+    ...lux.map(L=>({id:L.j===KEEL_BK?'keel-bk':'lux'+L.j,name:L.j===KEEL_BK?'Keel':'',x:BAV[0]+(EDGE+HALF)/2,z:L.z,side:1,axis:'z',store:{x:L.x,z:L.z}}))]});
   group.add(parking.root);
   // A smart board on the plaza at the start of the row, turned toward the crossing
   // you come from (east, on street 78).
@@ -109,7 +112,7 @@ export function buildNYCWorld({prep,materials,player}){
     start:{x:AV[2]+12,z:ST[5]-LANE,h:-Math.PI/2},
     vehicle:'Sport',carColor:'#b5121b',zoom:.62,fixedZoom:true,
     placeAt(){return null;},
-    update(t,dt,camera){city.update(dt);stores.update(dt);parking.update(dt,player());city.sea.value+=dt;traffic.update(dt);people.update(dt);
+    update(t,dt,camera){city.update(dt);stores.update(dt);for(const L of lux)L.update?.(dt);parking.update(dt,player());city.sea.value+=dt;traffic.update(dt);people.update(dt);
       if(camera)sky.position.copy(camera.position);
       for(const c of clouds){c.position.x+=dt*1.6;if(c.position.x>340)c.position.x-=680;}
       for(const sp of steam){const u=sp.userData;u.age=(u.age+dt)%3;const k=u.age/3;sp.position.set(u.x+k*1.2,G+1.6+k*6,u.z);sp.scale.setScalar(.8+k*4);sp.material.opacity=.45*(1-k)*Math.min(1,k*6);}

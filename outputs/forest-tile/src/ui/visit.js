@@ -50,8 +50,8 @@ export function createVisit({onOpen,onClose}){
   let bay=null,open=null;
 
   function fill(b){
-    const job=JOBS.find(j=>j.id===b.id),logo=LOGO[b.id];
-    const logoHtml=logo?`<div class="logo" style="background-image:url('${url(logo)}');${b.id==='keel'?'background-size:cover;':''}"></div>`
+    const job=JOBS.find(j=>j.id===b.id),logo=LOGO[b.id.startsWith('keel')?'keel':b.id];
+    const logoHtml=logo?`<div class="logo" style="background-image:url('${url(logo)}');${b.id.startsWith('keel')?'background-size:cover;':''}"></div>`
       :`<div class="logo" style="background:#141416;display:grid;place-items:center;color:${BRAND.rush.color};font:italic 900 30px ${FONT}">RUSH</div>`;
     if(job){
       card.innerHTML=`${logoHtml}<p class="label">Experience</p><h2>${b.name}</h2><p class="role">${job.role}</p>
@@ -81,7 +81,7 @@ export function createVisit({onOpen,onClose}){
     // Every frame: the bay the car stands still in (or null).
     update(b){
       if(open&&(!b||b.id!==open.id))close();   // drove away
-      if(b!==bay){bay=b;if(b&&!open){prompt.innerHTML=`<kbd>Enter</kbd><span>${b.id==='keel'?'Visit':'See'}</span><b>${b.name||'Boutique'}</b>`;prompt.hidden=false;
+      if(b!==bay){bay=b;if(b&&!open){prompt.innerHTML=`<kbd>Enter</kbd><span>${b.id.startsWith('keel')?'Visit':'See'}</span><b>${b.name||'Boutique'}</b>`;prompt.hidden=false;
           if(!reduced.matches)gsap.fromTo(prompt,{y:12,opacity:0},{y:0,opacity:1,duration:.35,ease:'power2.out'});}
         else prompt.hidden=true;}
     },
