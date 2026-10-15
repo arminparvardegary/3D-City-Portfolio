@@ -86,7 +86,9 @@ document.documentElement.style.setProperty('--sky-top',skyTint.top);document.doc
 const CAR_MODEL=world.vehicle??'City';
 const car=createCarControls(scene,materials,{prep:softenShadows,index:VEHICLES.findIndex(v=>v.name===CAR_MODEL),home:world.start??{x:0,z:0,h:Math.PI/2}});
 car.setBounds(bounds);car.addStatic([],world.solids);car.paint.color.set(world.carColor??THEME.campus.car);
-if(world.obstacles)car.setObstacles(world.obstacles);
+if(world.obstacles)car.setObstacles(world.obstacles);if(world.vehicleBoxes)car.setVehicleBoxes(world.vehicleBoxes);
+// Dev: ?colliders draws every collision shape over the scene.
+if(new URLSearchParams(location.search).has('colliders'))import('./dev/colliders.js').then(m=>m.showColliders({scene,car,world}));
 carRef=car;if(world.surface)car.setSurface(world.surface);if(world.circles)car.addStatic(world.circles);
 // Physics toys belong to the campus only.
 const playground=WORLD==='campus'?createPlayground({scene,prep:softenShadows,car,bounds:tb,solids:world.solids}):null;

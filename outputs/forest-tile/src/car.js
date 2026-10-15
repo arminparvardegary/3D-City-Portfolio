@@ -17,7 +17,7 @@ const KEYS={KeyW:'gas',ArrowUp:'gas',KeyS:'brake',ArrowDown:'brake',KeyA:'left',
 const BOXES=[];
 const CIRCLES=[];
 let BOUNDS={x0:-4.95,x1:4.95,z0:-4.95,z1:4.95};
-let dynamicObstacles=()=>[];
+let dynamicObstacles=()=>[],dynamicBoxes=()=>[];
 // The tyres sit 2.5 cm into the road (a loaded tyre flattens), so the car never floats.
 const SEAT=.028;
 // A soft contact shadow under the car, riding with it.
@@ -39,47 +39,93 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
     C.coast*=Math.min(1.3,Math.max(.7,1350/d.mass*1.0+.3));
     const heavy=Math.min(1,Math.max(0,(d.mass-1350)/12000));S.stiffness*=1-heavy*.45;S.damping*=1-heavy*.25;S.pitch*=1+heavy*.6;S.roll*=1+heavy*.5;};
   tune(index);
-  let cy=0,x=home.x,z=home.z,h=home.h,v=0,vy=0,yaw=0,steer=0,a=0,lat=0,brakeRamp=0,head=.55,tail=.45,slide=0,rollAngle=0;
+  let lastTy=null,stepEase=0,cy=0,x=home.x,z=home.z,h=home.h,v=0,vy=0,yaw=0,steer=0,a=0,lat=0,brakeRamp=0,head=.55,tail=.45,slide=0,rollAngle=0;
   // Sprung body: angles (rad) and heave (units), each with its own velocity.
   let pitch=0,pitchV=0,roll=0,rollV=0,heave=0,heaveV=0;
   let parts=buildVehicle(index,parent,m,prep);addContact(parts);let current=index,bodyY=parts.car.position.y,rigY=parts.rig.position.y-SEAT;parts.rig.rotation.order='YXZ';
   const skid=createSkid(parent),smoke=createSkid(parent,{color:'#e4e1f0',size:2.1,rate:36,opacity:.42,life:2.2,rise:.9}),frontW=[{x:0,z:0},{x:0,z:0}];
-  // The footprint as a row of circles along the car.
-  let probes=[],r=1;
-  const footprint=()=>{r=parts.width/2*.88;   // the body, not the mirrors: cars that look apart never touch
-    const k=Math.max(0,parts.length/2-r*.9),n=Math.max(1,Math.ceil(k/r));probes=[];for(let i=-n;i<=n;i++)probes.push(k*i/n);};
+  // The collision shape is the body itself: a box as wide as the body sides
+  // (mirrors left out) from the real front to the real back, turning with the
+  // car. probes are points along its centre line for the road checks.
+  let probes=[],r=1,hl=2,hw=.8,oz=0;
+  const footprint=()=>{const b=parts.body??{hw:parts.width/2*.88,z0:-parts.length/2,z1:parts.length/2};
+    hw=b.hw;hl=(b.z1-b.z0)/2;oz=(b.z1+b.z0)/2;r=hw;const n=Math.max(1,Math.ceil(hl/.45));probes=[];for(let i=-n;i<=n;i++)probes.push(oz+hl*i/n);};
   footprint();
-  // Collisions never trap the car. A pose is impossible where there is no road
-  // (water, off the edge, a step up or down); otherwise a move is refused only if
-  // it takes the car deeper into something. So when the car touches or overlaps
-  // another car, a curb or a post, backing out, steering away or sliding along
-  // always works.
+  // A pose is impossible where there is no road under the car (water, off the
+  // edge) or the road steps more than a curb from where the car is. On a slope,
+  // points further along a long vehicle may sit higher or lower (up to 1 in 4).
   function impossible(px,pz,ph){
-    const fx=Math.sin(ph),fz=Math.cos(ph);
+    const fx=Math.sin(ph),fz=Math.cos(ph),sx=fz,sz=-fx;
     for(const o of probes){const cx=px+fx*o,cz=pz+fz*o;
-      // A step is a wall, but a ramp is not: points further along a long vehicle may
-      // sit higher or lower on a slope (up to about 1 in 4), so a bus can climb the bridge.
       if(surface){const sy=surface(cx,cz,cy+Math.abs(o)*.25);if(sy===null||Math.abs(sy-cy)>.9+Math.abs(o)*.25)return true;}
       if(cx<BOUNDS.x0+r||cx>BOUNDS.x1-r||cz<BOUNDS.z0+r||cz>BOUNDS.z1-r)return true;}
+    // All four corners need ground (or deck) under them too.
+    if(surface)for(const a of [-1,1])for(const c of [-1,1]){const ox=px+fx*(oz+a*(hl-.02))+sx*c*(hw-.02),oz2=pz+fz*(oz+a*(hl-.02))+sz*c*(hw-.02);if(surface(ox,oz2,cy)===null)return true;}
     return false;
   }
-  // How deep the car sits inside things at a pose (0 when clear).
-  function depth(px,pz,ph){
-    const fx=Math.sin(ph),fz=Math.cos(ph);let d=0;
-    for(const o of probes){const cx=px+fx*o,cz=pz+fz*o;
-      // A box with a height (5th value) only counts on its level (a bridge passes over it).
-      for(const [bx,bz,hw,hd,bt] of BOXES){if(bt!==undefined&&cy>bt+.5)continue;
-        const qx=Math.max(bx-hw,Math.min(cx,bx+hw)),qz=Math.max(bz-hd,Math.min(cz,bz+hd)),dist=Math.hypot(cx-qx,cz-qz);
-        if(dist===0)d+=r+Math.min(cx-(bx-hw),bx+hw-cx,cz-(bz-hd),bz+hd-cz);else if(dist<r)d+=r-dist;}
-      for(const [qx,qz,qr] of CIRCLES){const dist=Math.hypot(cx-qx,cz-qz);if(dist<r+qr)d+=r+qr-dist;}
-      for(const [qx,qz,qr,qy] of dynamicObstacles()){if(qy!==undefined&&Math.abs(qy-cy)>=2)continue;const dist=Math.hypot(cx-qx,cz-qz);if(dist<r+qr)d+=r+qr-dist;}
-    }
+  // How deep the body box sits inside things at a pose (0 when clear): exact
+  // overlaps (separating axes) with boxes and other cars, closest point for posts.
+  const sep=(dx,dz,ax,az,ra,rb)=>ra+rb-Math.abs(dx*ax+dz*az);
+  // Only what is near the car is checked: gathered once per physics step (a car
+  // moves at most a few centimetres a step), so the many checks of a step stay cheap.
+  let nearBoxes=[],nearCircles=[],nearCars=[],nearDyn=[];
+  function gather(){const R=hl+hw+4,cx=x,cz=z;
+    nearBoxes=BOXES.filter(b=>Math.abs(b[0]-cx)<R+b[2]&&Math.abs(b[1]-cz)<R+b[3]);
+    nearCircles=CIRCLES.filter(q=>Math.abs(q[0]-cx)<R+q[2]&&Math.abs(q[1]-cz)<R+q[2]);
+    nearCars=dynamicBoxes().filter(q=>Math.abs(q[0]-cx)<R+q[3]+q[4]&&Math.abs(q[1]-cz)<R+q[3]+q[4]).map(q=>q.slice());
+    nearDyn=nearCars.length?[]:dynamicObstacles().filter(q=>Math.abs(q[0]-cx)<R+q[2]&&Math.abs(q[1]-cz)<R+q[2]).map(q=>q.slice());}
+  function depth(px,pz,ph,why=null){
+    const fx=Math.sin(ph),fz=Math.cos(ph),sx=fz,sz=-fx,cx=px+fx*oz,cz=pz+fz*oz;let d=0;
+    // A box with a height (5th value) only counts on its level (a bridge passes over it).
+    for(const [bx,bz,bhw,bhd,bt] of nearBoxes){if(bt!==undefined&&cy>bt+.5)continue;
+      const dx=bx-cx,dz=bz-cz;if(Math.abs(dx)>bhw+hl+hw||Math.abs(dz)>bhd+hl+hw)continue;
+      const o1=sep(dx,dz,1,0,hl*Math.abs(fx)+hw*Math.abs(sx),bhw),o2=sep(dx,dz,0,1,hl*Math.abs(fz)+hw*Math.abs(sz),bhd),
+        o3=sep(dx,dz,fx,fz,hl,bhw*Math.abs(fx)+bhd*Math.abs(fz)),o4=sep(dx,dz,sx,sz,hw,bhw*Math.abs(sx)+bhd*Math.abs(sz));
+      const m=Math.min(o1,o2,o3,o4);if(m>0){d+=m;why?.push(['box',bx,bz,bhw,bhd,bt,m]);}}
+    const circle=(qx,qz,qr)=>{const dx=qx-cx,dz=qz-cz,lf=dx*fx+dz*fz,ls=dx*sx+dz*sz;if(Math.abs(lf)>hl+qr||Math.abs(ls)>hw+qr)return 0;
+      const ef=Math.max(Math.abs(lf)-hl,0),es=Math.max(Math.abs(ls)-hw,0);
+      if(ef===0&&es===0)return qr+Math.min(hl-Math.abs(lf),hw-Math.abs(ls));const dist=Math.hypot(ef,es);return dist<qr?qr-dist:0;};
+    for(const [qx,qz,qr] of nearCircles){const m=circle(qx,qz,qr);if(m>0){d+=m;why?.push(['post',qx,qz,qr,m]);}}
+    // Other cars: their bodies as boxes (with their height, so the bridge and the street below never meet).
+    if(nearCars.length)for(const [qx,qz,qh,qhl,qhw,qy] of nearCars){if(Math.abs(qy-cy)>=2)continue;const dx=qx-cx,dz=qz-cz;if(dx*dx+dz*dz>(hl+hw+qhl+qhw)**2)continue;
+      const gx=Math.sin(qh),gz=Math.cos(qh),tx=gz,tz=-gx,rb=(ax,az)=>qhl*Math.abs(gx*ax+gz*az)+qhw*Math.abs(tx*ax+tz*az),ra=(ax,az)=>hl*Math.abs(fx*ax+fz*az)+hw*Math.abs(sx*ax+sz*az);
+      const m=Math.min(sep(dx,dz,fx,fz,ra(fx,fz),rb(fx,fz)),sep(dx,dz,sx,sz,ra(sx,sz),rb(sx,sz)),sep(dx,dz,gx,gz,ra(gx,gz),rb(gx,gz)),sep(dx,dz,tx,tz,ra(tx,tz),rb(tx,tz)));if(m>0)d+=m;}
+    else for(const [qx,qz,qr,qy] of nearDyn){if(qy!==undefined&&Math.abs(qy-cy)>=2)continue;d+=circle(qx,qz,qr);}
     return d;
   }
+  // The road a round tyre rests on: wherever the road height changes under the
+  // tyre (a curb edge), the edge is found exactly (bisection) and the tyre sits
+  // on it, lowered by the tyre's curve there; so a wheel at a curb edge rests
+  // on the edge, never in it.
+  function tyreGround(wx,wz,r0,y){const fx=Math.sin(h),fz=Math.cos(h),g=k=>surface(wx+fx*k*r0,wz+fz*k*r0,y),lift=(gk,k)=>gk+Math.sqrt(Math.max(0,1-k*k))*r0-r0;
+    const K=[-1,-.75,-.5,-.25,0,.25,.5,.75,1],G=K.map(g);let best=null;
+    for(let i=0;i<K.length;i++){if(G[i]===null)continue;const e=lift(G[i],K[i]);if(best===null||e>best)best=e;
+      if(i&&G[i-1]!==null&&Math.abs(G[i]-G[i-1])>1e-4){let a=K[i-1],b=K[i];const ga=G[i-1];for(let n=0;n<10;n++){const m=(a+b)/2;if(Math.abs((g(m)??ga)-ga)<1e-4)a=m;else b=m;}
+        const hi=Math.max(G[i],G[i-1]),edge=G[i]>G[i-1]?b:a,e2=lift(hi,edge);if(e2>best)best=e2;}}
+    return best;}
+  // Where the car stands: the road under its wheels sets its height, pitch and bank.
+  function stand(){
+      // Follow the road height; tilt with the slope between the front and back of the car.
+      // The car stands on its axles: the road height under the front and rear
+      // wheels sets the pitch and the height at the car's origin, so on a ramp or
+      // a crest both axles touch the road and neither sinks in.
+      // All four wheels: pitch from front against rear, bank from left against
+      // right, so a wheel over a curb lifts its side instead of sinking in.
+      const fx2=Math.sin(h),fz2=Math.cos(h),sx2=fz2,sz2=-fx2,fa=(parts.rearZ??-parts.length*.3)+(parts.wheelbase??parts.length*.6),ra=parts.rearMost??parts.rearZ??-parts.length*.3,   // stands on its outermost axles
+        tr=parts.track??parts.width*.4;
+      const at=(o,sd)=>surface(x+fx2*o+sx2*sd*tr,z+fz2*o+sz2*sd*tr,cy),FL=at(fa,1),FR=at(fa,-1),RL=at(ra,1),RR=at(ra,-1);
+      if(FL!==null&&FR!==null&&RL!==null&&RR!==null){const fy=(FL+FR)/2,by=(RL+RR)/2;slope=Math.atan2(fy-by,fa-ra);bank=Math.atan2((FL+RL)/2-(FR+RR)/2,2*tr);return by+(fy-by)*(0-ra)/(fa-ra);}
+      bank=0;return surface(x,z,cy)??cy;
+  }
+  // A move is refused if any point along it goes deeper into something than the
+  // car already is (sliding along or turning while touching is fine). Checking
+  // the path in steps of 3 cm, not just the end, means nothing thin (a railing
+  // is 12 cm) can be jumped through between two physics steps.
   function blocked(px,pz,ph){
     if(impossible(px,pz,ph))return true;
-    const dn=depth(px,pz,ph);if(dn<=1e-6)return false;
-    return dn>depth(x,z,h)+1e-4;   // sliding along or turning while touching is fine; only going deeper is not
+    const d0=depth(x,z,h)+1e-4,dh=Math.atan2(Math.sin(ph-h),Math.cos(ph-h)),n=Math.max(1,Math.ceil((Math.hypot(px-x,pz-z)+Math.abs(dh)*(hl+hw))/.03));
+    for(let k=1;k<=n;k++){const f=k/n;if(depth(x+(px-x)*f,z+(pz-z)*f,h+dh*f)>d0)return true;}
+    return false;
   }
   const down=new Set();let locked=false;
   m.headlight.emissive.set('#fff6e0');m.tailLight.emissive.set('#ff2a22');
@@ -98,8 +144,9 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
   // Fixed timestep: the simulation always advances in 1/120 s steps, whatever the
   // display rate. The drawn car sits between the last two steps (interpolated).
   const clock=fixedClock(STEP);
-  const prev={x,z,h,steer,roll:0,pitch:0,bodyRoll:0,heave:0,y:0,slope:0};let slope=0;
-  const snapshot=()=>{prev.x=x;prev.z=z;prev.h=h;prev.steer=steer;prev.roll=rollAngle;prev.pitch=pitch;prev.bodyRoll=roll;prev.heave=heave;prev.y=cy;prev.slope=slope;};
+  const wv=new THREE.Vector3();
+  const prev={x,z,h,steer,roll:0,pitch:0,bodyRoll:0,heave:0,y:0,slope:0,bank:0};let slope=0,bank=0;
+  const snapshot=()=>{prev.x=x;prev.z=z;prev.h=h;prev.steer=steer;prev.roll=rollAngle;prev.pitch=pitch;prev.bodyRoll=roll;prev.heave=heave;prev.y=cy;prev.slope=slope;prev.bank=bank;};
   // Coming back to the tab (or any long stall) never replays the missed time.
   let last=null;
   const resync=()=>{last=null;clock.reset();snapshot();};
@@ -121,7 +168,7 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
     reset(){x=home.x;z=home.z;h=home.h;v=0;vy=0;yaw=0;steer=0;pitch=pitchV=roll=rollV=heave=heaveV=0;snapshot();place();},
     resync,
     // Put the car somewhere, at rest (for tests and future spawn points).
-    teleport(nx,nz,nh=h,ny=0){x=nx;z=nz;h=nh;v=vy=yaw=0;cy=surface?.(x,z,ny)??0;snapshot();place();},
+    teleport(nx,nz,nh=h,ny=0){x=nx;z=nz;h=nh;v=vy=yaw=0;cy=surface?.(x,z,ny)??0;if(surface)cy=stand();lastTy=null;stepEase=0;snapshot();place();},
     get speed(){return v;},
     // For the sound: pedal (1 gas, -1 brake, 0 none) and how hard the tyres slide.
     get throttle(){return down.has('gas')?1:down.has('brake')?-1:0;},
@@ -139,6 +186,9 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
     hit,
     set onHit(fn){onHit=fn;},
     setObstacles(fn){dynamicObstacles=fn;},
+    setVehicleBoxes(fn){dynamicBoxes=fn;},
+    // dev: why a pose is refused (collision debugging)
+    probe(px=x,pz=z,ph=h){gather();const why=[];return {impossible:impossible(px,pz,ph),depth:depth(px,pz,ph,why),why,here:depth(x,z,h),cy,hl,hw,oz};},
     // fn(x, z) -> road height there, or null where the car cannot be.
     setSurface(fn){surface=fn;cy=fn(x,z,0)??0;snapshot();},
     addStatic(circles,boxes=[]){CIRCLES.push(...circles);BOXES.push(...boxes);},
@@ -150,8 +200,8 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
     select(i){
       if(i===current)return;
       tune(i);
-      disposeVehicle(parts,m);parts=buildVehicle(i,parent,m,prep);addContact(parts);current=i;bodyY=parts.car.position.y;rigY=parts.rig.position.y-SEAT;parts.rig.rotation.order='YXZ';footprint();
-      v=0;if(blocked(x,z,h)){x=home.x;z=home.z;h=home.h;}rollAngle=0;snapshot();place();
+      disposeVehicle(parts,m);parts=buildVehicle(i,parent,m,prep);addContact(parts);current=i;bodyY=parts.car.position.y;rigY=parts.rig.position.y-SEAT;parts.rig.rotation.order='YXZ';footprint();if(surface){cy=stand();lastTy=null;stepEase=0;}
+      v=0;gather();if(blocked(x,z,h)){x=home.x;z=home.z;h=home.h;}rollAngle=0;snapshot();place();
     },
   };
 
@@ -162,7 +212,7 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
   // handbrake (Space) locks the rear: grip drops, the tail steps out and the car
   // slides until you let go.
   function step(dt){
-    const x0=x,z0=z;   // to roll the wheels by the distance really travelled
+    const x0=x,z0=z;gather();   // to roll the wheels by the distance really travelled
     const gas=down.has('gas'),brake=down.has('brake'),hand=down.has('hand'),front=down.has('front');
     const held=(hand||front)&&Math.abs(v)<.6;   // a locked axle holds the car: the engine cannot push it
     brakeRamp=damp(brakeRamp,brake&&v>.15||gas&&v<-.15?1:0,16,dt);
@@ -199,6 +249,9 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
     // it back a little; gentle contact just takes the speed off.
     let moved=false;
     if(!blocked(nx,nz,nh)){h=nh;x=nx;z=nz;moved=true;lat=yaw*v;}
+    // Only the turn would touch (steering into a post you are passing): roll on
+    // straight, no crash. A hit is only a hit when the car itself is stopped.
+    else if(!blocked(nx,nz,h)){x=nx;z=nz;moved=true;lat=yaw*v;}
     else{
       const mx=nx-x,mz=nz-z,hard=Math.abs(v)>2.2;
       if(hard)hit(Math.abs(v)/C.maxSpeed*1.4);
@@ -229,9 +282,14 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
     if(d0>1e-4){let best=null,bd=d0;for(let k=0;k<8;k++){const ang=k*Math.PI/4,px=x+Math.sin(ang)*.05,pz=z+Math.cos(ang)*.05;if(impossible(px,pz,h))continue;const dd=depth(px,pz,h);if(dd<bd){bd=dd;best=[px,pz];}}
       if(best){x=best[0];z=best[1];}}
     if(moved&&surface){
-      // Follow the road height; tilt with the slope between the front and back of the car.
-      const fx2=Math.sin(h),fz2=Math.cos(h);{const ty=surface(x,z,cy)??cy;cy=Math.abs(ty-cy)>1.2?ty:damp(cy,ty,26,dt);}   // up and down curbs with a quick ease, not a pop
-      const L=parts.length*.42,fy=surface(x+fx2*L,z+fz2*L,cy),by=surface(x-fx2*L,z-fz2*L,cy);slope=fy!==null&&by!==null?Math.atan2(fy-by,2*L):slope;}
+      const ty=stand();
+      // Ramps are followed exactly (no lag, so wheels never sink going up or
+      // float coming down). Up a curb the wheels climb at once (never inside
+      // it); down a curb the body drops onto the road in about a tenth of a
+      // second, as a real car's wheels leave the edge.
+      const ds=Math.hypot(x-x0,z-z0),jump=lastTy===null?0:ty-lastTy;
+      if(Math.abs(jump)>1.2)stepEase=0;else if(jump<-(.08+ds*.45))stepEase-=jump;
+      stepEase=damp(stepEase,0,26,dt);cy=ty+stepEase;lastTy=ty;}
     // Wheels roll by the distance the car really moved along its heading (backwards
     // in reverse, not at all against a wall); each wheel turns it by its own radius.
     rollAngle+=(x-x0)*Math.sin(h)+(z-z0)*Math.cos(h);
@@ -268,9 +326,16 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
     shown.x=lerp(prev.x,x,t);shown.z=lerp(prev.z,z,t);shown.h=lerpAngle(prev.h,h,t);
     shown.vx=Math.sin(h)*v+Math.cos(h)*vy;shown.vz=Math.cos(h)*v-Math.sin(h)*vy;shown.speed=Math.abs(v);
     parts.rig.position.x=shown.x;parts.rig.position.z=shown.z;parts.rig.rotation.y=shown.h;
-    parts.rig.position.y=rigY+lerp(prev.y,cy,t);parts.rig.rotation.x=-lerp(prev.slope,slope,t);shown.y=parts.rig.position.y;
+    parts.rig.position.y=rigY+lerp(prev.y,cy,t);parts.rig.rotation.x=-lerp(prev.slope,slope,t);parts.rig.rotation.z=lerp(prev.bank,bank,t);shown.y=parts.rig.position.y;
     const s=lerp(prev.steer,steer,t),wr=lerp(prev.roll,rollAngle,t);
     for(const w of parts.wheels){w.rotation.x=wr/(w.userData.r??parts.wheelR);if(w.userData.front)w.userData.steer.rotation.y=s;}
+    // Suspension: the body is rigid, but each wheel travels up or down to meet
+    // the road right under it (a wheel on a curb, the middle axle of a long
+    // vehicle over the bridge's crest), within its travel.
+    if(surface){parts.rig.updateMatrixWorld();const base=parts.rig.position.y-lerp(prev.y,cy,t);
+      for(const w of parts.wheels){const pv=w.userData.steer,r0=w.userData.r??parts.wheelR;pv.userData.baseY??=pv.position.y;
+        wv.set(pv.position.x,pv.userData.baseY,pv.position.z).applyMatrix4(parts.rig.matrixWorld);const g=tyreGround(wv.x,wv.z,r0,cy);
+        pv.position.y=pv.userData.baseY+(g===null?0:THREE.MathUtils.clamp(base+g+pv.userData.baseY-wv.y,-r0*1.4,r0));}}
     parts.car.rotation.x=lerp(prev.pitch,pitch,t);parts.car.rotation.z=lerp(prev.bodyRoll,roll,t);parts.car.position.y=bodyY+lerp(prev.heave,heave,t);
     m.tailLight.emissiveIntensity=tail;m.headlight.emissiveIntensity=head;
     // The ambulance light bar pulses.

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { createKit } from '../../diorama/kit.js';
 import { FACADE } from './facades.js';
-import { G,BRIDGE,DECK_HALF,bridgeHeight } from './layout.js';
+import { G,BRIDGE,DECK_HALF,DECK_STEP,bridgeHeight } from './layout.js';
 
 // The bridge (world units), on the last street: from the FDR Drive crossing it
 // rises in one gentle arch over the river and comes down at the Brooklyn
@@ -15,7 +15,7 @@ export const TOWERS=[MID-7,MID+7];
 const W=DECK_HALF*2,SHORE=[54,82];
 
 export function buildBridge({prep}={}){
-  const K=createKit({flat:false}),{box,cyl,add,mat}=K,root=new THREE.Group(),occluders=[],solids=[];
+  const K=createKit({flat:false}),{box,cyl,add,mat}=K,root=new THREE.Group(),occluders=[],solids=[],circles=[];
   const stoneM=mat('#c4ad87',{map:FACADE.ashlar(),roughness:.9});stoneM.userData.uvSize=4;
   const asphalt=mat('#46484e',{map:FACADE.asphalt(),roughness:.9});asphalt.userData.uvSize=10;
   const steel=mat('#5c6168',{metalness:.6,roughness:.45}),cable=mat('#4c4f55',{metalness:.5,roughness:.5}),yellow=mat('#e3bd3a');
@@ -23,16 +23,19 @@ export function buildBridge({prep}={}){
   // Deck: short tilted slabs following the arch, a double yellow line, steel
   // railings and girders on both edges. Each railing piece is solid up to rail
   // height above the deck at that point.
-  const STEP=1.2;
+  // Colliders match what you see: the railing's inner face is 5.04 from the
+  // centre line (top bar and posts), so its solid starts exactly there.
+  const STEP=DECK_STEP,RAIL_IN=W/2-.16,RAIL_OUT=W/2-.04;
   for(let x=landM;x<landB-1e-6;x+=STEP){
     const x1=Math.min(x+STEP,landB),y0=y(x),y1=y(x1),len=Math.hypot(x1-x,y1-y0),ang=Math.atan2(y1-y0,x1-x),mx=(x+x1)/2,my=(y0+y1)/2;
-    const r=[0,0,ang];add(new THREE.BoxGeometry(len+.05,.5,W),asphalt,[mx,my-.25,Z],r);
+    // The slab's top face lies exactly on the chord from (x, y0) to (x1, y1): its centre sits half a slab below it, square to the slope.
+    const r=[0,0,ang];add(new THREE.BoxGeometry(len+.05,.5,W),asphalt,[mx+.25*Math.sin(ang),my-.25*Math.cos(ang),Z],r);
     if(Math.round(x/STEP)%2===0)for(const o of [-.14,.14])add(new THREE.BoxGeometry(len,.02,.12),yellow,[mx,my+.01,Z+o],r);
     for(const s of [-1,1]){
       add(new THREE.BoxGeometry(len,.12,.12),steel,[mx,my+1.1,Z+s*(W/2-.1)],r);
       add(new THREE.BoxGeometry(len,.6,.16),steel,[mx,my-.1,Z+s*(W/2+.05)],r);
       if(Math.round(x/STEP)%2===0)box(.1,1.1,.1,mx,my,Z+s*(W/2-.1),steel);
-      solids.push([mx,Z+s*(W/2-.1),len/2+.05,.2,bridgeHeight(mx)+1]);
+      solids.push([mx,Z+s*(RAIL_IN+RAIL_OUT)/2,(x1-x)/2,(RAIL_OUT-RAIL_IN)/2,bridgeHeight(mx)+1]);
     }
   }
   // On each shore the low end of the arch rests on stone, its top following the deck.
@@ -53,7 +56,7 @@ export function buildBridge({prep}={}){
   // Main cables: from stone pylons at both ends, over the tower tops, sagging between.
   const A=[landM+1.5,landB-1.5],top=TH+.4,aY=A.map(x=>y(x)+1.6),low=y(MID)+3.2;
   // Pylons stand outside the railing, never on the road.
-  for(const ax of A)for(const s of [-1,1])box(1.2,2.2,1.4,ax,y(ax)-.6,Z+s*(W/2+.95),stoneM);
+  for(const ax of A)for(const s of [-1,1]){box(1.2,2.2,1.4,ax,y(ax)-.6,Z+s*(W/2+.95),stoneM);solids.push([ax,Z+s*(W/2+.95),.6,.7]);}   // they reach the road at both ends: solid
   const cableY=x=>{
     if(x<TOWERS[0]){const t=(x-A[0])/(TOWERS[0]-A[0]);return aY[0]+(top-aY[0])*(t*t*.4+t*.6);}
     if(x>TOWERS[1]){const t=(A[1]-x)/(A[1]-TOWERS[1]);return aY[1]+(top-aY[1])*(t*t*.4+t*.6);}
@@ -74,8 +77,8 @@ export function buildBridge({prep}={}){
     add(new THREE.TubeGeometry(new THREE.LineCurve3(new THREE.Vector3(tx,top-1.6,cz),new THREE.Vector3(x1,y(x1)+.45,cz)),1,.04,4),cable);}}
   // Lamps along the bridge, glowing warm at night.
   const lampHead=mat('#fff3d6',{emissive:'#ffb052',emissiveIntensity:4});
-  for(const x of [landM+5,MID,landB-5])for(const s of [-1,1]){const z=Z+s*(W/2-.3),yb=y(x)+1;cyl(.08,.1,3.4,8,x,yb,z,steel);add(new THREE.SphereGeometry(.28,12,8),lampHead,[x,yb+3.5,z]);}
+  for(const x of [landM+5,MID,landB-5])for(const s of [-1,1]){const z=Z+s*(W/2-.3),yb=y(x)+1;cyl(.08,.1,3.4,8,x,yb,z,steel);circles.push([x,z,.1]);add(new THREE.SphereGeometry(.28,12,8),lampHead,[x,yb+3.5,z]);}
   K.finish(root);
   root.traverse(o=>{if(o.isMesh){o.castShadow=o.receiveShadow=true;[].concat(o.material).forEach(m=>prep?.(m));}});
-  return {root,occluders,solids,circles:[]};
+  return {root,occluders,solids,circles};
 }

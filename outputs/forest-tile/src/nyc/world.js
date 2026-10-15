@@ -14,7 +14,7 @@ import { createPeople } from './people.js';
 import { buildCity } from './drive/build.js';
 import { buildBridge } from './drive/bridge.js';
 import { createTraffic } from './drive/traffic.js';
-import { G,CURB,HALF,LANE,PARK,EDGE,ST,AV,BAV,MAN,BKN,NS,BRIDGE,blocks,bridgeHeight,onBridgeBand,onLand } from './drive/layout.js';
+import { G,CURB,HALF,LANE,PARK,EDGE,ST,AV,BAV,MAN,BKN,NS,BRIDGE,blocks,bridgeHeight,bridgeDeck,onBridgeBand,onLand } from './drive/layout.js';
 
 // New York as the world you drive (world units, about 1.5 m each). The plan is
 // in drive/layout.js: Manhattan, the East River, a strip of Brooklyn, water all
@@ -104,14 +104,14 @@ export function buildNYCWorld({prep,materials,player}){
   // Where the car can drive and how high: the streets and sidewalks on land, and
   // the bridge deck wherever the bridge is.
   function surface(x,z,y=0){
-    const ground=onLand(x,z)?city.walkHeight(x,z):null,deck=onBridgeBand(x,z)?bridgeHeight(x):null;
+    const ground=onLand(x,z)?city.walkHeight(x,z):null,deck=onBridgeBand(x,z)?bridgeDeck(x):null;
     // Nothing passes under the bridge, so on its band the deck is the road.
     return deck!==null?deck:ground;
   }
   return {
     parking:parking.bays,garage:lux.find(L=>L.j===GARAGE_BK),
     group,solids,places,labels:[keelSign.userData.cta],row:null,lot:null,occluders,surface,trafficCars:traffic.cars,
-    obstacles:()=>traffic.obstacles(),circles:bridge.circles,
+    obstacles:()=>traffic.obstacles(),vehicleBoxes:()=>traffic.boxes(),circles:[...bridge.circles,...city.posts],
     bounds:{x0:MAN.x0-6,x1:BKN.x1+6,z0:NS.z0-6,z1:NS.z1+6},
     // Start on the street in front of Keel HQ, heading west: Keel on the right.
     start:{x:AV[2]+12,z:ST[5]-LANE,h:-Math.PI/2},

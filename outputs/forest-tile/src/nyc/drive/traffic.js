@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { G,HALF,LANE,network,bridgeHeight,onBridgeBand,CORNER_R } from './layout.js';
+import { G,HALF,LANE,network,bridgeDeck,onBridgeBand,CORNER_R } from './layout.js';
 import { modelType, createModelFleet } from '../../cars/models.js';
 import { dampAngle } from '../../motion.js';
 
@@ -21,9 +21,10 @@ export function createTraffic({phase,player,prep,count=MIX.length,parked=[],seed
   // Parked cars along the curbs: the same family, drawn in the same batches, never moving.
   const PARKED=['sedan','suv','hatchback','van','pickup','muscle','roadster','sedan','taxi','suv','sports','limousine'];
   const still=parked.map((p,i)=>{const type=PARKED[Math.floor(rand()*PARKED.length)],T=modelType(type);return {...p,type,color:T.colors[Math.floor(rand()*T.colors.length)],len:T.L};});
-  const fleet=createModelFleet({cars:[...cars,...still],prep});
+  const deckAt=(x,z)=>onBridgeBand(x,z)?bridgeDeck(x):0;   // the road height (deck on the bridge)
+  const fleet=createModelFleet({cars:[...cars,...still],prep,ground:(x,z)=>G+deckAt(x,z)});
   still.forEach((p,i)=>fleet.set(count+i,p.x,G,p.z,p.h));
-  const height=e=>e.kind==='bridge'?bridgeHeight:()=>0;
+  const height=e=>e.kind==='bridge'?bridgeDeck:()=>0;
   // A lane: from just after the start crossing to just before the end one.
   function lane(e){const dx=e.b.x-e.a.x,dz=e.b.z-e.a.z,len=Math.hypot(dx,dz),fx=dx/len,fz=dz/len,rx=-fz,rz=fx;
     const s0=e.a.degree>2?STOP:e.a.corner?CORNER_R:HALF+1,s1=len-(e.b.degree>2?STOP:e.b.corner?CORNER_R:HALF+1);
@@ -41,7 +42,7 @@ export function createTraffic({phase,player,prep,count=MIX.length,parked=[],seed
     const L=lane(e);state.push({...cars[i],id:i,wait:0,L,s:L.len*(.15+rand()*.6),v:cars[i].cruise*.5,turn:null,ts:0,nextE:null,x:0,y:G,z:0,h:0,hr:null});}
   // Point and heading at distance d along the current piece (lane or turn).
   function pointAt(t,d,out){
-    if(t.turn){const {pts,cum,len}=t.turn,dd=Math.min(Math.max(d,0),len-1e-4);let i=1;while(cum[i]<dd)i++;const f=(dd-cum[i-1])/(cum[i]-cum[i-1]),a=pts[i-1],b=pts[i];out[0]=a[0]+(b[0]-a[0])*f;out[1]=a[1]+(b[1]-a[1])*f;out[2]=G+(onBridgeBand(out[0],out[1])?bridgeHeight(out[0]):0);return;}   // turns onto the bridge start up its ramp
+    if(t.turn){const {pts,cum,len}=t.turn,dd=Math.min(Math.max(d,0),len-1e-4);let i=1;while(cum[i]<dd)i++;const f=(dd-cum[i-1])/(cum[i]-cum[i-1]),a=pts[i-1],b=pts[i];out[0]=a[0]+(b[0]-a[0])*f;out[1]=a[1]+(b[1]-a[1])*f;out[2]=G+deckAt(out[0],out[1]);return;}   // turns onto the bridge start up its ramp
     const L=t.L;out[0]=L.x0+L.fx*d;out[1]=L.z0+L.fz*d;out[2]=G+height(L.e)(out[0]);
   }
   const p=[0,0,0],ahead=[0,0,0];
@@ -53,6 +54,10 @@ export function createTraffic({phase,player,prep,count=MIX.length,parked=[],seed
     else if(t.nextE){const L2=lane(t.nextE),tr=t.pendingTurn??(t.pendingTurn=turn(t.L,L2));const k=Math.min(d+look-lim,tr.len-1e-4);let i=1;while(tr.cum[i]<k)i++;const f=(k-tr.cum[i-1])/(tr.cum[i]-tr.cum[i-1]);ahead[0]=tr.pts[i-1][0]+(tr.pts[i][0]-tr.pts[i-1][0])*f;ahead[1]=tr.pts[i-1][1]+(tr.pts[i][1]-tr.pts[i-1][1])*f;}
     else{ahead[0]=t.x+t.L.fx;ahead[1]=t.z+t.L.fz;}
     const want=Math.atan2(ahead[0]-t.x,ahead[1]-t.z);t.hr=t.hr===null?want:dampAngle(t.hr,want,14,dt||1);t.h=t.hr;
+    // Standing on its axles: on the bridge the road under the front and rear
+    // wheels sets the car's height and pitch, so long vehicles never sink in.
+    const T=modelType(t.type),sh=Math.sin(t.h),ch=Math.cos(t.h),hf=deckAt(t.x+sh*T.front,t.z+ch*T.front),hb=deckAt(t.x+sh*T.rear,t.z+ch*T.rear);
+    t.pitch=Math.atan2(hf-hb,T.front-T.rear);t.y=G+hb+(hf-hb)*(0-T.rear)/(T.front-T.rear);
   }
   state.forEach(t=>place(t,0));
   // Free road ahead: other cars (and yours) in front, close to this car's line.
@@ -110,7 +115,7 @@ export function createTraffic({phase,player,prep,count=MIX.length,parked=[],seed
       else{t.s+=step;if(t.s>=t.L.len){if(!t.nextE){t.nextE=pickNext(t.L.e);t.pendingTurn=turn(t.L,lane(t.nextE));}t.turn=t.pendingTurn;t.ts=t.s-t.L.len;}}
       place(t,dt);
     }
-    state.forEach((t,i)=>fleet.set(i,t.x,t.y,t.z,t.h));
+    state.forEach((t,i)=>fleet.set(i,t.x,t.y,t.z,t.h,t.pitch));
   }
   update(0);
   // Circles your car bumps into (world units), with the height of each car.
@@ -119,5 +124,10 @@ export function createTraffic({phase,player,prep,count=MIX.length,parked=[],seed
   // near miss is a miss and a bumper hit is a hit.
   const half=t=>(modelType(t.type)?.W??1.66)/2*.88,   // body width, without the mirrors
     circles=[...state.flatMap(()=>[[0,0,1,0],[0,0,1,0],[0,0,1,0]]),...still.flatMap(p=>{const r=half(p),k=Math.max(0,(p.len??4)/2-r);return [-1,0,1].map(j=>[p.x+Math.sin(p.h)*j*k,p.z+Math.cos(p.h)*j*k,r,0]);})];   // parked cars: their real length and width
-  return {root:fleet.root,update,cars:state,obstacles(){state.forEach((t,i)=>{const r=half(t),k=Math.max(0,(t.len??4)/2-r),fx=Math.sin(t.h),fz=Math.cos(t.h);for(let j=0;j<3;j++){const c=circles[i*3+j],o=(j-1)*k;c[0]=t.x+fx*o;c[1]=t.z+fz*o;c[2]=r;c[3]=t.y-G;}});return circles;}};
+  // Each car's body as a box for your car to collide with: centre, heading, half
+  // length, half width (mirrors left out) and height above the street.
+  const boxes=[...state,...still].map(()=>[0,0,0,1,1,0]);
+  const fillBox=(b,t,y)=>{const B=modelType(t.type).body,oz=(B.z0+B.z1)/2;b[0]=t.x+Math.sin(t.h)*oz;b[1]=t.z+Math.cos(t.h)*oz;b[2]=t.h;b[3]=(B.z1-B.z0)/2;b[4]=B.hw;b[5]=y;};
+  still.forEach((p,i)=>fillBox(boxes[count+i],p,0));
+  return {root:fleet.root,update,cars:state,boxes(){state.forEach((t,i)=>fillBox(boxes[i],t,t.y-G));return boxes;},obstacles(){state.forEach((t,i)=>{const r=half(t),k=Math.max(0,(t.len??4)/2-r),fx=Math.sin(t.h),fz=Math.cos(t.h);for(let j=0;j<3;j++){const c=circles[i*3+j],o=(j-1)*k;c[0]=t.x+fx*o;c[1]=t.z+fz*o;c[2]=r;c[3]=t.y-G;}});return circles;}};
 }

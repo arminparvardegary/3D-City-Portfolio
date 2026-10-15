@@ -13,7 +13,7 @@ let seed=7;const rand=()=>((seed=(seed*16807)%2147483647)/2147483647),pick=a=>a[
 export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
   seed=7;
   const root=new THREE.Group(),K=createKit({flat:false}),{box,cyl,add,mat}=K;
-  const solids=[],occluders=[],loops=[];
+  const solids=[],occluders=[],loops=[],posts=[];   // posts: round things the car hits ([x, z, radius])
   // Sidewalks are not walls: the car can drive up the curb onto them. Each
   // walkable area is recorded here; walkHeight() gives the ground height there.
   const walks=[];
@@ -185,7 +185,7 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
     if(inner)solids.push([(b.x0+b.x1)/2,(b.z0+b.z1)/2,(b.x1-b.x0)/2-WALK,(b.z1-b.z0)/2-WALK]);
   }
   const lampHead=mat('#fff3d6',{emissive:'#ffb052',emissiveIntensity:4});
-  const lamp=(x,z,ox,oz)=>{solids.push([x,z,.15,.15]);cyl(.09,.13,5.6,8,x,top,z,dark);add(new THREE.BoxGeometry(.08,.08,1.6).rotateY(Math.atan2(ox,oz)),dark,[x+ox*.8,top+5.5,z+oz*.8]);
+  const lamp=(x,z,ox,oz)=>{posts.push([x,z,.13]);cyl(.09,.13,5.6,8,x,top,z,dark);add(new THREE.BoxGeometry(.08,.08,1.6).rotateY(Math.atan2(ox,oz)),dark,[x+ox*.8,top+5.5,z+oz*.8]);
     add(new THREE.BoxGeometry(.5,.16,.8).rotateY(Math.atan2(ox,oz)),dark,[x+ox*1.6,top+5.38,z+oz*1.6]);box(.4,.04,.6,x+ox*1.6,top+5.3,z+oz*1.6,lampHead);};
   // Painterly canopies (as on bruno-simon.com): a blotchy alpha map tears each leaf
   // ball into ragged dabs, so trees read as brush strokes, not spheres.
@@ -392,8 +392,9 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
           const yaw=S.axis==='x'?0:Math.PI/2,bw=S.axis==='x'?[1.7,.1,.5]:[.5,.1,1.7];
           box(...bw,bx,top+.42,bz,seat);const [kx,kz]=at(S,a+6,1.95);box(...(S.axis==='x'?[1.7,.5,.1]:[.1,.5,1.7]),kx,top+.52,kz,seat);
           for(const o of [-.7,.7]){const [qx,qz]=S.axis==='x'?[bx+o,bz]:[bx,bz+o];box(.08,.42,.4,qx,top,qz,iron);}
-          solids.push([bx,bz,S.axis==='x'?.9:.35,S.axis==='x'?.35:.9]);}
-        const [fx,fz]=at(S,a+3,3.2);if(!band(fx,fz)&&k%2===0){box(1.4,.45,.7,fx,top,fz,post);solids.push([fx,fz,.75,.4]);
+          // Exactly the bench: seat (1.35 to 1.85 from the edge) and back (to 2.0), 1.7 long.
+          const [cx2,cz2]=at(S,a+6,1.675);solids.push([cx2,cz2,S.axis==='x'?.85:.325,S.axis==='x'?.325:.85]);}
+        const [fx,fz]=at(S,a+3,3.2);if(!band(fx,fz)&&k%2===0){box(1.4,.45,.7,fx,top,fz,post);solids.push([fx,fz,.7,.35]);
           for(let f=0;f<7;f++)add(new THREE.SphereGeometry(.13,8,6),blooms[(f+k)%blooms.length],[fx-.55+f*.18,top+.55+(f%2)*.05,fz+(f%3-1)*.15]);}
         const [tx,tz]=at(S,a+9,3.1);if(!band(tx,tz)&&k%2===1&&a+9<S.a1-2)tree(tx,tz,.85);
       }
@@ -427,6 +428,6 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
     if(x>w.x1-ra&&z<w.z0+ra)return corner(w.x1-ra,w.z0+ra,ra);if(x>w.x1-rb&&z>w.z1-rb)return corner(w.x1-rb,w.z1-rb,rb);
     if(x<w.x0+rc&&z>w.z1-rc)return corner(w.x0+rc,w.z1-rc,rc);if(x<w.x0+rd&&z<w.z0+rd)return corner(w.x0+rd,w.z0+rd,rd);return true;};
   const walkHeight=(x,z)=>walks.some(w=>inWalk(w,x,z))?CURB:0;
-  return {root,solids,occluders,loops,parking,steam,sea:seaTime,walkHeight,phase:()=>phase(lightTime),
+  return {root,solids,posts,occluders,loops,parking,steam,sea:seaTime,walkHeight,phase:()=>phase(lightTime),
     update(dt){lightTime+=dt;const ph=phase(lightTime);for(const a of ['z','x'])for(const c of ['r','y','g'])LIGHT[a][c].emissiveIntensity=ph[a]===c?3.2:0;}};
 }

@@ -69,6 +69,14 @@ export function bridgeHeight(x){
   if(x<=landM||x>=landB)return 0;
   return deck*Math.sin(Math.PI*(x-landM)/(landB-landM));
 }
+// The deck is drawn as straight slabs DECK_STEP long between points on that
+// arch; this is its height exactly as drawn, so wheels sit on the visible road.
+export const DECK_STEP=1.2;
+export function bridgeDeck(x){
+  const {landM,landB}=BRIDGE;if(x<=landM||x>=landB)return 0;
+  const x0=landM+Math.floor((x-landM)/DECK_STEP)*DECK_STEP,x1=Math.min(x0+DECK_STEP,landB),h0=bridgeHeight(x0),h1=bridgeHeight(x1);
+  return h0+(h1-h0)*(x-x0)/(x1-x0);
+}
 export const DECK_HALF=5.2;      // the bridge deck is narrower than a street: two lanes, no parking
 export const onBridgeBand=(x,z)=>Math.abs(z-BRIDGE.z)<=DECK_HALF&&x>BRIDGE.landM-1&&x<BRIDGE.landB+1;
 // A wooden boardwalk, WHARF wide, runs round every shore; it is ground too.

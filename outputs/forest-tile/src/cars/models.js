@@ -76,11 +76,17 @@ export async function loadModels(prep){
       o.material=Array.isArray(o.material)?mats.map(r=>r.mat):mats[0].mat;o.userData.kinds=mats.map(r=>r.kind);
       o.castShadow=true;o.receiveShadow=true;
       (/wheel_(front|rear)_(left|right)/i.test(o.name)?wheels:body).push(o);});
+    // The body's footprint for collisions, measured from the mesh: half width of
+    // the body sides (below the mirrors, which stick out at 60 to 80% of the
+    // height), and the real front and back (models are not centred).
+    let bodyHW=0,bz0=1e9,bz1=-1e9;const bv=new THREE.Vector3();
+    root.traverse(o=>{if(!o.isMesh||/wheel/i.test(o.name))return;const p=o.geometry.attributes.position;
+      for(let i=0;i<p.count;i++){bv.fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);bz0=Math.min(bz0,bv.z);bz1=Math.max(bz1,bv.z);if(bv.y-box.min.y<size.y*.6)bodyHW=Math.max(bodyHW,Math.abs(bv.x));}});
     // Wheels: centre, radius, front or rear.
     const W=wheels.map(o=>{const b=new THREE.Box3().setFromObject(o),c=b.getCenter(new THREE.Vector3());return {o,c,r:b.getSize(new THREE.Vector3()).y/2,front:/front/i.test(o.name)};});
     const lift=-box.min.y,fz=W.filter(w=>w.front).map(w=>w.c.z),rz=W.filter(w=>!w.front).map(w=>w.c.z);
     const front=fz.length?Math.max(...fz):size.z*.3,rear=rz.length?rz.reduce((a,b)=>a+b,0)/rz.length:-size.z*.3;
-    cache.set(M.id,{M,root,lift,L:size.z,Wd:size.x,H:size.y,wheels:W,wheelR:W[0]?.r??.3,track:W[0]?Math.abs(W[0].c.x):size.x*.4,front,rear,paintColor:paintColor??'#b5121b'});
+    cache.set(M.id,{M,root,lift,L:size.z,Wd:size.x,H:size.y,body:{hw:Math.max(bodyHW,...W.map(w=>Math.abs(w.c.x)+.1)),z0:bz0,z1:bz1},wheels:W,wheelR:W[0]?.r??.3,track:W[0]?Math.abs(W[0].c.x):size.x*.4,front,rear,rearMost:W.length?Math.min(...W.map(w=>w.c.z)):rear,paintColor:paintColor??'#b5121b'});
   }));
 }
 export const modelInfo=id=>cache.get(id);
@@ -122,7 +128,7 @@ export function buildModelVehicle(id,parent){
   body.add(copy);
   if(id==='roadster'){const m=new THREE.Mesh(mergeGeometries(roadsterDriver(C.lift),false),new THREE.MeshStandardMaterial({vertexColors:true,roughness:.7}));m.castShadow=true;body.add(m);}
   paint=paint??new THREE.MeshPhysicalMaterial({color:C.paintColor});
-  return {rig,car:body,wheels:spins,paint,color:C.paintColor,name:C.M.name,wheelR:C.wheelR,wheelbase:C.front-C.rear,rearZ:C.rear,track:C.track,length:C.L,width:C.Wd};
+  return {rig,car:body,wheels:spins,paint,color:C.paintColor,name:C.M.name,wheelR:C.wheelR,wheelbase:C.front-C.rear,rearZ:C.rear,track:C.track,length:C.L,width:C.Wd,body:C.body,rearMost:C.rearMost};
 }
 
 // Traffic: every model merged into three batches (body, glass, lights), each
@@ -139,7 +145,7 @@ function bakeMesh(o,matrix,out,only){const g0=o.geometry,mats=[].concat(o.materi
     const col=new Float32Array(ct*3),c=mat.color||new THREE.Color('#fff');for(let i=0;i<ct;i++)col.set([c.r,c.g,c.b],i*3);sub.setAttribute('color',new THREE.BufferAttribute(col,3));
     sub.applyMatrix4(matrix);(out[bucket]??=[]).push(sub);}
   if(g!==g0)g.dispose();}
-export function createModelFleet({cars,prep}){
+export function createModelFleet({cars,prep,ground=null}){
   const geos={},wheelGeos={};
   // Each wheel of a model, centred on its own axle, so it can turn about it.
   const bakeWheels=id=>{if(wheelGeos[id])return wheelGeos[id];const C=cache.get(id);C.root.updateMatrixWorld(true);
@@ -175,7 +181,8 @@ export function createModelFleet({cars,prep}){
   const roll=new Float64Array(cars.length),steer=new Float32Array(cars.length),last=cars.map(()=>null);
   const m4=new THREE.Matrix4(),w4=new THREE.Matrix4(),s4=new THREE.Matrix4(),q=new THREE.Quaternion(),v=new THREE.Vector3(),one=new THREE.Vector3(1,1,1),up=new THREE.Vector3(0,1,0),side=new THREE.Vector3(1,0,0);
   const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
-  return {root,set(i,x,y,z,h){m4.compose(v.set(x,y,z),q.setFromAxisAngle(up,h),one);for(const b in batches){const id=ids[b][i];if(id!==null)batches[b].setMatrixAt(id,m4);}
+  const eu=new THREE.Euler(0,0,0,'YXZ');
+  return {root,set(i,x,y,z,h,pitch=0){m4.compose(v.set(x,y,z),q.setFromEuler(eu.set(-pitch,h,0)),one);for(const b in batches){const id=ids[b][i];if(id!==null)batches[b].setMatrixAt(id,m4);}
     const L=last[i];
     if(L){const dx=x-L.x,dy=y-L.y,dz=z-L.z,along=dx*Math.sin(h)+dz*Math.cos(h),dist=Math.hypot(dx,dy,dz);
       if(dist<3){   // a jump further than that is a respawn, not driving
@@ -184,7 +191,11 @@ export function createModelFleet({cars,prep}){
       L.x=x;L.y=y;L.z=z;L.h=h;}
     else last[i]={x,y,z,h};
     wheelsOf[i].forEach((w,k)=>{w4.copy(m4).multiply(s4.makeTranslation(w.at.x,w.at.y,w.at.z));if(w.front)w4.multiply(s4.makeRotationY(steer[i]));
-      w4.multiply(s4.makeRotationAxis(side,(roll[i]/w.r)%(Math.PI*2)));wb.setMatrixAt(wIds[i][k],w4);});}};
+      w4.multiply(s4.makeRotationAxis(side,(roll[i]/w.r)%(Math.PI*2)));
+      // Suspension: the wheel meets the road right under it, within its travel
+      // (it can hang lower than it can compress).
+      if(ground){const e=w4.elements,want=ground(e[12],e[14])+w.r;e[13]+=THREE.MathUtils.clamp(want-e[13]-.028,-w.r*1.4,w.r*.8);}
+      wb.setMatrixAt(wIds[i][k],w4);});}};
 }
 // Size and speed of a model, for the traffic.
-export const modelType=id=>{const C=cache.get(id);return {L:C.L,W:C.Wd,speed:C.M.speed,colors:[C.paintColor]};};
+export const modelType=id=>{const C=cache.get(id);return {L:C.L,W:C.Wd,speed:C.M.speed,colors:[C.paintColor],body:C.body,front:C.front,rear:C.rearMost};};
