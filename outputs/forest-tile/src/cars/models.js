@@ -45,7 +45,7 @@ function convert(m,paintName){
   if(n===paintName)return {kind:'paint',mat:new THREE.MeshPhysicalMaterial({color:c,metalness:.45,roughness:.3,clearcoat:1,clearcoatRoughness:.08,envMapIntensity:1.2})};
   // Other body colours (stripes, trim) stay as they are; "body light blue" is paint, not a lamp.
   if(n.startsWith('body'))return {kind:'solid',mat:new THREE.MeshStandardMaterial({color:c,roughness:.4,metalness:.25})};
-  if(n.includes('window'))return {kind:'glass',mat:new THREE.MeshPhysicalMaterial({color:'#0b1118',metalness:.25,roughness:.04,clearcoat:1,envMapIntensity:1.8})};
+  if(n.includes('window'))return {kind:'glass',mat:new THREE.MeshPhysicalMaterial({color:'#0b1118',metalness:.25,roughness:.04,clearcoat:1,envMapIntensity:1.8,transparent:true,opacity:.55})};   // tinted, so you see who drives
   if(n.includes('headlight'))return {kind:'lamp',mat:new THREE.MeshStandardMaterial({color:'#f6f8ff',emissive:'#fff1d0',emissiveIntensity:2.6})};
   if(n.includes('rear light')||n.includes('rearlight')||n.includes('brake'))return {kind:'lamp',mat:new THREE.MeshStandardMaterial({color:'#5a0006',emissive:'#ff2418',emissiveIntensity:1.8})};
   if(n.includes('light')||n.includes('siren'))return {kind:'lamp',mat:new THREE.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:2})};
@@ -76,17 +76,48 @@ export async function loadModels(prep){
       o.material=Array.isArray(o.material)?mats.map(r=>r.mat):mats[0].mat;o.userData.kinds=mats.map(r=>r.kind);
       o.castShadow=true;o.receiveShadow=true;
       (/wheel_(front|rear)_(left|right)/i.test(o.name)?wheels:body).push(o);});
+    // The cabin: where the windows are (for the driver and the dark interior).
+    const glass=new THREE.Box3(),gv=new THREE.Vector3();
+    root.traverse(o=>{if(!o.isMesh)return;const k=o.userData.kinds,g=o.geometry,pos=g.attributes.position,idx=g.index;
+      const groups=g.groups.length?g.groups:[{start:0,count:idx?idx.count:pos.count,materialIndex:0}];
+      for(const gr of groups){if(k[gr.materialIndex]!=='glass')continue;for(let i=gr.start;i<gr.start+gr.count;i++){gv.fromBufferAttribute(pos,idx?idx.getX(i):i).applyMatrix4(o.matrixWorld);glass.expandByPoint(gv);}}});
     // Wheels: centre, radius, front or rear.
     const W=wheels.map(o=>{const b=new THREE.Box3().setFromObject(o),c=b.getCenter(new THREE.Vector3());return {o,c,r:b.getSize(new THREE.Vector3()).y/2,front:/front/i.test(o.name)};});
     const lift=-box.min.y,fz=W.filter(w=>w.front).map(w=>w.c.z),rz=W.filter(w=>!w.front).map(w=>w.c.z);
     const front=fz.length?Math.max(...fz):size.z*.3,rear=rz.length?rz.reduce((a,b)=>a+b,0)/rz.length:-size.z*.3;
-    cache.set(M.id,{M,root,lift,L:size.z,Wd:size.x,H:size.y,wheels:W,wheelR:W[0]?.r??.3,track:W[0]?Math.abs(W[0].c.x):size.x*.4,front,rear,paintColor:paintColor??'#b5121b'});
+    cache.set(M.id,{M,root,lift,L:size.z,Wd:size.x,H:size.y,wheels:W,wheelR:W[0]?.r??.3,track:W[0]?Math.abs(W[0].c.x):size.x*.4,front,rear,paintColor:paintColor??'#b5121b',cabin:glass.isEmpty()?null:glass,seed:MODELS.indexOf(M)});
   }));
 }
 export const modelInfo=id=>cache.get(id);
 
+// Someone at the wheel: a seated driver (head, hair, torso, arms to the wheel)
+// on the left behind the windshield, and a dark interior (dash and seats) under
+// the windows so the cabin never looks hollow. Sized from the model's windows,
+// in model space; vertex coloured so the traffic batches can merge it.
+const SKIN=['#f1c7a5','#d9a27c','#b97a55','#8d5a3b','#5e3a26'],HAIR=['#1d1612','#3b2618','#6b4a2b','#b98d4f','#2b2b2b','#8a8a8a'],SHIRT=['#2f4a7a','#b23a3a','#e8e4da','#2b2d33','#3f6b4a','#c9a24a','#6a4c8c','#1f6f8b'];
+function occupant(C){
+  const B=C.cabin;if(!B)return [];
+  const k=C.seed,lift=C.lift,out=[];
+  const put=(geo,color,x,y,z)=>{geo.translate(x,y+lift,z);const g=geo.index?geo.toNonIndexed():geo;const n=g.attributes.position.count,c=new THREE.Color(color),col=new Float32Array(n*3);for(let i=0;i<n;i++)col.set([c.r,c.g,c.b],i*3);g.setAttribute('color',new THREE.BufferAttribute(col,3));g.deleteAttribute('uv');out.push(g);};
+  const span=B.max.z-B.min.z,winH=B.max.y-B.min.y,s=THREE.MathUtils.clamp(winH*1.15,.55,.85);   // seated torso to head height
+  const halfW=(B.max.x-B.min.x)/2,cx=(B.max.x+B.min.x)/2;
+  const dx=cx+halfW*.42,dz=B.max.z-Math.min(1.05,span*.42),eye=B.min.y+winH*.42;   // driver: left seat, behind the windshield
+  const headR=s*.17,sh=eye-headR*1.4;   // shoulders
+  // Interior: a dark floor and seat block up to just under the window line, and the dash.
+  put(new THREE.BoxGeometry(halfW*1.8,.32,Math.max(.4,span*.85)),'#16171b',cx,B.min.y-.2,(B.max.z+B.min.z)/2-span*.02);
+  put(new THREE.BoxGeometry(halfW*1.8,.16,.32),'#202227',cx,B.min.y-.02,B.max.z-.22);
+  // The driver.
+  put(new THREE.BoxGeometry(s*.55,s*.62,s*.3),SHIRT[k%SHIRT.length],dx,sh-s*.25,dz);                 // torso
+  put(new THREE.SphereGeometry(headR,12,10),SKIN[(k*3)%SKIN.length],dx,sh+headR*1.15,dz);             // head
+  put(new THREE.SphereGeometry(headR*1.04,12,8,0,Math.PI*2,0,Math.PI*.5),HAIR[(k*5)%HAIR.length],dx,sh+headR*1.25,dz-headR*.08);   // hair
+  for(const sd of [-1,1]){const arm=new THREE.BoxGeometry(s*.12,s*.12,s*.42);arm.rotateX(.35);put(arm,SHIRT[k%SHIRT.length],dx+sd*s*.24,sh-s*.12,dz+s*.2);}
+  put(new THREE.TorusGeometry(s*.17,s*.025,6,16),'#121316',dx,sh-s*.05,dz+s*.44);                     // steering wheel
+  return out;
+}
+
 // A drivable copy for the player (and the garage): rig > body + wheel pivots,
 // the format car.js expects. Paint is its own material, so it can be recoloured.
+let occupantMat=null;
 export function buildModelVehicle(id,parent){
   const C=cache.get(id),rig=new THREE.Group();rig.name='vehicle';parent.add(rig);
   const body=new THREE.Group();rig.add(body);
@@ -103,6 +134,7 @@ export function buildModelVehicle(id,parent){
     const inv=new THREE.Matrix4().makeTranslation(-w.c.x,-(w.c.y+C.lift),-w.c.z);mesh.matrix.copy(inv.multiply(m));mesh.matrix.decompose(mesh.position,mesh.quaternion,mesh.scale);spin.add(mesh);
     spins.push(spin);}
   body.add(copy);
+  const people=occupant(C);if(people.length){const m=new THREE.Mesh(mergeGeometries(people,false),occupantMat??=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.7}));m.castShadow=true;body.add(m);}
   paint=paint??new THREE.MeshPhysicalMaterial({color:C.paintColor});
   return {rig,car:body,wheels:spins,paint,color:C.paintColor,name:C.M.name,wheelR:C.wheelR,wheelbase:C.front-C.rear,rearZ:C.rear,track:C.track,length:C.L,width:C.Wd};
 }
@@ -129,10 +161,11 @@ export function createModelFleet({cars,prep}){
       return {geo:mergeGeometries(out.wheel,false),at:new THREE.Vector3(w.c.x,w.c.y+C.lift,w.c.z),front:w.front,r:Math.max(.05,w.r)};});};
   const bake=(id)=>{if(geos[id])return geos[id];const C=cache.get(id),out={solid:[],glass:[],lamp:[]};C.root.updateMatrixWorld(true);
     C.root.traverse(o=>{if(!o.isMesh||WHEEL.test(o.name))return;bakeMesh(o,new THREE.Matrix4().makeTranslation(0,C.lift,0).multiply(o.matrixWorld),out);});
+    for(const g of occupant(C)){if(!g.attributes.normal)g.computeVertexNormals();out.solid.push(g);}   // a driver in every car
     const merged={};for(const b in out)if(out[b].length)merged[b]=mergeGeometries(out[b],false);return geos[id]=merged;};
   const P=m=>{prep?.(m);return m;};
   const mats={solid:P(new THREE.MeshStandardMaterial({vertexColors:true,roughness:.4,metalness:.3,envMapIntensity:1.1})),
-    glass:P(new THREE.MeshPhysicalMaterial({color:'#0b1118',metalness:.25,roughness:.04,clearcoat:1,envMapIntensity:1.8})),
+    glass:P(new THREE.MeshPhysicalMaterial({color:'#0b1118',metalness:.25,roughness:.04,clearcoat:1,envMapIntensity:1.8,transparent:true,opacity:.55})),
     lamp:new THREE.MeshBasicMaterial({vertexColors:true})};
   const root=new THREE.Group(),batches={},ids={};
   for(const b of ['solid','glass','lamp']){
