@@ -56,7 +56,9 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
   function impossible(px,pz,ph){
     const fx=Math.sin(ph),fz=Math.cos(ph);
     for(const o of probes){const cx=px+fx*o,cz=pz+fz*o;
-      if(surface){const sy=surface(cx,cz,cy);if(sy===null||Math.abs(sy-cy)>.9)return true;}
+      // A step is a wall, but a ramp is not: points further along a long vehicle may
+      // sit higher or lower on a slope (up to about 1 in 4), so a bus can climb the bridge.
+      if(surface){const sy=surface(cx,cz,cy+Math.abs(o)*.25);if(sy===null||Math.abs(sy-cy)>.9+Math.abs(o)*.25)return true;}
       if(cx<BOUNDS.x0+r||cx>BOUNDS.x1-r||cz<BOUNDS.z0+r||cz>BOUNDS.z1-r)return true;}
     return false;
   }
