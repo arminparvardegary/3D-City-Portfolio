@@ -1,124 +1,69 @@
-# My House — Block 001
+# Armin's New York
 
-A single minimal isometric 3D tile based on the supplied neighborhood reference: cream house, coral roof, turquoise windows, a smooth flat lawn, the City car, which you drive yourself (W A S D or arrow keys, Space handbrake, R or the Park button to put it back; on touch screens use the on screen pad), and a small Turkish flag beside the entrance.
+A portfolio you drive. A small night-time New York in the browser: park in front of each of my
+companies and press Enter to see what I did there, visit Keel, choose a car in the Lux Garage and cross
+the bridge to Brooklyn.
 
-## Drive New York (the main page)
+Live: https://forest-tile.vercel.app
 
-A realistic New York you drive from behind the car (chase camera), at twice the earlier size (240 x 240 units, about 360 m), planned in `src/nyc/drive/layout.js`:
-- **Geography that makes sense**: Manhattan is an island with water all round and a waterfront promenade with railings; the East River separates it from a strip of Brooklyn; the Statue of Liberty stands on her island in the harbour.
-- **A complete street grid**: avenues and streets that all connect (FDR Drive along the river, edge roads round the island), so there are no dead ends. Double yellow centre lines, zebra crossings and stop lines; traffic lights at every crossing of three or more roads (20 s cycle).
-- **The Brooklyn Bridge** (`drive/bridge.js`): straight off a Manhattan street, up a stone viaduct with arches, over FDR Drive on a steel span, through the two gothic stone towers (lanes either side of the middle pier), over the Brooklyn riverside road and down onto a Brooklyn street. Four main cables from anchorages under the road, suspenders and diagonal stays. The car follows the road height; the bridge passes over the roads below.
-- **Streets built like an engineer would** (`drive/layout.js`, `drive/build.js`): 18 m carriageways (two travel lanes, a white edge line, a parking lane each side), double yellow centre lines, continental crosswalks just past the curb returns, stop bars, lane arrows for the moves each approach allows, rounded curb returns with granite curbs, curb ramps with tactile pads, storm drains and manholes. Fire hydrants, green trash bins, subway entrances with green globes, steam stacks.
-- **Traffic** (`drive/traffic.js`, `drive/carfamily.js`): about twenty moving cars of eleven types (sports, coupe, sedan, hatchback, city car, estate, SUV, van, pickup, taxi, police), each with its own colour and speed, plus cars parked along the curbs; all drawn as a few batched meshes. They drive their lane on the right, choose their way early, slow for turns, follow a smooth curve, stop at red, keep their distance and look along their own path, so they never drive into you or each other, and never appear or vanish.
-- **Your car never gets stuck**: a move is refused only if it would push the car deeper into something, so backing out, steering away or sliding along always works.
-- **Animated film style** (the current look): candy coloured walk ups (pink, coral, mint, teal, butter, lavender, sky blue, brick) with painted arched windows, shutters and sills (`drive/facades.js`), thick cornices on brackets, striped shop awnings, flower boxes, fire escapes and water towers; pastel towers with rounded crowns; fluffy rounded trees; string lights with glowing bulbs across Armin's streets; candy coloured cars; a warm golden sun, a deep blue sky and big puffy clouds.
-- **People** (`nyc/people.js`): animated film characters with big round heads and friendly faces (oval eyes with a highlight, nose, ears, brows, a smile), soft bodies in sweaters, trousers with rolled cuffs, chunky sneakers and mitten hands; five hair styles; a bouncy walk, some standing and swaying.
-- **Sky**: a blue sky dome with a glow round the sun, soft clouds drifting overhead, steam from the street stacks.
-- **Sound** (`src/audio.js`): a smooth V8 built from its firing harmonics with seven gears, intake breath and lift off burbles; calm tyre roll and wind; a warm horn (H); the city in a reverberant space (traffic, distant horns and sirens, the police siren nearby, birds in Central Park, water at the edge); a soft lounge pad (N). M or the button mutes.
-- **Districts** (`drive/build.js`): Central Park (grass, paths, pond, trees, stone wall), midtown and downtown towers (glass, limestone with setbacks, offices), the Empire State, Chrysler and One World Trade Center, a copper domed tower, brick walk ups with water tanks and fire escapes on the west side, brownstones with stoops in Brooklyn. Street lamps and trees on the sidewalks, people walking every block.
-- **Realistic materials**: drawn facades (glass curtain walls with reflections, brick, limestone, brownstone, cut stone), textured asphalt and paving, reflective water, a blue sky with distance haze.
-- **Your car** (`src/realcar.js`): a smooth lofted sports saloon with clearcoat paint, reflective glass, LED lamps, a rear light bar, alloy wheels and red brake callipers.
-- **Experience Row** with Experience Parking faces **Skills Street** across street z = 78; park in a bay and press Enter for the experience story. The start is on Skills Street.
-- The white campus is still at `?world=campus`; the diorama pages are `/nyc.html` and `/block.html`.
-- All facts come from `src/data/profile.js` (his CVs); nothing is invented.
+## Play
 
-## The corner block (block.html)
+| Key                 | Does                                           |
+| ------------------- | ---------------------------------------------- |
+| W A S D / arrows    | Drive                                          |
+| Space               | Handbrake                                      |
+| Command             | Front brake                                    |
+| Q / E (both: back)  | Look left / right                              |
+| V                   | Camera: chase, far, hood                       |
+| H                   | Horn (sirens on police cars and the ambulance) |
+| Enter               | Open the place you are parked at               |
+| M (hold) or the map | Map: click a place to drive there              |
+| N or the note       | Music on / off                                 |
 
-A single low poly block on its own page (`/block.html`, `src/block/`): a two storey corner restaurant with striped awnings, glowing shop windows, a sign, café tables, a rooftop terrace with umbrellas and a flat roof with AC units; a road with three vintage cars and four figures in coats and hats; a utility pole, hydrant, lantern, faceted tree, hedge, scooter and manhole. The base shows a dark asphalt layer over pale stone with a wavy line between them. Flat shaded, pastel, ambient occlusion, a soft shadow on a teal backdrop. Drag turns it a little (it eases back), the wheel zooms.
+## Run it
 
-## New York (nyc.html)
+Node.js 20.19+ or 22.12+.
 
-New York as one low poly diorama in the corner block's style (`/nyc.html`, `src/nyc/`): the Empire State, Chrysler and One World Trade Center, a dark glass tower, a copper domed tower, the Statue of Liberty on her star fort and the Brooklyn Bridge over the river, brick towers with water tanks, faceted trees, taxis driving the streets and the bridge (one instanced draw call), clouds and the sun. The title shows today's date and the live New York weather (Open-Meteo); the temperature hides if the request fails. Both diorama pages share `src/diorama/stage.js` (view, light, backdrop, shadow) and `src/diorama/kit.js` (low poly modelling and window textures).
+```bash
+npm install
+npm run dev
+```
 
-## Run
+Open http://127.0.0.1:5173. For a production build: `npm run build`, then `npm run preview`.
 
-Use Node.js 20.19+ or 22.12+. Run `npm install`, then `npm run dev -- --port 5173`. Open http://127.0.0.1:5173/ . For production, run `npm run build` and `npm run preview`.
+## How it is built
 
-## Adjust
+Three.js, no game engine. Everything is made in code; the only model files are the cars.
 
-The toolbar offers zoom, breeze on/off, and an art-direction panel. Adjust daylight, tree size, roughness, lawn/tree/roof/car colors, or show the design grid. Save a PNG with “Save a view.” Reset restores defaults. Panel changes last for the current page session.
+- **City** (`src/nyc/drive/layout.js`, `build.js`): the street plan, then roads with lane markings,
+  crosswalks, traffic lights, sidewalks with curbs, lamps, trees and buildings from it.
+- **Places** (`src/nyc/world.js`, `src/stores/`, `src/nyc/lux.js`): my four companies' stores, Keel,
+  the Brooklyn boutiques, Rankd and the Lux Garage. Each has a parking bay; its card is in
+  `src/ui/visit.js` and the facts in `src/data/profile.js`.
+- **Cars** (`src/cars/models.js`, `src/car.js`): 21 low-poly models, each with its own speed, power,
+  brakes, grip, weight and engine sound. The physics is a body-sized box against exact colliders, the
+  car stands on its axles with suspension on every wheel, and every move is checked along its path.
+- **Traffic** (`src/nyc/drive/traffic.js`): cars on the road network that keep their lane, stop at
+  red and roll their wheels by the distance they travel.
+- **Bridge** (`src/nyc/drive/bridge.js`): an arch over the river; its deck height and railing
+  colliders match what you see.
+- **Sound** (`src/audio.js`): synthesized live with the Web Audio API (no audio files): engines per
+  car type, horns, sirens, the city and the music.
+- **Look** (`src/main.js`): ambient occlusion, bloom, tone mapping and anti-aliasing; the quality adapts
+  to the device to keep the frame rate smooth. Faces that share a plane are given a fixed draw order
+  (`src/fx/coplanar.js`) so nothing flickers.
 
-Defaults are in `src/config.js`: palette, lighting, fixed camera, house dimensions, car placement, and tile footprint. `src/home.js` creates the minimal house and Turkish flag; `src/vehicles.js` models the vehicles and `src/car.js` drives them; `src/tile.js` assembles the lawn, driveway, house, car, trees, and entrance path. `src/main.js` controls rendering and the interface.
+## Developer tools
 
-Vehicles (src/vehicles.js), all original designs in the tile's clean toy style: 1 Hatchback, 2 Sedan, 3 Coupe, 4 SUV, 5 Wagon, 6 Minivan, 7 Taxi, 8 City, 9 Ambulance, 10 Box truck, 11 Dump truck. The page shows only the scene and drives the City car (hardcoded in main.js); there is no picker. `garage.html` shows them all side by side; `car.html?v=N` shows one close up (N from 0). It is not manufacturer CAD. All assets are live 3D geometry, with a local canvas texture for the Turkish crescent and star. No remote models or images are required. Interface fonts have sans-serif fallbacks.
+Only in `npm run dev`:
 
-## Modular footprint
+- `?colliders` in the address draws every collision shape over the scene.
+- `src/dev/bridge-bench.js` drives every car over the bridge and reports wheel contact, sticking and
+  railing contact. In the console: `(await import('/src/dev/bridge-bench.js')).run()`.
+- `src/dev/zfight.js` lists surfaces that would flicker.
 
-One 100 × 100 design-pixel square maps to 10 × 10 world units. The enlarged preview is independent of this footprint. The camera is orthographic at 45° azimuth and 35.264° elevation, with zoom only.
+Format the code with `npm run format`.
 
-Future tiles snap in 10-unit increments along X/Z. Lawn edges share height 0.12. The south driveway is centered at x=2.2, 2.8 units wide, with surface height 0.145; these values are recorded in `TILE_SPEC`. Only this house tile is implemented.
+## Credits
 
-Static geometry is batched by material. Pixel ratio is capped at 1.75. Breeze targets 30 FPS; shadows update at 6 Hz. Rendering pauses in hidden tabs and runs on demand with breeze off. Reduced-motion preferences disable breeze by default.
-
-The previous forest study was preserved in the workspace's `work/forest-v1/` directory before this redesign. 
-
-## Rendering and engine notes
-
-Stack: Three.js r180 (vanilla, no React), Vite 7, `postprocessing` 6.39.5 (pmndrs composer), `n8ao` 2.0.1 (ambient occlusion). React Three Fiber, drei, Leva, r3f-perf and Rapier were evaluated and not adopted: the app has no React, collision is a handful of static shapes, and each benefit is available directly in Three.js at a fraction of the bundle cost.
-
-- Pipeline: one multisampled HDR scene pass, N8AO from depth (no second scene render; transparency detection off, it cost ~10 ms), one merged pass for tone mapping and sRGB output. Default tone mapping ACES (keeps the established palette); Neutral and AgX in the developer panel.
-- Light: `src/world/lighting.js` holds lighting presets (sun by azimuth/elevation, sky, fill, environment, exposure, fog, AO). A prefiltered RoomEnvironment gives soft reflections with no download.
-- Quality: `src/quality.js` has High / Balanced / Performance (pixel ratio cap, MSAA, shadow map size, shadow filter taps, AO resolution and samples, decor density). Chosen from the GPU and device, forced with `?quality=`, or set in the developer panel. A frame monitor lowers render scale in small steps with hysteresis and a cool-down, and steps the preset down once if needed (never up automatically).
-- Loop: renders at display rate only while something moves or changed; driving runs a fixed 120 Hz simulation interpolated for display, so it feels the same at 60 or 144 Hz.
-- World kit: `src/world/units.js` (1 unit = 10 design pixels, tile = 10 units = 100 design pixels, tile origin at its centre, edge connectors), `src/world/vegetation.js` (faceted round and pine trees, instanced meadow scatter with GPU wind and density control).
-- Developer tools (dev builds only, stripped from production): a Developer section inside the Workbench (quality, render scale, sun, sky, environment, exposure, tone mapping, shadow softness, AO, fog, decor density, animation speed, colours, saved and exported presets), a stats overlay, and `forestTile.bench(n)` for timed frames.
-- Production chunks: app ~46 kB, three ~520 kB, effects ~212 kB (gzip 18 / 132 / 96 kB).
-
-## The map
-
-A square of 81 tiles of 100 x 100 design pixels (9 across, 9 down, 90 x 90 units), numbered 1 to 81 row by row from the north west corner (`src/world/grid.js`); the start plaza is tile 41, in the middle. Add `?tiles` to the URL to see the numbers. Drag to pan, scroll or pinch to zoom; the camera angle never changes and the view follows the car while it drives.
-
-## Driving
-
-W / Up gas, S / Down brake then reverse, A D / Left Right steer, Space handbrake, R back to the parking space. Top speed 9.6 units/s (0 to 4.8 in 0.8 s, to 9 in about 3 s), brakes stop from full speed in about 0.7 s. The car follows its front wheels exactly: tight at low speed (radius about 3 units), wider arcs at speed (about 4.7 at 5 units/s, 7.5 at full speed, where tyre grip caps it and the car runs wide instead of snapping round). Steering eases in and centres quickly; the handbrake lets the rear slide. The camera follows faster as speed rises.
-
-## Road and traffic (tiles 79 to 87)
-
-An east-west road runs across tiles 79 to 87, directly in front of the house; the house driveway joins it at tile 83 (`src/world/roads.js`). Two lanes (right-hand traffic), dashed centre line, sidewalks, zebra crossings either side of the driveway, stop lines and three traffic lights: one for each road direction and one facing the driveway. The road lights cycle green 25 s, yellow 3 s, red 25 s (no timer is shown); the driveway light is green only while the road is red.
-
-Bot cars (`src/world/traffic.js`) use the Intelligent Driver Model: they keep a safe gap to the car ahead (including yours), stop behind the line on red, stop on yellow only when they comfortably can, and pull away on green. Cars leaving the road re-enter at the other end. Your car collides with them and with the light poles. In a 160 s simulated run: no red light violations, minimum gap 1.0 units, peak braking 1.2 units/s².
-
-## Park (tile 98)
-
-Across the road from the house (`src/world/park.js`): a stone fountain on a circular gravel path, four paths out to the tile edges (the north one meets the road's sidewalk), twelve faceted round trees and pines (three per quarter), four benches facing the fountain, four lamp posts, and a trimmed hedge framing the edges with openings at the paths. The car can drive on the grass and paths but collides with trees, benches, lamps, hedges and the fountain.
-
-## Design system: storybook
-
-All colours, light and surfaces come from one set of tokens in `src/world/theme.js`, so every tile shares the look. Storybook is an original style in the spirit of classic animated films: lush, saturated but soft greens; warm golden sunlight with sky-blue fill light in the shadows; cream walls and coral roofs; a soft sky gradient behind the world with faceted clouds drifting slowly over the map; contact shading tinted violet, never black.
-
-## The white campus (current world)
-
-The whole map is one architectural white model (`src/world/campus.js`), in the spirit of a white smart factory maquette: matte white blocks on raised plinths, floor level roads on a pale grid, soft high-key light with cool grey contact shading, and one accent, blue.
-- Five hero buildings around the start plaza carry the sections: Work (two finned towers on a podium), Skills (stepped block with a gatehouse and a glass bridge), Contact (ribbed warehouse with trucks and pallets), About (the factory with a blue glass entrance and the ARMIN name plate) and Projects (banded block with an annex).
-- Four outer campuses carry the studios Armin worked at (Rush Graphics, Hindra Studio, AAQ Real Estate, Big Uppetite); the quiet blocks hold sheds, solar rows, offices and parking.
-- Each labelled building has a floating label card with a signal icon, a blue beam and a slow pulse on its roof (still with reduced motion).
-- The plinths are solid: the car drives the roads and the plaza. Static geometry is merged per material (about 70 to 110 draw calls in view).
-- All colours and light come from `THEME.campus`, `THEME.palette` and `THEME.light` in `src/world/theme.js`.
-
-## Finding the experience
-
-Work history is never more than one click away (`src/ui/experience.js`):
-- An Experience list sits top left (a pill on phones), newest first, with years.
-- Picking a job, clicking a studio's building or label, or clicking the Work tower opens one card: role, years and place, with Newer and Older to walk the timeline. Esc or × closes it.
-- The camera glides to the studio and holds there until you drive again. Studio labels in the scene also show their years.
-
-## The playground
-
-Toys on the campus roads and plaza, all white, that the car pushes with real physics (`src/world/playground.js`):
-- Big white 3D letters spelling ARMIN on the start plaza.
-- A row of blocks across the Work road, ten bowling pins with a blue ball, cones along the main road and stacks of crates.
-- Bumping something takes a little speed off the car, more for heavier things. Anything pushed off the edge comes back to where it started.
-- Bodies sleep until touched, so a still scene costs nothing; shadows refresh only while something moves.
-
-- Street furniture (lamps, benches, bins) topples when hit, rests a few seconds, then floats slowly back to its spot.
-- The plinths are solid for the props too.
-- Physics is Rapier (`@dimforge/rapier3d-compat`), loaded in the background after the scene shows (about 1 MB gzipped, WASM inlined).
-
-## Feel
-
-All motion shares `src/motion.js`: one smoothing helper, `damp(a, b, lambda, dt) = lerp(a, b, 1 - exp(-lambda*dt))`, and a fixed 1/120 s clock (car, physics, traffic) drawn interpolated between the last two steps. Frame time is clamped to 0.1 s and the clocks reset when the tab is hidden, so nothing ever jumps.
-- Car body on spring-dampers: it squats under gas, dives under braking, leans in turns and bounces on hits. The handbrake drift leaves tyre marks that fade out and kicks up dust.
-- Camera: a critically damped spring follow with look-ahead along the car's velocity, a slight zoom out at speed and a tiny shake on hard hits (off with reduced motion). Drag pans and wheel or pinch zooms glide to a stop after release.
-- Every constant is in `FEEL` (motion.js) and live in the dev build's Feel panel (bottom left), saved per browser.
-
-The earlier harbour district is kept in git history (commit 3bc1d28); its modules are still in `src/world/` for reuse. 
+Car models: [Free Low Poly Vehicles Pack by Rgsdev](public/cars/LICENSE-rgsdev.txt) (CC0).

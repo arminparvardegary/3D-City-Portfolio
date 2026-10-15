@@ -1,1 +1,31 @@
-{"name":"my-house-tile","version":"0.2.0","private":true,"type":"module","scripts":{"dev":"vite --host 127.0.0.1","build":"vite build","preview":"vite preview --host 127.0.0.1"},"dependencies":{"@dimforge/rapier3d-compat":"0.20.0","@react-three/drei":"^10.7.9","@react-three/fiber":"^9.8.2","goober":"^2.1.19","gsap":"^3.15.0","howler":"^2.2.4","n8ao":"2.0.1","postprocessing":"6.39.5","react":"^19.3.1","react-dom":"^19.3.1","three":"0.180.0"},"devDependencies":{"vite":"7.3.7","vite-plugin-pwa":"^2.0.0"}}
+{
+  "name": "my-house-tile",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "format": "prettier --write \"src/**/*.{js,ts,tsx,css}\" \"*.{html,js,json}\"",
+    "format:check": "prettier --check \"src/**/*.{js,ts,tsx,css}\" \"*.{html,js,json}\""
+  },
+  "dependencies": {
+    "@dimforge/rapier3d-compat": "0.20.0",
+    "@react-three/drei": "^10.7.9",
+    "@react-three/fiber": "^9.8.2",
+    "goober": "^2.1.19",
+    "gsap": "^3.15.0",
+    "howler": "^2.2.4",
+    "n8ao": "2.0.1",
+    "postprocessing": "6.39.5",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "prettier": "3.3.3",
+    "vite": "7.3.7",
+    "vite-plugin-pwa": "^2.0.0"
+  }
+}

@@ -8,21 +8,22 @@
 // TILE.top; neighbours sit at exact multiples of TILE.size on x and z, so edges
 // meet with no gaps or overlaps. +x is east, +z is south, +y is up.
 
-export const TILE=Object.freeze({size:10,designPx:100,unitsPerPx:.1,top:.12,slab:.12});
+export const TILE = Object.freeze({ size: 10, designPx: 100, unitsPerPx: 0.1, top: 0.12, slab: 0.12 });
 
-export const px=n=>n*TILE.unitsPerPx;              // design pixels -> world units
-export const half=TILE.size/2;
+export const px = n => n * TILE.unitsPerPx; // design pixels -> world units
+export const half = TILE.size / 2;
 
 // World position of a tile placed at grid cell (col, row).
-export const tileOrigin=(col,row)=>[col*TILE.size,0,row*TILE.size];
+export const tileOrigin = (col, row) => [col * TILE.size, 0, row * TILE.size];
 
 // Edges shared with neighbours. A connector names what crosses the edge so two
 // tiles only snap together when both sides agree (lawn to lawn, path to path).
-export const EDGES=Object.freeze({north:[0,-1],east:[1,0],south:[0,1],west:[-1,0]});
-export const OPPOSITE=Object.freeze({north:'south',south:'north',east:'west',west:'east'});
+export const EDGES = Object.freeze({ north: [0, -1], east: [1, 0], south: [0, 1], west: [-1, 0] });
+export const OPPOSITE = Object.freeze({ north: 'south', south: 'north', east: 'west', west: 'east' });
 
-export function canConnect(a,edge,b){
-  const ca=a.connectors[edge],cb=b.connectors[OPPOSITE[edge]];
-  const type=c=>typeof c==='string'?c:c?.type;
-  return type(ca)===type(cb)&&(ca?.offset??0)===(cb?.offset??0);
+export function canConnect(a, edge, b) {
+  const ca = a.connectors[edge],
+    cb = b.connectors[OPPOSITE[edge]];
+  const type = c => (typeof c === 'string' ? c : c?.type);
+  return type(ca) === type(cb) && (ca?.offset ?? 0) === (cb?.offset ?? 0);
 }

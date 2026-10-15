@@ -7,12 +7,19 @@ function grainTexture(kind, seed = 291) {
   canvas.width = canvas.height = 256;
   const ctx = canvas.getContext('2d');
   const rand = seededRandom(seed);
-  ctx.fillStyle = '#a5a5a5'; ctx.fillRect(0, 0, 256, 256);
+  ctx.fillStyle = '#a5a5a5';
+  ctx.fillRect(0, 0, 256, 256);
   for (let i = 0; i < 16000; i++) {
     const v = 118 + Math.floor(rand() * 85);
     ctx.fillStyle = `rgba(${v},${v},${v},${kind === 'wood' ? 0.13 : 0.4})`;
-    const x = rand() * 256, y = rand() * 256;
-    ctx.fillRect(x, y, kind === 'wood' ? 0.4 + rand() : 0.5 + rand() * 1.3, kind === 'wood' ? 8 + rand() * 65 : 0.5 + rand() * 1.3);
+    const x = rand() * 256,
+      y = rand() * 256;
+    ctx.fillRect(
+      x,
+      y,
+      kind === 'wood' ? 0.4 + rand() : 0.5 + rand() * 1.3,
+      kind === 'wood' ? 8 + rand() * 65 : 0.5 + rand() * 1.3,
+    );
   }
   const texture = new THREE.CanvasTexture(canvas);
   texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
@@ -24,7 +31,8 @@ function grainTexture(kind, seed = 291) {
 export function createMaterials() {
   const grain = grainTexture('stone');
   const wood = grainTexture('wood');
-  const make = (color, extra = {}) => new THREE.MeshStandardMaterial({color, roughness: ART.material.roughness, metalness: 0, ...extra});
+  const make = (color, extra = {}) =>
+    new THREE.MeshStandardMaterial({ color, roughness: ART.material.roughness, metalness: 0, ...extra });
   const tactile = { bumpMap: grain, bumpScale: ART.material.bump };
   const colors = ART.palette;
   return {
@@ -38,7 +46,13 @@ export function createMaterials() {
     door: make(THEME.palette.door, { vertexColors: true }),
     roof: make(colors.roof, { ...tactile, bumpScale: 0.018, vertexColors: true }),
     roofDark: make(THEME.palette.roofDark, { ...tactile }),
-    leaves: make(colors.leaves, { ...tactile, bumpScale: 0.006, vertexColors: true, envMapIntensity: 0.35, side: THREE.DoubleSide }),
+    leaves: make(colors.leaves, {
+      ...tactile,
+      bumpScale: 0.006,
+      vertexColors: true,
+      envMapIntensity: 0.35,
+      side: THREE.DoubleSide,
+    }),
     pine: make(THEME.palette.pine, { vertexColors: true, envMapIntensity: 0.3 }),
     leafTips: make(colors.leafLight, { vertexColors: true, side: THREE.DoubleSide }),
     bark: make(colors.bark, { bumpMap: wood, bumpScale: 0.075, vertexColors: true }),

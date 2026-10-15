@@ -8,131 +8,417 @@ import { track } from '../analytics.js';
 // Rush Graphics") while the car stands in a bay; the card shows the logo, the
 // role, the years and what Armin did. Esc, the close button or driving away
 // closes it.
-const HAND='"Amatic SC","Marker Felt",cursive',FONT='-apple-system,"SF Pro Text",Inter,system-ui,sans-serif';
-const INK='#f4f0ff',DIM='#b9b0ef',WARM='#ff9a4a';
-const glass=`background:rgba(22,16,56,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 18px 56px #0007,inset 0 0 0 1px #ffffff14;color:${INK};font-family:${FONT};`;
-const promptCls=css`
-  position:absolute;left:50%;bottom:28px;transform:translateX(-50%);z-index:9;display:flex;align-items:center;gap:12px;height:56px;padding:0 24px 0 10px;border-radius:28px;${glass}
-  font-size:17px;font-weight:600;cursor:pointer;white-space:nowrap;
-  &[hidden]{display:none;}
-  kbd{height:38px;padding:0 14px;display:grid;place-items:center;border-radius:19px;background:${WARM};color:#1a1035;font:700 22px ${HAND};box-shadow:0 0 18px #ff9a4a88;}
-  b{font:700 26px ${HAND};letter-spacing:.02em;}
-  &:focus-visible{outline:3px solid #ff9a4a88;outline-offset:2px;}
-  @media(hover:none){bottom:150px;}
+const HAND = '"Amatic SC","Marker Felt",cursive',
+  FONT = '-apple-system,"SF Pro Text",Inter,system-ui,sans-serif';
+const INK = '#f4f0ff',
+  DIM = '#b9b0ef',
+  WARM = '#ff9a4a';
+const glass = `background:rgba(22,16,56,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 18px 56px #0007,inset 0 0 0 1px #ffffff14;color:${INK};font-family:${FONT};`;
+const promptCls = css`
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 56px;
+  padding: 0 24px 0 10px;
+  border-radius: 28px;
+  ${glass}
+  font-size:17px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  &[hidden] {
+    display: none;
+  }
+  kbd {
+    height: 38px;
+    padding: 0 14px;
+    display: grid;
+    place-items: center;
+    border-radius: 19px;
+    background: ${WARM};
+    color: #1a1035;
+    font: 700 22px ${HAND};
+    box-shadow: 0 0 18px #ff9a4a88;
+  }
+  b {
+    font: 700 26px ${HAND};
+    letter-spacing: 0.02em;
+  }
+  &:focus-visible {
+    outline: 3px solid #ff9a4a88;
+    outline-offset: 2px;
+  }
+  @media (hover: none) {
+    bottom: 150px;
+  }
 `;
-const cardCls=css`
-  position:absolute;right:24px;top:24px;z-index:9;width:min(380px,calc(100% - 48px));padding:28px;border-radius:28px;${glass}
-  &[hidden]{display:none;}
-  .logo{width:96px;height:96px;border-radius:22px;background:#fff center/contain no-repeat;margin-bottom:16px;}
-  .label{margin:0;font:700 22px ${HAND};letter-spacing:.06em;color:${WARM};}
-  h2{margin:4px 0 6px;font:700 48px/1 ${HAND};color:${INK};}
-  .role{margin:0 0 16px;font-size:17px;color:${INK};}
-  .meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;}
-  .meta div{background:#ffffff10;border-radius:16px;padding:12px;}
-  .meta b{display:block;font:700 28px/1.1 ${HAND};}
-  .meta span{font-size:13px;color:${DIM};}
-  .note{margin:0 0 16px;font-size:15px;line-height:1.45;color:${DIM};}
-  .row{display:flex;justify-content:space-between;align-items:center;}
-  a,button{font:700 24px ${HAND};color:${INK};}
-  a{color:${WARM};text-decoration:none;}
-  button{padding:6px 2px;}
-  a:focus-visible,button:focus-visible{outline:3px solid #ff9a4a88;outline-offset:2px;border-radius:8px;}
-  .models{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:34vh;overflow:auto;margin-top:8px;}
-  .models button{font:600 15px ${FONT};text-align:left;padding:10px 12px;border-radius:14px;background:#ffffff10;color:${INK};}
-  .models button[aria-pressed="true"]{background:${WARM};color:#1a1035;}
-  .paints{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0 16px;}
-  .paints button{width:34px;height:34px;padding:0;border-radius:50%;box-shadow:inset 0 0 0 2px #ffffff33;}
-  .paints button[aria-pressed="true"]{box-shadow:0 0 0 3px ${WARM};}
-  .models button.hi{box-shadow:inset 0 0 0 2px ${WARM};}
-  .models button[aria-pressed="true"]::after{content:' ✓';}
-  .keys{display:flex;gap:6px;align-items:center;font-size:13px;color:${DIM};}
-  .keys kbd{min-width:24px;height:24px;padding:0 6px;display:inline-grid;place-items:center;border-radius:7px;background:#ffffff18;color:${INK};font:600 13px ${FONT};}
-  button.go{padding:8px 22px;border-radius:999px;background:${WARM};color:#1a1035;white-space:nowrap;}
+const cardCls = css`
+  position: absolute;
+  right: 24px;
+  top: 24px;
+  z-index: 9;
+  width: min(380px, calc(100% - 48px));
+  padding: 28px;
+  border-radius: 28px;
+  ${glass}
+  &[hidden] {
+    display: none;
+  }
+  .logo {
+    width: 96px;
+    height: 96px;
+    border-radius: 22px;
+    background: #fff center/contain no-repeat;
+    margin-bottom: 16px;
+  }
+  .label {
+    margin: 0;
+    font: 700 22px ${HAND};
+    letter-spacing: 0.06em;
+    color: ${WARM};
+  }
+  h2 {
+    margin: 4px 0 6px;
+    font: 700 48px/1 ${HAND};
+    color: ${INK};
+  }
+  .role {
+    margin: 0 0 16px;
+    font-size: 17px;
+    color: ${INK};
+  }
+  .meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .meta div {
+    background: #ffffff10;
+    border-radius: 16px;
+    padding: 12px;
+  }
+  .meta b {
+    display: block;
+    font: 700 28px/1.1 ${HAND};
+  }
+  .meta span {
+    font-size: 13px;
+    color: ${DIM};
+  }
+  .note {
+    margin: 0 0 16px;
+    font-size: 15px;
+    line-height: 1.45;
+    color: ${DIM};
+  }
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  a,
+  button {
+    font: 700 24px ${HAND};
+    color: ${INK};
+  }
+  a {
+    color: ${WARM};
+    text-decoration: none;
+  }
+  button {
+    padding: 6px 2px;
+  }
+  a:focus-visible,
+  button:focus-visible {
+    outline: 3px solid #ff9a4a88;
+    outline-offset: 2px;
+    border-radius: 8px;
+  }
+  .models {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    max-height: 34vh;
+    overflow: auto;
+    margin-top: 8px;
+  }
+  .models button {
+    font: 600 15px ${FONT};
+    text-align: left;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: #ffffff10;
+    color: ${INK};
+  }
+  .models button[aria-pressed='true'] {
+    background: ${WARM};
+    color: #1a1035;
+  }
+  .paints {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 8px 0 16px;
+  }
+  .paints button {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 2px #ffffff33;
+  }
+  .paints button[aria-pressed='true'] {
+    box-shadow: 0 0 0 3px ${WARM};
+  }
+  .models button.hi {
+    box-shadow: inset 0 0 0 2px ${WARM};
+  }
+  .models button[aria-pressed='true']::after {
+    content: ' ✓';
+  }
+  .keys {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    font-size: 13px;
+    color: ${DIM};
+  }
+  .keys kbd {
+    min-width: 24px;
+    height: 24px;
+    padding: 0 6px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 7px;
+    background: #ffffff18;
+    color: ${INK};
+    font: 600 13px ${FONT};
+  }
+  button.go {
+    padding: 8px 22px;
+    border-radius: 999px;
+    background: ${WARM};
+    color: #1a1035;
+    white-space: nowrap;
+  }
   /* On a phone the garage card sits low and short, so the car on the turntable shows above it. */
-  @media(max-width:520px){&.garage{top:auto;bottom:16px;padding:18px;h2{font-size:32px;}.models{max-height:20vh;}.paints{flex-wrap:nowrap;overflow-x:auto;gap:8px;margin-bottom:10px;}.paints button{flex:none;width:30px;height:30px;}.keys{display:none;}}}
-  @media(max-width:520px){left:16px;right:16px;top:16px;width:auto;padding:22px;h2{font-size:40px;}}
+  @media (max-width: 520px) {
+    &.garage {
+      top: auto;
+      bottom: 16px;
+      padding: 18px;
+      h2 {
+        font-size: 32px;
+      }
+      .models {
+        max-height: 20vh;
+      }
+      .paints {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+      .paints button {
+        flex: none;
+        width: 30px;
+        height: 30px;
+      }
+      .keys {
+        display: none;
+      }
+    }
+  }
+  @media (max-width: 520px) {
+    left: 16px;
+    right: 16px;
+    top: 16px;
+    width: auto;
+    padding: 22px;
+    h2 {
+      font-size: 40px;
+    }
+  }
 `;
 
-const LOGO={rankd:BRAND.rankd.logo,rush:null,hindra:BRAND.hindra.logo,aaq:BRAND.aaq.logo,bigup:BRAND.bigup.logo,keel:BRAND.keel.logo};
+const LOGO = {
+  rankd: BRAND.rankd.logo,
+  rush: null,
+  hindra: BRAND.hindra.logo,
+  aaq: BRAND.aaq.logo,
+  bigup: BRAND.bigup.logo,
+  keel: BRAND.keel.logo,
+};
 
-export function createVisit({onOpen,onClose,garage}){
-  const reduced=matchMedia('(prefers-reduced-motion: reduce)');
-  const prompt=document.createElement('button');prompt.className=promptCls;prompt.hidden=true;
-  const card=document.createElement('section');card.className=cardCls;card.hidden=true;card.setAttribute('aria-live','polite');
-  document.querySelector('.scene').append(prompt,card);
-  let bay=null,open=null,pick=null;
+export function createVisit({ onOpen, onClose, garage }) {
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  const prompt = document.createElement('button');
+  prompt.className = promptCls;
+  prompt.hidden = true;
+  const card = document.createElement('section');
+  card.className = cardCls;
+  card.hidden = true;
+  card.setAttribute('aria-live', 'polite');
+  document.querySelector('.scene').append(prompt, card);
+  let bay = null,
+    open = null,
+    pick = null;
   // Garage: the highlighted car and paint show on the turntable; Enter drives it.
   // Each car's own paints (the Cybertruck only comes in stainless or black).
-  function paintsFor(i){const list=garage.colorsFor?.(i)??garage.colors,box=card.querySelector('.paints');if(!list.includes(pick.color))pick.color=list[0];
-    if(box&&box.dataset.for!==String(i)){box.dataset.for=String(i);box.innerHTML=list.map(c=>`<button data-c="${c}" aria-label="Paint ${c}" style="background:${c}"></button>`).join('');}}
-  function showPick(){
+  function paintsFor(i) {
+    const list = garage.colorsFor?.(i) ?? garage.colors,
+      box = card.querySelector('.paints');
+    if (!list.includes(pick.color)) pick.color = list[0];
+    if (box && box.dataset.for !== String(i)) {
+      box.dataset.for = String(i);
+      box.innerHTML = list
+        .map(c => `<button data-c="${c}" aria-label="Paint ${c}" style="background:${c}"></button>`)
+        .join('');
+    }
+  }
+  function showPick() {
     paintsFor(pick.i);
-    card.querySelectorAll('.models [data-i]').forEach(el=>{const on=+el.dataset.i===pick.i;el.classList.toggle('hi',on);if(on)el.scrollIntoView({block:'nearest'});});
-    card.querySelectorAll('.paints [data-c]').forEach(el=>el.setAttribute('aria-pressed',String(el.dataset.c===pick.color)));
-    garage.preview?.(pick.i,pick.color);}
-  const movePick=d=>{const n=garage.models.length;pick.i=Math.min(n-1,Math.max(0,pick.i+d));showPick();};
-  function drive(){garage.choose(pick.i,pick.color);close();}
+    card.querySelectorAll('.models [data-i]').forEach(el => {
+      const on = +el.dataset.i === pick.i;
+      el.classList.toggle('hi', on);
+      if (on) el.scrollIntoView({ block: 'nearest' });
+    });
+    card
+      .querySelectorAll('.paints [data-c]')
+      .forEach(el => el.setAttribute('aria-pressed', String(el.dataset.c === pick.color)));
+    garage.preview?.(pick.i, pick.color);
+  }
+  const movePick = d => {
+    const n = garage.models.length;
+    pick.i = Math.min(n - 1, Math.max(0, pick.i + d));
+    showPick();
+  };
+  function drive() {
+    garage.choose(pick.i, pick.color);
+    close();
+  }
 
-  function fill(b){
-    const job=JOBS.find(j=>j.id===b.id),logo=LOGO[b.id.startsWith('keel')?'keel':b.id];
-    const logoHtml=logo?`<div class="logo" style="background-image:url('${url(logo)}');${b.id.startsWith('keel')||b.id==='rankd'?'background-size:cover;':''}"></div>`
-      :`<div class="logo" style="background:#141416;display:grid;place-items:center;color:${BRAND.rush.color};font:italic 900 30px ${FONT}">RUSH</div>`;
-    if(job){
-      card.innerHTML=`${logoHtml}<p class="label">Experience</p><h2>${b.name}</h2><p class="role">${job.role}</p>
-        <div class="meta"><div><b>${duration(job)}</b><span>${span(job)}</span></div><div><b>${job.place.split(' · ')[0]}</b><span>${job.place.includes('·')?job.place.split(' · ')[1]:'On site'}</span></div></div>
-        ${job.note?`<p class="note">${job.note}</p>`:''}<div class="row"><span></span><button data-close>Close ×</button></div>`;
-    }else if(b.id==='garage'&&garage){   // the Lux Garage: look at a car on the turntable, then drive it
-      const cur=garage.current();pick={i:cur.i,color:cur.color};
-      card.innerHTML=`<p class="label">Lux Garage</p><h2>Choose your car</h2>
-        <div class="models">${garage.models.map((n,i)=>`<button data-i="${i}" aria-pressed="${i===cur.i}">${n}</button>`).join('')}</div>
+  function fill(b) {
+    const job = JOBS.find(j => j.id === b.id),
+      logo = LOGO[b.id.startsWith('keel') ? 'keel' : b.id];
+    const logoHtml = logo
+      ? `<div class="logo" style="background-image:url('${url(logo)}');${b.id.startsWith('keel') || b.id === 'rankd' ? 'background-size:cover;' : ''}"></div>`
+      : `<div class="logo" style="background:#141416;display:grid;place-items:center;color:${BRAND.rush.color};font:italic 900 30px ${FONT}">RUSH</div>`;
+    if (job) {
+      card.innerHTML = `${logoHtml}<p class="label">Experience</p><h2>${b.name}</h2><p class="role">${job.role}</p>
+        <div class="meta"><div><b>${duration(job)}</b><span>${span(job)}</span></div><div><b>${job.place.split(' · ')[0]}</b><span>${job.place.includes('·') ? job.place.split(' · ')[1] : 'On site'}</span></div></div>
+        ${job.note ? `<p class="note">${job.note}</p>` : ''}<div class="row"><span></span><button data-close>Close ×</button></div>`;
+    } else if (b.id === 'garage' && garage) {
+      // the Lux Garage: look at a car on the turntable, then drive it
+      const cur = garage.current();
+      pick = { i: cur.i, color: cur.color };
+      card.innerHTML = `<p class="label">Lux Garage</p><h2>Choose your car</h2>
+        <div class="models">${garage.models.map((n, i) => `<button data-i="${i}" aria-pressed="${i === cur.i}">${n}</button>`).join('')}</div>
         <p class="label" style="margin-top:14px">Paint</p>
-        <div class="paints">${garage.colors.map(c=>`<button data-c="${c}" aria-label="Paint ${c}" style="background:${c}"></button>`).join('')}</div>
+        <div class="paints">${garage.colors.map(c => `<button data-c="${c}" aria-label="Paint ${c}" style="background:${c}"></button>`).join('')}</div>
         <div class="row"><span class="keys"><kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>⏎</kbd><kbd>⌫</kbd></span><button class="go" data-go>Drive it</button></div>
         <div class="row" style="margin-top:6px"><span></span><button data-close>Close ×</button></div>`;
-      card.querySelector('.models').onclick=e=>{const t=e.target.closest('[data-i]');if(t)movePick(+t.dataset.i-pick.i);};
-      card.querySelector('.models').ondblclick=e=>{if(e.target.closest('[data-i]'))drive();};
-      card.querySelector('.paints').onclick=e=>{const t=e.target.closest('[data-c]');if(!t)return;pick.color=t.dataset.c;showPick();};
-      card.querySelector('[data-go]').onclick=drive;
+      card.querySelector('.models').onclick = e => {
+        const t = e.target.closest('[data-i]');
+        if (t) movePick(+t.dataset.i - pick.i);
+      };
+      card.querySelector('.models').ondblclick = e => {
+        if (e.target.closest('[data-i]')) drive();
+      };
+      card.querySelector('.paints').onclick = e => {
+        const t = e.target.closest('[data-c]');
+        if (!t) return;
+        pick.color = t.dataset.c;
+        showPick();
+      };
+      card.querySelector('[data-go]').onclick = drive;
       showPick();
-    }else if(b.id==='rankd'){
-      card.innerHTML=`${logoHtml}<p class="label">My project</p><h2>Rankd</h2><p class="role">Bring your list. Leave with a real one.</p>
+    } else if (b.id === 'rankd') {
+      card.innerHTML = `${logoHtml}<p class="label">My project</p><h2>Rankd</h2><p class="role">Bring your list. Leave with a real one.</p>
         <p class="note">Head to head ranking for movies, TV and books. Rankd asks one question at a time, which is better, until every title has its own number. No stars. No ties.</p>
         <div class="row"><a href="https://therankd.com" target="_blank" rel="noopener">therankd.com ›</a><button data-close>Close ×</button></div>`;
-    }else if(b.id.startsWith('lux')){   // a Brooklyn boutique: no branding
-      card.innerHTML=`<p class="label">Brooklyn</p><h2>Boutique</h2><p class="role">Glass, gold and marble on the river</p>
+    } else if (b.id.startsWith('lux')) {
+      // a Brooklyn boutique: no branding
+      card.innerHTML = `<p class="label">Brooklyn</p><h2>Boutique</h2><p class="role">Glass, gold and marble on the river</p>
         <p class="note">One of six boutiques along the Brooklyn waterfront. Walk round the glass and look inside.</p><div class="row"><span></span><button data-close>Close ×</button></div>`;
-    }else{   // Keel
-      card.innerHTML=`${logoHtml}<p class="label">My company</p><h2>Keel</h2><p class="role">Founder</p>
+    } else {
+      // Keel
+      card.innerHTML = `${logoHtml}<p class="label">My company</p><h2>Keel</h2><p class="role">Founder</p>
         <p class="note">The AI assistant you text like a friend. It remembers the small stuff, plans your day and keeps your money straight, on iMessage and Telegram.</p>
         <div class="row"><a href="https://www.keeltwin.com" target="_blank" rel="noopener">keeltwin.com ›</a><button data-close>Close ×</button></div>`;
     }
-    card.querySelector('[data-close]').onclick=close;
+    card.querySelector('[data-close]').onclick = close;
   }
-  function show(){
-    if(!bay||open)return;open=bay;card.classList.toggle('garage',bay.id==='garage');fill(bay);card.hidden=false;prompt.hidden=true;track('open_place',{place:bay.id});onOpen?.(bay);
-    if(!reduced.matches)gsap.fromTo(card,{y:16,opacity:0},{y:0,opacity:1,duration:.45,ease:'power2.out'});
+  function show() {
+    if (!bay || open) return;
+    open = bay;
+    card.classList.toggle('garage', bay.id === 'garage');
+    fill(bay);
+    card.hidden = false;
+    prompt.hidden = true;
+    track('open_place', { place: bay.id });
+    onOpen?.(bay);
+    if (!reduced.matches)
+      gsap.fromTo(card, { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: 'power2.out' });
   }
-  function close(){if(!open)return;card.hidden=true;open=null;onClose?.();if(bay)prompt.hidden=false;}
-  prompt.onclick=show;
-  const typing=t=>t&&(t.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
-  addEventListener('keydown',e=>{
-    if(typing(e.target))return;
-    if(open?.id==='garage'&&garage){
-      const d={ArrowLeft:-1,ArrowRight:1,ArrowUp:-2,ArrowDown:2}[e.key];
-      if(d){e.preventDefault();movePick(d);return;}
-      if(e.key==='Enter'){e.preventDefault();if(!e.repeat)drive();return;}
+  function close() {
+    if (!open) return;
+    card.hidden = true;
+    open = null;
+    onClose?.();
+    if (bay) prompt.hidden = false;
+  }
+  prompt.onclick = show;
+  const typing = t => t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
+  addEventListener('keydown', e => {
+    if (typing(e.target)) return;
+    if (open?.id === 'garage' && garage) {
+      const d = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -2, ArrowDown: 2 }[e.key];
+      if (d) {
+        e.preventDefault();
+        movePick(d);
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (!e.repeat) drive();
+        return;
+      }
     }
-    if(e.key==='Enter'&&!e.repeat&&bay&&!open){e.preventDefault();show();}
-    else if((e.key==='Escape'||e.key==='Backspace')&&open){e.preventDefault();close();}
+    if (e.key === 'Enter' && !e.repeat && bay && !open) {
+      e.preventDefault();
+      show();
+    } else if ((e.key === 'Escape' || e.key === 'Backspace') && open) {
+      e.preventDefault();
+      close();
+    }
   });
   return {
     // Every frame: the bay the car stands still in (or null).
-    update(b){
-      if(open&&(!b||b.id!==open.id))close();   // drove away
-      if(b!==bay){bay=b;if(b&&!open){prompt.innerHTML=`<kbd>Enter</kbd><span>${b.id.startsWith('keel')?'Visit':'See'}</span><b>${b.name||'Boutique'}</b>`;prompt.hidden=false;
-          if(!reduced.matches)gsap.fromTo(prompt,{y:12,opacity:0},{y:0,opacity:1,duration:.35,ease:'power2.out'});}
-        else prompt.hidden=true;}
+    update(b) {
+      if (open && (!b || b.id !== open.id)) close(); // drove away
+      if (b !== bay) {
+        bay = b;
+        if (b && !open) {
+          prompt.innerHTML = `<kbd>Enter</kbd><span>${b.id.startsWith('keel') ? 'Visit' : 'See'}</span><b>${b.name || 'Boutique'}</b>`;
+          prompt.hidden = false;
+          if (!reduced.matches)
+            gsap.fromTo(
+              prompt,
+              { y: 12, opacity: 0 },
+              { y: 0, opacity: 1, duration: 0.35, ease: 'power2.out' },
+            );
+        } else prompt.hidden = true;
+      }
     },
-    get isOpen(){return !!open;},
+    get isOpen() {
+      return !!open;
+    },
   };
 }

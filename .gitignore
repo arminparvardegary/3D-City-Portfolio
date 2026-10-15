@@ -1,3 +1,7 @@
 node_modules/
 dist/
 .DS_Store
+
+# Third party car models with an unknown licence: kept locally, never published.
+outputs/forest-tile/public/cars/cybertruck.fbx
+outputs/forest-tile/public/cars/model-s.glb

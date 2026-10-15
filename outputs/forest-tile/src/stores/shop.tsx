@@ -1,50 +1,73 @@
-
-import { useMemo } from "react";
-import * as THREE from "three";
-import { RoundedBox } from "@react-three/drei";
-import { Foliage, Mat, Platform, ctex, noise, rng } from "./kit";
+import { useMemo } from 'react';
+import * as THREE from 'three';
+import { RoundedBox } from '@react-three/drei';
+import { Foliage, Mat, Platform, ctex, noise, rng } from './kit';
 
 /* Shared parts for the store blocks: glass, signs, furniture, lamps, paving. */
 
-export const LEAF = ["#3f7d2a", "#4c8f31", "#5aa23a", "#6ab544", "#447f2c", "#78bf4a"];
-export const PINE = ["#2f5f2a", "#356b2e", "#3e7a34", "#2b5426"];
+export const LEAF = ['#3f7d2a', '#4c8f31', '#5aa23a', '#6ab544', '#447f2c', '#78bf4a'];
+export const PINE = ['#2f5f2a', '#356b2e', '#3e7a34', '#2b5426'];
 export const FONT = "-apple-system, 'SF Pro Display', 'Helvetica Neue', Arial";
-export const WARM = "#f7e3c0";
-export const GLOW = "#ffc77a";
+export const WARM = '#f7e3c0';
+export const GLOW = '#ffc77a';
 
 /* ---------- surfaces ---------- */
 function relief(key: string, base: string, face: string, line: string) {
   return {
-    relief: ctex(`${key}-relief`, 1024, 160, (g) => {
-      g.fillStyle = base;
-      g.fillRect(0, 0, 1024, 160);
-      for (let k = 0; k < 8; k++) {
-        const x = k * 128;
-        g.fillStyle = face;
-        g.fillRect(x + 4, 6, 120, 148);
-        g.strokeStyle = line;
-        g.lineWidth = 8;
-        g.beginPath();
-        g.moveTo(x + 22, 134); g.lineTo(x + 22, 26); g.lineTo(x + 106, 26); g.lineTo(x + 106, 112);
-        g.lineTo(x + 46, 112); g.lineTo(x + 46, 52); g.lineTo(x + 82, 52); g.lineTo(x + 82, 86);
-        g.stroke();
-      }
-    }, { repeat: [3, 1] }),
-    reliefBump: ctex("shared-relief-b", 1024, 160, (g) => {
-      g.fillStyle = "#202020";
-      g.fillRect(0, 0, 1024, 160);
-      for (let k = 0; k < 8; k++) {
-        const x = k * 128;
-        g.fillStyle = "#b0b0b0";
-        g.fillRect(x + 4, 6, 120, 148);
-        g.strokeStyle = "#555";
-        g.lineWidth = 8;
-        g.beginPath();
-        g.moveTo(x + 22, 134); g.lineTo(x + 22, 26); g.lineTo(x + 106, 26); g.lineTo(x + 106, 112);
-        g.lineTo(x + 46, 112); g.lineTo(x + 46, 52); g.lineTo(x + 82, 52); g.lineTo(x + 82, 86);
-        g.stroke();
-      }
-    }, { repeat: [3, 1], color: false }),
+    relief: ctex(
+      `${key}-relief`,
+      1024,
+      160,
+      g => {
+        g.fillStyle = base;
+        g.fillRect(0, 0, 1024, 160);
+        for (let k = 0; k < 8; k++) {
+          const x = k * 128;
+          g.fillStyle = face;
+          g.fillRect(x + 4, 6, 120, 148);
+          g.strokeStyle = line;
+          g.lineWidth = 8;
+          g.beginPath();
+          g.moveTo(x + 22, 134);
+          g.lineTo(x + 22, 26);
+          g.lineTo(x + 106, 26);
+          g.lineTo(x + 106, 112);
+          g.lineTo(x + 46, 112);
+          g.lineTo(x + 46, 52);
+          g.lineTo(x + 82, 52);
+          g.lineTo(x + 82, 86);
+          g.stroke();
+        }
+      },
+      { repeat: [3, 1] },
+    ),
+    reliefBump: ctex(
+      'shared-relief-b',
+      1024,
+      160,
+      g => {
+        g.fillStyle = '#202020';
+        g.fillRect(0, 0, 1024, 160);
+        for (let k = 0; k < 8; k++) {
+          const x = k * 128;
+          g.fillStyle = '#b0b0b0';
+          g.fillRect(x + 4, 6, 120, 148);
+          g.strokeStyle = '#555';
+          g.lineWidth = 8;
+          g.beginPath();
+          g.moveTo(x + 22, 134);
+          g.lineTo(x + 22, 26);
+          g.lineTo(x + 106, 26);
+          g.lineTo(x + 106, 112);
+          g.lineTo(x + 46, 112);
+          g.lineTo(x + 46, 52);
+          g.lineTo(x + 82, 52);
+          g.lineTo(x + 82, 86);
+          g.stroke();
+        }
+      },
+      { repeat: [3, 1], color: false },
+    ),
   };
 }
 
@@ -52,7 +75,7 @@ function relief(key: string, base: string, face: string, line: string) {
 function cobble(key: string, hue: number, sat: number, light: number) {
   const draw = (bump: boolean) => (g: CanvasRenderingContext2D) => {
     const r = rng(hue * 7 + light);
-    g.fillStyle = bump ? "#111" : `hsl(${hue}, ${sat}%, ${light - 22}%)`;
+    g.fillStyle = bump ? '#111' : `hsl(${hue}, ${sat}%, ${light - 22}%)`;
     g.fillRect(0, 0, 512, 512);
     const s = 32;
     for (let row = 0; row < 16; row++)
@@ -61,8 +84,8 @@ function cobble(key: string, hue: number, sat: number, light: number) {
         const y = row * s + (r() - 0.5) * 3;
         if (bump) {
           const grd = g.createRadialGradient(x + s / 2, y + s / 2, 2, x + s / 2, y + s / 2, s * 0.62);
-          grd.addColorStop(0, "#fff");
-          grd.addColorStop(1, "#444");
+          grd.addColorStop(0, '#fff');
+          grd.addColorStop(1, '#444');
           g.fillStyle = grd;
         } else g.fillStyle = `hsl(${hue + (r() - 0.5) * 8}, ${sat}%, ${light + (r() - 0.5) * 10}%)`;
         g.beginPath();
@@ -78,157 +101,283 @@ function cobble(key: string, hue: number, sat: number, light: number) {
 
 /** Large square slabs (McDonald's, Google). */
 function slabs(key: string, hue: number, sat: number, light: number) {
-  const n = 4, s = 128;
+  const n = 4,
+    s = 128;
   return {
-    tiles: ctex(`${key}-slab`, 512, 512, (g) => {
-      const r = rng(hue + light);
-      g.fillStyle = `hsl(${hue}, ${sat}%, ${light - 12}%)`;
-      g.fillRect(0, 0, 512, 512);
-      for (let i = 0; i < n; i++)
-        for (let j = 0; j < n; j++) {
-          g.fillStyle = `hsl(${hue}, ${sat}%, ${light + (r() - 0.5) * 5}%)`;
-          g.fillRect(i * s + 2.5, j * s + 2.5, s - 5, s - 5);
-          for (let k = 0; k < 120; k++) {
-            g.fillStyle = `rgba(90,90,95,${r() * 0.07})`;
-            g.fillRect(i * s + r() * s, j * s + r() * s, 2, 2);
+    tiles: ctex(
+      `${key}-slab`,
+      512,
+      512,
+      g => {
+        const r = rng(hue + light);
+        g.fillStyle = `hsl(${hue}, ${sat}%, ${light - 12}%)`;
+        g.fillRect(0, 0, 512, 512);
+        for (let i = 0; i < n; i++)
+          for (let j = 0; j < n; j++) {
+            g.fillStyle = `hsl(${hue}, ${sat}%, ${light + (r() - 0.5) * 5}%)`;
+            g.fillRect(i * s + 2.5, j * s + 2.5, s - 5, s - 5);
+            for (let k = 0; k < 120; k++) {
+              g.fillStyle = `rgba(90,90,95,${r() * 0.07})`;
+              g.fillRect(i * s + r() * s, j * s + r() * s, 2, 2);
+            }
           }
+      },
+      { repeat: [3, 3] },
+    ),
+    tilesBump: ctex(
+      `${key}-slab-b`,
+      512,
+      512,
+      g => {
+        noise(g, 512, 512, 3, 200, 30, 2);
+        g.fillStyle = 'rgb(40,40,40)';
+        for (let i = 0; i <= n; i++) {
+          g.fillRect(i * s - 2.5, 0, 5, 512);
+          g.fillRect(0, i * s - 2.5, 512, 5);
         }
-    }, { repeat: [3, 3] }),
-    tilesBump: ctex(`${key}-slab-b`, 512, 512, (g) => {
-      noise(g, 512, 512, 3, 200, 30, 2);
-      g.fillStyle = "rgb(40,40,40)";
-      for (let i = 0; i <= n; i++) {
-        g.fillRect(i * s - 2.5, 0, 5, 512);
-        g.fillRect(0, i * s - 2.5, 512, 5);
-      }
-    }, { repeat: [3, 3], color: false }),
+      },
+      { repeat: [3, 3], color: false },
+    ),
   };
 }
 
-export function Base({ kind }: { kind: "mcd" | "sbux" | "nike" | "google" }) {
+export function Base({ kind }: { kind: 'mcd' | 'sbux' | 'nike' | 'google' }) {
   const t = useMemo(() => {
     switch (kind) {
-      case "mcd":
-        return { ...slabs("mcd", 30, 6, 84), ...relief("mcd", "#7f848b", "#a7acb3", "#8a9098"), plinth: "#a7acb3", cap: "#d8d8da" };
-      case "sbux":
-        return { ...cobble("sbux", 30, 8, 72), ...relief("sbux", "#6f5a48", "#9b8371", "#7f6a58"), plinth: "#9b8371", cap: "#cfc6bb" };
-      case "nike":
-        return { ...cobble("nike", 220, 4, 62), ...relief("nike", "#55585d", "#7c8087", "#64686e"), plinth: "#7c8087", cap: "#c9cacd" };
+      case 'mcd':
+        return {
+          ...slabs('mcd', 30, 6, 84),
+          ...relief('mcd', '#7f848b', '#a7acb3', '#8a9098'),
+          plinth: '#a7acb3',
+          cap: '#d8d8da',
+        };
+      case 'sbux':
+        return {
+          ...cobble('sbux', 30, 8, 72),
+          ...relief('sbux', '#6f5a48', '#9b8371', '#7f6a58'),
+          plinth: '#9b8371',
+          cap: '#cfc6bb',
+        };
+      case 'nike':
+        return {
+          ...cobble('nike', 220, 4, 62),
+          ...relief('nike', '#55585d', '#7c8087', '#64686e'),
+          plinth: '#7c8087',
+          cap: '#c9cacd',
+        };
       default:
-        return { ...slabs("google", 210, 4, 86), ...relief("google", "#7f848b", "#a9aeb5", "#8a9098"), plinth: "#a9aeb5", cap: "#dcdcde" };
+        return {
+          ...slabs('google', 210, 4, 86),
+          ...relief('google', '#7f848b', '#a9aeb5', '#8a9098'),
+          plinth: '#a9aeb5',
+          cap: '#dcdcde',
+        };
     }
   }, [kind]);
-  return <Platform relief={t.relief} reliefBump={t.reliefBump} tiles={t.tiles} tilesBump={t.tilesBump} plinth={t.plinth} cap={t.cap} />;
+  return (
+    <Platform
+      relief={t.relief}
+      reliefBump={t.reliefBump}
+      tiles={t.tiles}
+      tilesBump={t.tilesBump}
+      plinth={t.plinth}
+      cap={t.cap}
+    />
+  );
 }
 
 export const woodFloor = () =>
-  ctex("shop-floor", 512, 512, (g) => {
-    const r = rng(51);
-    for (let i = 0; i < 16; i++) {
-      g.fillStyle = `hsl(32, ${32 + r() * 10}%, ${62 + r() * 10}%)`;
-      g.fillRect(0, i * 32, 512, 32);
-      g.fillStyle = "rgba(110,70,35,.3)";
-      g.fillRect(0, i * 32, 512, 1.5);
-      g.fillRect(((i * 197) % 512) | 0, i * 32, 1.5, 32);
-      for (let k = 0; k < 30; k++) {
-        g.fillStyle = `rgba(120,80,40,${r() * 0.12})`;
-        g.fillRect(r() * 512, i * 32 + r() * 32, 30 + r() * 80, 1);
+  ctex(
+    'shop-floor',
+    512,
+    512,
+    g => {
+      const r = rng(51);
+      for (let i = 0; i < 16; i++) {
+        g.fillStyle = `hsl(32, ${32 + r() * 10}%, ${62 + r() * 10}%)`;
+        g.fillRect(0, i * 32, 512, 32);
+        g.fillStyle = 'rgba(110,70,35,.3)';
+        g.fillRect(0, i * 32, 512, 1.5);
+        g.fillRect((i * 197) % 512 | 0, i * 32, 1.5, 32);
+        for (let k = 0; k < 30; k++) {
+          g.fillStyle = `rgba(120,80,40,${r() * 0.12})`;
+          g.fillRect(r() * 512, i * 32 + r() * 32, 30 + r() * 80, 1);
+        }
       }
-    }
-  }, { repeat: [2, 2] });
+    },
+    { repeat: [2, 2] },
+  );
 
 export const brick = () =>
-  ctex("shop-brick", 512, 512, (g) => {
-    const r = rng(61);
-    g.fillStyle = "#c9b9a6";
-    g.fillRect(0, 0, 512, 512);
-    const bw = 64, bh = 24;
-    for (let row = 0; row < 22; row++)
-      for (let col = -1; col < 9; col++) {
-        const x = col * bw + (row % 2 ? bw / 2 : 0);
-        g.fillStyle = `hsl(${10 + r() * 10}, ${42 + r() * 14}%, ${30 + r() * 12}%)`;
-        g.fillRect(x + 2, row * bh + 2, bw - 4, bh - 4);
-      }
-  }, { repeat: [3, 3] });
+  ctex(
+    'shop-brick',
+    512,
+    512,
+    g => {
+      const r = rng(61);
+      g.fillStyle = '#c9b9a6';
+      g.fillRect(0, 0, 512, 512);
+      const bw = 64,
+        bh = 24;
+      for (let row = 0; row < 22; row++)
+        for (let col = -1; col < 9; col++) {
+          const x = col * bw + (row % 2 ? bw / 2 : 0);
+          g.fillStyle = `hsl(${10 + r() * 10}, ${42 + r() * 14}%, ${30 + r() * 12}%)`;
+          g.fillRect(x + 2, row * bh + 2, bw - 4, bh - 4);
+        }
+    },
+    { repeat: [3, 3] },
+  );
 
 export const brickBump = () =>
-  ctex("shop-brick-b", 512, 512, (g) => {
-    g.fillStyle = "#222";
-    g.fillRect(0, 0, 512, 512);
-    const bw = 64, bh = 24;
-    for (let row = 0; row < 22; row++)
-      for (let col = -1; col < 9; col++) {
-        g.fillStyle = "#bbb";
-        g.fillRect(col * bw + (row % 2 ? bw / 2 : 0) + 2, row * bh + 2, bw - 4, bh - 4);
-      }
-  }, { repeat: [3, 3], color: false });
+  ctex(
+    'shop-brick-b',
+    512,
+    512,
+    g => {
+      g.fillStyle = '#222';
+      g.fillRect(0, 0, 512, 512);
+      const bw = 64,
+        bh = 24;
+      for (let row = 0; row < 22; row++)
+        for (let col = -1; col < 9; col++) {
+          g.fillStyle = '#bbb';
+          g.fillRect(col * bw + (row % 2 ? bw / 2 : 0) + 2, row * bh + 2, bw - 4, bh - 4);
+        }
+    },
+    { repeat: [3, 3], color: false },
+  );
 
 export const slats = () =>
-  ctex("shop-slats", 256, 256, (g) => {
-    const r = rng(71);
-    for (let i = 0; i < 16; i++) {
-      g.fillStyle = `hsl(${24 + r() * 6}, ${45 + r() * 10}%, ${34 + r() * 10}%)`;
-      g.fillRect(0, i * 16, 256, 16);
-      g.fillStyle = "rgba(30,15,5,.55)";
-      g.fillRect(0, i * 16 + 14, 256, 2);
-      for (let k = 0; k < 12; k++) {
-        g.fillStyle = `rgba(60,30,10,${r() * 0.2})`;
-        g.fillRect(r() * 256, i * 16 + r() * 14, 20 + r() * 50, 1);
+  ctex(
+    'shop-slats',
+    256,
+    256,
+    g => {
+      const r = rng(71);
+      for (let i = 0; i < 16; i++) {
+        g.fillStyle = `hsl(${24 + r() * 6}, ${45 + r() * 10}%, ${34 + r() * 10}%)`;
+        g.fillRect(0, i * 16, 256, 16);
+        g.fillStyle = 'rgba(30,15,5,.55)';
+        g.fillRect(0, i * 16 + 14, 256, 2);
+        for (let k = 0; k < 12; k++) {
+          g.fillStyle = `rgba(60,30,10,${r() * 0.2})`;
+          g.fillRect(r() * 256, i * 16 + r() * 14, 20 + r() * 50, 1);
+        }
       }
-    }
-  }, { repeat: [3, 2] });
+    },
+    { repeat: [3, 2] },
+  );
 
 export const grassTop = () =>
-  ctex("shop-grass", 512, 512, (g) => {
-    const r = rng(41);
-    g.fillStyle = "#4a8a2c";
-    g.fillRect(0, 0, 512, 512);
-    for (let i = 0; i < 26000; i++) {
-      g.fillStyle = `hsl(${88 + r() * 22}, ${42 + r() * 22}%, ${22 + r() * 24}%)`;
-      g.fillRect(r() * 512, r() * 512, 1.3, 2.5 + r() * 2);
-    }
-  }, { repeat: [2, 2] });
+  ctex(
+    'shop-grass',
+    512,
+    512,
+    g => {
+      const r = rng(41);
+      g.fillStyle = '#4a8a2c';
+      g.fillRect(0, 0, 512, 512);
+      for (let i = 0; i < 26000; i++) {
+        g.fillStyle = `hsl(${88 + r() * 22}, ${42 + r() * 22}%, ${22 + r() * 24}%)`;
+        g.fillRect(r() * 512, r() * 512, 1.3, 2.5 + r() * 2);
+      }
+    },
+    { repeat: [2, 2] },
+  );
 
 export const grassBump = () =>
-  ctex("shop-grass-b", 256, 256, (g, w, h) => noise(g, w, h, 42, 128, 200, 1.6), { repeat: [4, 4], color: false });
+  ctex('shop-grass-b', 256, 256, (g, w, h) => noise(g, w, h, 42, 128, 200, 1.6), {
+    repeat: [4, 4],
+    color: false,
+  });
 
 /** Text sign texture. */
-export function signTex(key: string, text: string, opts: { bg?: string; fg: string; w?: number; h?: number; size?: number; weight?: number; family?: string }) {
-  const w = opts.w ?? 512, h = opts.h ?? 128;
-  return ctex(key, w, h, (g) => {
+export function signTex(
+  key: string,
+  text: string,
+  opts: { bg?: string; fg: string; w?: number; h?: number; size?: number; weight?: number; family?: string },
+) {
+  const w = opts.w ?? 512,
+    h = opts.h ?? 128;
+  return ctex(key, w, h, g => {
     if (opts.bg) {
       g.fillStyle = opts.bg;
       g.fillRect(0, 0, w, h);
     }
     g.fillStyle = opts.fg;
     g.font = `${opts.weight ?? 700} ${opts.size ?? 70}px ${opts.family ?? FONT}`;
-    g.textAlign = "center";
-    g.textBaseline = "middle";
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
     g.fillText(text, w / 2, h / 2 + 4);
   });
 }
 
 /* ---------- glass + signs ---------- */
-export function Glass({ w, h, tint = "#dfeaf1" }: { w: number; h: number; tint?: string }) {
+export function Glass({ w, h, tint = '#dfeaf1' }: { w: number; h: number; tint?: string }) {
   return (
     <mesh userData={{ noCast: true }}>
       <planeGeometry args={[w, h]} />
-      <meshPhysicalMaterial color={tint} transparent opacity={0.13} roughness={0.02} clearcoat={1} clearcoatRoughness={0.02} envMapIntensity={1.6} side={THREE.DoubleSide} depthWrite={false} />
+      <meshPhysicalMaterial
+        color={tint}
+        transparent
+        opacity={0.13}
+        roughness={0.02}
+        clearcoat={1}
+        clearcoatRoughness={0.02}
+        envMapIntensity={1.6}
+        side={THREE.DoubleSide}
+        depthWrite={false}
+      />
     </mesh>
   );
 }
 
-export function Label({ map, w, h, ei = 1.2, lit = true }: { map: THREE.Texture; w: number; h: number; ei?: number; lit?: boolean }) {
+export function Label({
+  map,
+  w,
+  h,
+  ei = 1.2,
+  lit = true,
+}: {
+  map: THREE.Texture;
+  w: number;
+  h: number;
+  ei?: number;
+  lit?: boolean;
+}) {
   return (
     <mesh userData={{ noCast: true }}>
       <planeGeometry args={[w, h]} />
-      <meshStandardMaterial map={map} transparent emissive="#ffffff" emissiveMap={lit ? map : null} emissiveIntensity={lit ? ei : 0} depthWrite={false} toneMapped={!lit} />
+      <meshStandardMaterial
+        map={map}
+        transparent
+        emissive="#ffffff"
+        emissiveMap={lit ? map : null}
+        emissiveIntensity={lit ? ei : 0}
+        depthWrite={false}
+        toneMapped={!lit}
+      />
     </mesh>
   );
 }
 
 /** A box sign: colored body with a printed (optionally lit) face on +z. */
-export function SignBox({ w, h, d = 0.06, color, map, ei = 0.6 }: { w: number; h: number; d?: number; color: string; map: THREE.Texture; ei?: number }) {
+export function SignBox({
+  w,
+  h,
+  d = 0.06,
+  color,
+  map,
+  ei = 0.6,
+}: {
+  w: number;
+  h: number;
+  d?: number;
+  color: string;
+  map: THREE.Texture;
+  ei?: number;
+}) {
   return (
     <mesh>
       <boxGeometry args={[w, h, d]} />
@@ -236,14 +385,37 @@ export function SignBox({ w, h, d = 0.06, color, map, ei = 0.6 }: { w: number; h
       <meshStandardMaterial attach="material-1" color={color} />
       <meshStandardMaterial attach="material-2" color={color} />
       <meshStandardMaterial attach="material-3" color={color} />
-      <meshStandardMaterial attach="material-4" map={map} roughness={0.45} emissive="#ffffff" emissiveMap={map} emissiveIntensity={ei} />
+      <meshStandardMaterial
+        attach="material-4"
+        map={map}
+        roughness={0.45}
+        emissive="#ffffff"
+        emissiveMap={map}
+        emissiveIntensity={ei}
+      />
       <meshStandardMaterial attach="material-5" color={color} />
     </mesh>
   );
 }
 
 /** Glazed wall with evenly spaced mullions and top/bottom rails, centred on its own origin, facing +z. */
-export function Curtain({ w, h, bays, frame, depth = 0.06, bar = 0.04, tint }: { w: number; h: number; bays: number; frame: string; depth?: number; bar?: number; tint?: string }) {
+export function Curtain({
+  w,
+  h,
+  bays,
+  frame,
+  depth = 0.06,
+  bar = 0.04,
+  tint,
+}: {
+  w: number;
+  h: number;
+  bays: number;
+  frame: string;
+  depth?: number;
+  bar?: number;
+  tint?: string;
+}) {
   return (
     <group>
       <Glass w={w} h={h} tint={tint} />
@@ -253,7 +425,7 @@ export function Curtain({ w, h, bays, frame, depth = 0.06, bar = 0.04, tint }: {
           <Mat c={frame} r={0.35} m={0.5} />
         </mesh>
       ))}
-      {[-1, 1].map((s) => (
+      {[-1, 1].map(s => (
         <mesh key={s} position={[0, (s * h) / 2, 0]}>
           <boxGeometry args={[w + bar, bar * 1.4, depth]} />
           <Mat c={frame} r={0.35} m={0.5} />
@@ -264,7 +436,15 @@ export function Curtain({ w, h, bays, frame, depth = 0.06, bar = 0.04, tint }: {
 }
 
 /* ---------- interior ---------- */
-export function Chair({ position, rotation = 0, color }: { position: [number, number, number]; rotation?: number; color: string }) {
+export function Chair({
+  position,
+  rotation = 0,
+  color,
+}: {
+  position: [number, number, number];
+  rotation?: number;
+  color: string;
+}) {
   return (
     <group position={position} rotation={[0, rotation, 0]}>
       <mesh position={[0, 0.2, 0]}>
@@ -275,7 +455,12 @@ export function Chair({ position, rotation = 0, color }: { position: [number, nu
         <boxGeometry args={[0.16, 0.18, 0.02]} />
         <Mat c={color} r={0.5} />
       </mesh>
-      {[[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([x, z], i) => (
+      {[
+        [-1, -1],
+        [1, -1],
+        [-1, 1],
+        [1, 1],
+      ].map(([x, z], i) => (
         <mesh key={i} position={[x * 0.065, 0.1, z * 0.065]}>
           <cylinderGeometry args={[0.008, 0.008, 0.2, 6]} />
           <Mat c="#2a2c30" r={0.4} m={0.6} />
@@ -285,11 +470,25 @@ export function Chair({ position, rotation = 0, color }: { position: [number, nu
   );
 }
 
-export function CafeTable({ position, chair = "#2b2d31", top = "#d9c3a0", round = true }: { position: [number, number, number]; chair?: string; top?: string; round?: boolean }) {
+export function CafeTable({
+  position,
+  chair = '#2b2d31',
+  top = '#d9c3a0',
+  round = true,
+}: {
+  position: [number, number, number];
+  chair?: string;
+  top?: string;
+  round?: boolean;
+}) {
   return (
     <group position={position}>
       <mesh position={[0, 0.34, 0]}>
-        {round ? <cylinderGeometry args={[0.16, 0.16, 0.025, 28]} /> : <boxGeometry args={[0.34, 0.025, 0.34]} />}
+        {round ? (
+          <cylinderGeometry args={[0.16, 0.16, 0.025, 28]} />
+        ) : (
+          <boxGeometry args={[0.34, 0.025, 0.34]} />
+        )}
         <Mat c={top} r={0.45} />
       </mesh>
       <mesh position={[0, 0.17, 0]}>
@@ -310,7 +509,19 @@ export function CafeTable({ position, chair = "#2b2d31", top = "#d9c3a0", round 
   );
 }
 
-export function Counter({ position, w, color, top = "#e9e6df", rotation = 0 }: { position: [number, number, number]; w: number; color: string; top?: string; rotation?: number }) {
+export function Counter({
+  position,
+  w,
+  color,
+  top = '#e9e6df',
+  rotation = 0,
+}: {
+  position: [number, number, number];
+  w: number;
+  color: string;
+  top?: string;
+  rotation?: number;
+}) {
   return (
     <group position={position} rotation={[0, rotation, 0]}>
       <mesh position={[0, 0.25, 0]}>
@@ -326,8 +537,24 @@ export function Counter({ position, w, color, top = "#e9e6df", rotation = 0 }: {
 
 /** Warm lit shelving with product boxes; colours picked from a palette. */
 export function ProductShelf({
-  position, rotation = 0, w = 1, h = 1.4, palette, seed = 1, wood = "#c9a274", glow = true,
-}: { position: [number, number, number]; rotation?: number; w?: number; h?: number; palette: string[]; seed?: number; wood?: string; glow?: boolean }) {
+  position,
+  rotation = 0,
+  w = 1,
+  h = 1.4,
+  palette,
+  seed = 1,
+  wood = '#c9a274',
+  glow = true,
+}: {
+  position: [number, number, number];
+  rotation?: number;
+  w?: number;
+  h?: number;
+  palette: string[];
+  seed?: number;
+  wood?: string;
+  glow?: boolean;
+}) {
   const rows = Math.max(2, Math.round(h / 0.38));
   const cols = Math.max(3, Math.round(w / 0.17));
   const items = useMemo(() => {
@@ -361,10 +588,23 @@ export function ProductShelf({
   );
 }
 
-export function ClothesRack({ position, rotation = 0, palette, seed = 1 }: { position: [number, number, number]; rotation?: number; palette: string[]; seed?: number }) {
+export function ClothesRack({
+  position,
+  rotation = 0,
+  palette,
+  seed = 1,
+}: {
+  position: [number, number, number];
+  rotation?: number;
+  palette: string[];
+  seed?: number;
+}) {
   const shirts = useMemo(() => {
     const r = rng(seed);
-    return Array.from({ length: 9 }, (_, i) => ({ x: -0.32 + i * 0.08, c: palette[Math.floor(r() * palette.length)] }));
+    return Array.from({ length: 9 }, (_, i) => ({
+      x: -0.32 + i * 0.08,
+      c: palette[Math.floor(r() * palette.length)],
+    }));
   }, [palette, seed]);
   return (
     <group position={position} rotation={[0, rotation, 0]}>
@@ -372,7 +612,7 @@ export function ClothesRack({ position, rotation = 0, palette, seed = 1 }: { pos
         <cylinderGeometry args={[0.008, 0.008, 0.8, 8]} />
         <Mat c="#2a2c30" r={0.3} m={0.8} />
       </mesh>
-      {[-0.4, 0.4].map((x) => (
+      {[-0.4, 0.4].map(x => (
         <mesh key={x} position={[x, 0.31, 0]}>
           <cylinderGeometry args={[0.008, 0.008, 0.62, 8]} />
           <Mat c="#2a2c30" r={0.3} m={0.8} />
@@ -388,7 +628,13 @@ export function ClothesRack({ position, rotation = 0, palette, seed = 1 }: { pos
   );
 }
 
-export function Pendant({ position, color = "#1c1d20" }: { position: [number, number, number]; color?: string }) {
+export function Pendant({
+  position,
+  color = '#1c1d20',
+}: {
+  position: [number, number, number];
+  color?: string;
+}) {
   return (
     <group position={position}>
       <mesh position={[0, 0.15, 0]}>
@@ -408,22 +654,30 @@ export function Pendant({ position, color = "#1c1d20" }: { position: [number, nu
 }
 
 /* ---------- street furniture ---------- */
-export function Bench({ position, rotation = 0, wood = "#b98a58" }: { position: [number, number, number]; rotation?: number; wood?: string }) {
+export function Bench({
+  position,
+  rotation = 0,
+  wood = '#b98a58',
+}: {
+  position: [number, number, number];
+  rotation?: number;
+  wood?: string;
+}) {
   return (
     <group position={position} rotation={[0, rotation, 0]}>
-      {[-0.09, -0.03, 0.03, 0.09].map((z) => (
+      {[-0.09, -0.03, 0.03, 0.09].map(z => (
         <mesh key={z} position={[0, 0.22, z]}>
           <boxGeometry args={[0.85, 0.03, 0.05]} />
           <Mat c={wood} r={0.6} />
         </mesh>
       ))}
-      {[0.3, 0.37].map((y) => (
+      {[0.3, 0.37].map(y => (
         <mesh key={y} position={[0, y, -0.13]} rotation={[-0.2, 0, 0]}>
           <boxGeometry args={[0.85, 0.05, 0.025]} />
           <Mat c={wood} r={0.6} />
         </mesh>
       ))}
-      {[-0.34, 0.34].map((x) => (
+      {[-0.34, 0.34].map(x => (
         <group key={x} position={[x, 0, 0]}>
           <mesh position={[0, 0.1, 0]}>
             <boxGeometry args={[0.04, 0.2, 0.24]} />
@@ -439,7 +693,19 @@ export function Bench({ position, rotation = 0, wood = "#b98a58" }: { position: 
   );
 }
 
-export function Shrub({ position, s = 1, seed = 1, pot = "#9aa0a8", palette = LEAF }: { position: [number, number, number]; s?: number; seed?: number; pot?: string; palette?: string[] }) {
+export function Shrub({
+  position,
+  s = 1,
+  seed = 1,
+  pot = '#9aa0a8',
+  palette = LEAF,
+}: {
+  position: [number, number, number];
+  s?: number;
+  seed?: number;
+  pot?: string;
+  palette?: string[];
+}) {
   return (
     <group position={position} scale={s}>
       <mesh position={[0, 0.12, 0]}>
@@ -458,10 +724,20 @@ export function Shrub({ position, s = 1, seed = 1, pot = "#9aa0a8", palette = LE
 }
 
 /** Conical topiary / small conifer in a pot (Starbucks). */
-export function Topiary({ position, h = 0.6, pot = "#c9733f", seed = 1 }: { position: [number, number, number]; h?: number; pot?: string | null; seed?: number }) {
+export function Topiary({
+  position,
+  h = 0.6,
+  pot = '#c9733f',
+  seed = 1,
+}: {
+  position: [number, number, number];
+  h?: number;
+  pot?: string | null;
+  seed?: number;
+}) {
   const tiers = useMemo(() => {
     const r = rng(seed);
-    return [0, 1, 2, 3].map((i) => ({ y: 0.12 + i * h * 0.2, r: h * (0.3 - i * 0.065), j: r() }));
+    return [0, 1, 2, 3].map(i => ({ y: 0.12 + i * h * 0.2, r: h * (0.3 - i * 0.065), j: r() }));
   }, [h, seed]);
   return (
     <group position={position}>
@@ -481,7 +757,21 @@ export function Topiary({ position, h = 0.6, pot = "#c9733f", seed = 1 }: { posi
   );
 }
 
-export function Planter({ position, w, d = 0.3, color = "#7a5a42", rotation = 0, seed = 1 }: { position: [number, number, number]; w: number; d?: number; color?: string; rotation?: number; seed?: number }) {
+export function Planter({
+  position,
+  w,
+  d = 0.3,
+  color = '#7a5a42',
+  rotation = 0,
+  seed = 1,
+}: {
+  position: [number, number, number];
+  w: number;
+  d?: number;
+  color?: string;
+  rotation?: number;
+  seed?: number;
+}) {
   const bushes = Math.max(2, Math.round(w / 0.28));
   return (
     <group position={position} rotation={[0, rotation, 0]}>

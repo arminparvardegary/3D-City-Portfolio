@@ -1,162 +1,234 @@
-
-import { useMemo } from "react";
-import * as THREE from "three";
-import { RoundedBox } from "@react-three/drei";
-import { BRAND, contain, imgTex, round } from "./brand";
-import { Block, Foliage, Mat, Person, Platform, brushed, ctex, noise, rng, stucco } from "./kit";
+import { useMemo } from 'react';
+import * as THREE from 'three';
+import { RoundedBox } from '@react-three/drei';
+import { BRAND, contain, imgTex, round } from './brand';
+import { Block, Foliage, Mat, Person, Platform, brushed, ctex, noise, rng, stucco } from './kit';
 
 const A = {
-  silver: "#c3c8cf",
-  silverDark: "#a9afb7",
-  wood: "#d6b487",
-  woodDark: "#b8925f",
-  warm: "#f7e3c0",
-  glow: "#ffc77a",
-  black: "#1e1f22",
-  leaf: ["#3f7d2a", "#4c8f31", "#5aa23a", "#6ab544", "#447f2c"],
+  silver: '#c3c8cf',
+  silverDark: '#a9afb7',
+  wood: '#d6b487',
+  woodDark: '#b8925f',
+  warm: '#f7e3c0',
+  glow: '#ffc77a',
+  black: '#1e1f22',
+  leaf: ['#3f7d2a', '#4c8f31', '#5aa23a', '#6ab544', '#447f2c'],
 };
 
 function T() {
   const font = "-apple-system, 'SF Pro Display', 'Helvetica Neue', Arial";
   return {
-    relief: ctex("ap-relief", 1024, 160, (g) => {
-      const r = rng(19);
-      g.fillStyle = "#7d838b";
-      g.fillRect(0, 0, 1024, 160);
-      for (let k = 0; k < 8; k++) {
-        const x = k * 128;
-        g.fillStyle = `hsl(215, 6%, ${66 + r() * 4}%)`;
-        g.fillRect(x + 4, 6, 120, 148);
-        g.strokeStyle = "#8a9098";
-        g.lineWidth = 8;
-        g.beginPath();
-        g.moveTo(x + 22, 134); g.lineTo(x + 22, 26); g.lineTo(x + 106, 26); g.lineTo(x + 106, 112);
-        g.lineTo(x + 46, 112); g.lineTo(x + 46, 52); g.lineTo(x + 82, 52); g.lineTo(x + 82, 86);
-        g.stroke();
-      }
-    }, { repeat: [3, 1] }),
-    reliefBump: ctex("ap-relief-b", 1024, 160, (g) => {
-      g.fillStyle = "#202020";
-      g.fillRect(0, 0, 1024, 160);
-      for (let k = 0; k < 8; k++) {
-        const x = k * 128;
-        g.fillStyle = "#b0b0b0";
-        g.fillRect(x + 4, 6, 120, 148);
-        g.strokeStyle = "#555";
-        g.lineWidth = 8;
-        g.beginPath();
-        g.moveTo(x + 22, 134); g.lineTo(x + 22, 26); g.lineTo(x + 106, 26); g.lineTo(x + 106, 112);
-        g.lineTo(x + 46, 112); g.lineTo(x + 46, 52); g.lineTo(x + 82, 52); g.lineTo(x + 82, 86);
-        g.stroke();
-      }
-    }, { repeat: [3, 1], color: false }),
-    pavers: ctex("ap-pavers", 512, 512, (g) => {
-      const r = rng(23);
-      g.fillStyle = "#b9b9bc";
-      g.fillRect(0, 0, 512, 512);
-      // running-bond pavers
-      const pw = 128, ph = 64;
-      for (let row = 0; row < 8; row++)
-        for (let col = -1; col < 5; col++) {
-          const x = col * pw + (row % 2 ? pw / 2 : 0);
-          g.fillStyle = `hsl(35, 6%, ${83 + r() * 5}%)`;
-          g.fillRect(x + 2, row * ph + 2, pw - 4, ph - 4);
-          for (let k = 0; k < 60; k++) {
-            g.fillStyle = `rgba(110,105,100,${r() * 0.07})`;
-            g.fillRect(x + r() * pw, row * ph + r() * ph, 2, 2);
+    relief: ctex(
+      'ap-relief',
+      1024,
+      160,
+      g => {
+        const r = rng(19);
+        g.fillStyle = '#7d838b';
+        g.fillRect(0, 0, 1024, 160);
+        for (let k = 0; k < 8; k++) {
+          const x = k * 128;
+          g.fillStyle = `hsl(215, 6%, ${66 + r() * 4}%)`;
+          g.fillRect(x + 4, 6, 120, 148);
+          g.strokeStyle = '#8a9098';
+          g.lineWidth = 8;
+          g.beginPath();
+          g.moveTo(x + 22, 134);
+          g.lineTo(x + 22, 26);
+          g.lineTo(x + 106, 26);
+          g.lineTo(x + 106, 112);
+          g.lineTo(x + 46, 112);
+          g.lineTo(x + 46, 52);
+          g.lineTo(x + 82, 52);
+          g.lineTo(x + 82, 86);
+          g.stroke();
+        }
+      },
+      { repeat: [3, 1] },
+    ),
+    reliefBump: ctex(
+      'ap-relief-b',
+      1024,
+      160,
+      g => {
+        g.fillStyle = '#202020';
+        g.fillRect(0, 0, 1024, 160);
+        for (let k = 0; k < 8; k++) {
+          const x = k * 128;
+          g.fillStyle = '#b0b0b0';
+          g.fillRect(x + 4, 6, 120, 148);
+          g.strokeStyle = '#555';
+          g.lineWidth = 8;
+          g.beginPath();
+          g.moveTo(x + 22, 134);
+          g.lineTo(x + 22, 26);
+          g.lineTo(x + 106, 26);
+          g.lineTo(x + 106, 112);
+          g.lineTo(x + 46, 112);
+          g.lineTo(x + 46, 52);
+          g.lineTo(x + 82, 52);
+          g.lineTo(x + 82, 86);
+          g.stroke();
+        }
+      },
+      { repeat: [3, 1], color: false },
+    ),
+    pavers: ctex(
+      'ap-pavers',
+      512,
+      512,
+      g => {
+        const r = rng(23);
+        g.fillStyle = '#b9b9bc';
+        g.fillRect(0, 0, 512, 512);
+        // running-bond pavers
+        const pw = 128,
+          ph = 64;
+        for (let row = 0; row < 8; row++)
+          for (let col = -1; col < 5; col++) {
+            const x = col * pw + (row % 2 ? pw / 2 : 0);
+            g.fillStyle = `hsl(35, 6%, ${83 + r() * 5}%)`;
+            g.fillRect(x + 2, row * ph + 2, pw - 4, ph - 4);
+            for (let k = 0; k < 60; k++) {
+              g.fillStyle = `rgba(110,105,100,${r() * 0.07})`;
+              g.fillRect(x + r() * pw, row * ph + r() * ph, 2, 2);
+            }
+          }
+      },
+      { repeat: [3, 3] },
+    ),
+    paversBump: ctex(
+      'ap-pavers-b',
+      512,
+      512,
+      g => {
+        noise(g, 512, 512, 24, 200, 30, 2);
+        g.fillStyle = 'rgb(40,40,40)';
+        const pw = 128,
+          ph = 64;
+        for (let row = 0; row <= 8; row++) {
+          g.fillRect(0, row * ph - 2, 512, 4);
+          for (let col = -1; col < 5; col++)
+            g.fillRect(col * pw + (row % 2 ? pw / 2 : 0) - 2, row * ph, 4, ph);
+        }
+      },
+      { repeat: [3, 3], color: false },
+    ),
+    grass: ctex(
+      'ap-grass',
+      512,
+      512,
+      g => {
+        const r = rng(41);
+        g.fillStyle = '#4a8a2c';
+        g.fillRect(0, 0, 512, 512);
+        for (let i = 0; i < 26000; i++) {
+          g.fillStyle = `hsl(${88 + r() * 22}, ${42 + r() * 22}%, ${22 + r() * 24}%)`;
+          g.fillRect(r() * 512, r() * 512, 1.3, 2.5 + r() * 2);
+        }
+        // mowing stripes
+        for (let i = 0; i < 8; i++) {
+          g.fillStyle = `rgba(255,255,220,${i % 2 ? 0.05 : 0})`;
+          g.fillRect(i * 64, 0, 64, 512);
+        }
+      },
+      { repeat: [2, 2] },
+    ),
+    grassBump: ctex('ap-grass-b', 256, 256, (g, w, h) => noise(g, w, h, 42, 128, 200, 1.6), {
+      repeat: [4, 4],
+      color: false,
+    }),
+    floor: ctex(
+      'ap-floor',
+      512,
+      512,
+      g => {
+        const r = rng(51);
+        for (let i = 0; i < 16; i++) {
+          g.fillStyle = `hsl(33, ${30 + r() * 10}%, ${70 + r() * 8}%)`;
+          g.fillRect(0, i * 32, 512, 32);
+          g.fillStyle = 'rgba(120,80,40,.25)';
+          g.fillRect(0, i * 32, 512, 1.5);
+          g.fillRect((i * 197) % 512 | 0, i * 32, 1.5, 32);
+          for (let k = 0; k < 30; k++) {
+            g.fillStyle = `rgba(140,95,50,${r() * 0.12})`;
+            g.fillRect(r() * 512, i * 32 + r() * 32, 30 + r() * 80, 1);
           }
         }
-    }, { repeat: [3, 3] }),
-    paversBump: ctex("ap-pavers-b", 512, 512, (g) => {
-      noise(g, 512, 512, 24, 200, 30, 2);
-      g.fillStyle = "rgb(40,40,40)";
-      const pw = 128, ph = 64;
-      for (let row = 0; row <= 8; row++) {
-        g.fillRect(0, row * ph - 2, 512, 4);
-        for (let col = -1; col < 5; col++) g.fillRect(col * pw + (row % 2 ? pw / 2 : 0) - 2, row * ph, 4, ph);
-      }
-    }, { repeat: [3, 3], color: false }),
-    grass: ctex("ap-grass", 512, 512, (g) => {
-      const r = rng(41);
-      g.fillStyle = "#4a8a2c";
-      g.fillRect(0, 0, 512, 512);
-      for (let i = 0; i < 26000; i++) {
-        g.fillStyle = `hsl(${88 + r() * 22}, ${42 + r() * 22}%, ${22 + r() * 24}%)`;
-        g.fillRect(r() * 512, r() * 512, 1.3, 2.5 + r() * 2);
-      }
-      // mowing stripes
-      for (let i = 0; i < 8; i++) {
-        g.fillStyle = `rgba(255,255,220,${i % 2 ? 0.05 : 0})`;
-        g.fillRect(i * 64, 0, 64, 512);
-      }
-    }, { repeat: [2, 2] }),
-    grassBump: ctex("ap-grass-b", 256, 256, (g, w, h) => noise(g, w, h, 42, 128, 200, 1.6), { repeat: [4, 4], color: false }),
-    floor: ctex("ap-floor", 512, 512, (g) => {
-      const r = rng(51);
-      for (let i = 0; i < 16; i++) {
-        g.fillStyle = `hsl(33, ${30 + r() * 10}%, ${70 + r() * 8}%)`;
-        g.fillRect(0, i * 32, 512, 32);
-        g.fillStyle = "rgba(120,80,40,.25)";
-        g.fillRect(0, i * 32, 512, 1.5);
-        g.fillRect(((i * 197) % 512) | 0, i * 32, 1.5, 32);
-        for (let k = 0; k < 30; k++) {
-          g.fillStyle = `rgba(140,95,50,${r() * 0.12})`;
-          g.fillRect(r() * 512, i * 32 + r() * 32, 30 + r() * 80, 1);
-        }
-      }
-    }, { repeat: [2, 2] }),
-    seams: ctex("ap-seams", 512, 512, (g) => {
-      g.fillStyle = "#c6cbd2";
+      },
+      { repeat: [2, 2] },
+    ),
+    seams: ctex('ap-seams', 512, 512, g => {
+      g.fillStyle = '#c6cbd2';
       g.fillRect(0, 0, 512, 512);
       const grd = g.createLinearGradient(0, 0, 512, 0);
-      grd.addColorStop(0, "rgba(255,255,255,.08)");
-      grd.addColorStop(0.5, "rgba(0,0,0,.03)");
-      grd.addColorStop(1, "rgba(255,255,255,.08)");
+      grd.addColorStop(0, 'rgba(255,255,255,.08)');
+      grd.addColorStop(0.5, 'rgba(0,0,0,.03)');
+      grd.addColorStop(1, 'rgba(255,255,255,.08)');
       g.fillStyle = grd;
       g.fillRect(0, 0, 512, 512);
-      g.fillStyle = "rgba(60,64,70,.55)";
+      g.fillStyle = 'rgba(60,64,70,.55)';
       g.fillRect(0, 0, 3, 512);
       g.fillRect(509, 0, 3, 512);
       g.fillRect(0, 254, 512, 3);
     }),
     // Keel: the avatar as the store logo, the name, and the landing banner on the display wall.
-    logo: imgTex("keel-logo", 256, 256, [BRAND.keel.logo!], (g, [im]) => {
-      g.fillStyle = "#fff"; g.beginPath(); g.arc(128, 128, 124, 0, Math.PI * 2); g.fill();
+    logo: imgTex('keel-logo', 256, 256, [BRAND.keel.logo!], (g, [im]) => {
+      g.fillStyle = '#fff';
+      g.beginPath();
+      g.arc(128, 128, 124, 0, Math.PI * 2);
+      g.fill();
       round(g, im, 128, 128, 116);
     }),
-    text: ctex("keel-text", 512, 128, (g) => {
-      g.fillStyle = "#fff";
+    text: ctex('keel-text', 512, 128, g => {
+      g.fillStyle = '#fff';
       g.font = `700 76px ${font}`;
-      g.textAlign = "center";
-      g.textBaseline = "middle";
-      g.fillText("Keel.", 256, 66);
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText('Keel.', 256, 66);
     }),
-    screen: imgTex("keel-banner", 1600, 800, [BRAND.keel.banner!], (g, [pose]) => {
+    screen: imgTex('keel-banner', 1600, 800, [BRAND.keel.banner!], (g, [pose]) => {
       const grd = g.createLinearGradient(0, 0, 0, 800);
-      grd.addColorStop(0, "#ffffff"); grd.addColorStop(1, "#eaf0ff");
-      g.fillStyle = grd; g.fillRect(0, 0, 1600, 800);
-      g.fillStyle = "#1d1d1f"; g.font = `700 190px ${font}`; g.textBaseline = "alphabetic"; g.textAlign = "left";
-      g.fillText("Meet", 80, 260); g.fillStyle = BRAND.keel.color; g.fillText("Keel.", 80, 450);
-      g.fillStyle = "#6e6e73"; g.font = `500 58px ${font}`;
-      g.fillText("The AI assistant", 84, 570); g.fillText("you text like a friend.", 84, 640);
-      g.fillStyle = BRAND.keel.color; g.beginPath(); g.roundRect(80, 680, 470, 96, 48); g.fill();
-      g.fillStyle = "#fff"; g.font = `600 44px ${font}`; g.fillText("keeltwin.com", 150, 742);
+      grd.addColorStop(0, '#ffffff');
+      grd.addColorStop(1, '#eaf0ff');
+      g.fillStyle = grd;
+      g.fillRect(0, 0, 1600, 800);
+      g.fillStyle = '#1d1d1f';
+      g.font = `700 190px ${font}`;
+      g.textBaseline = 'alphabetic';
+      g.textAlign = 'left';
+      g.fillText('Meet', 80, 260);
+      g.fillStyle = BRAND.keel.color;
+      g.fillText('Keel.', 80, 450);
+      g.fillStyle = '#6e6e73';
+      g.font = `500 58px ${font}`;
+      g.fillText('The AI assistant', 84, 570);
+      g.fillText('you text like a friend.', 84, 640);
+      g.fillStyle = BRAND.keel.color;
+      g.beginPath();
+      g.roundRect(80, 680, 470, 96, 48);
+      g.fill();
+      g.fillStyle = '#fff';
+      g.font = `600 44px ${font}`;
+      g.fillText('keeltwin.com', 150, 742);
       contain(g, pose, 820, 20, 760, 780);
     }),
-    laptop: ctex("ap-laptop", 128, 80, (g) => {
+    laptop: ctex('ap-laptop', 128, 80, g => {
       const grd = g.createLinearGradient(0, 0, 128, 80);
-      grd.addColorStop(0, "#5aa7ff");
-      grd.addColorStop(1, "#b36bff");
+      grd.addColorStop(0, '#5aa7ff');
+      grd.addColorStop(1, '#b36bff');
       g.fillStyle = grd;
       g.fillRect(0, 0, 128, 80);
-      g.fillStyle = "rgba(255,255,255,.7)";
+      g.fillStyle = 'rgba(255,255,255,.7)';
       g.fillRect(0, 0, 128, 6);
     }),
-    box: ctex("ap-box", 64, 96, (g) => {
-      g.fillStyle = "#f6f6f4";
+    box: ctex('ap-box', 64, 96, g => {
+      g.fillStyle = '#f6f6f4';
       g.fillRect(0, 0, 64, 96);
-      g.fillStyle = "#2b2d33";
-      g.beginPath(); g.roundRect(18, 22, 28, 52, 6); g.fill();
+      g.fillStyle = '#2b2d33';
+      g.beginPath();
+      g.roundRect(18, 22, 28, 52, 6);
+      g.fill();
     }),
   };
 }
@@ -188,7 +260,15 @@ function Label({ map, w, h, ei = 1.4 }: { map: THREE.Texture; w: number; h: numb
   return (
     <mesh userData={{ noCast: true }}>
       <planeGeometry args={[w, h]} />
-      <meshStandardMaterial map={map} transparent emissive="#ffffff" emissiveMap={map} emissiveIntensity={ei} depthWrite={false} toneMapped={false} />
+      <meshStandardMaterial
+        map={map}
+        transparent
+        emissive="#ffffff"
+        emissiveMap={map}
+        emissiveIntensity={ei}
+        depthWrite={false}
+        toneMapped={false}
+      />
     </mesh>
   );
 }
@@ -197,12 +277,26 @@ function Panel({ args, t }: { args: [number, number, number]; t: Tex }) {
   return (
     <mesh>
       <boxGeometry args={args} />
-      <meshStandardMaterial color="#ffffff" map={t.seams} roughness={0.32} metalness={0.55} roughnessMap={brushed()} />
+      <meshStandardMaterial
+        color="#ffffff"
+        map={t.seams}
+        roughness={0.32}
+        metalness={0.55}
+        roughnessMap={brushed()}
+      />
     </mesh>
   );
 }
 
-function Laptop({ position, rotation = 0, t }: { position: [number, number, number]; rotation?: number; t: Tex }) {
+function Laptop({
+  position,
+  rotation = 0,
+  t,
+}: {
+  position: [number, number, number];
+  rotation?: number;
+  t: Tex;
+}) {
   return (
     <group position={position} rotation={[0, rotation, 0]}>
       <mesh position={[0, 0.004, 0]}>
@@ -216,7 +310,13 @@ function Laptop({ position, rotation = 0, t }: { position: [number, number, numb
         </mesh>
         <mesh position={[0, 0.05, 0.003]}>
           <planeGeometry args={[0.145, 0.088]} />
-          <meshStandardMaterial map={t.laptop} emissive="#ffffff" emissiveMap={t.laptop} emissiveIntensity={1.2} toneMapped={false} />
+          <meshStandardMaterial
+            map={t.laptop}
+            emissive="#ffffff"
+            emissiveMap={t.laptop}
+            emissiveIntensity={1.2}
+            toneMapped={false}
+          />
         </mesh>
       </group>
     </group>
@@ -245,7 +345,7 @@ function Table({ position, len = 1.0, t }: { position: [number, number, number];
       <RoundedBox args={[len, 0.04, 0.4]} radius={0.012} smoothness={2} position={[0, 0.42, 0]}>
         <Mat c={A.wood} r={0.5} bump={stucco()} bs={0.15} />
       </RoundedBox>
-      {[-1, 1].map((s) => (
+      {[-1, 1].map(s => (
         <mesh key={s} position={[(s * (len - 0.14)) / 2, 0.2, 0]}>
           <boxGeometry args={[0.05, 0.4, 0.32]} />
           <Mat c={A.woodDark} r={0.55} />
@@ -263,13 +363,21 @@ function Table({ position, len = 1.0, t }: { position: [number, number, number];
   );
 }
 
-function Shelf({ position, rotation = 0, t }: { position: [number, number, number]; rotation?: number; t: Tex }) {
+function Shelf({
+  position,
+  rotation = 0,
+  t,
+}: {
+  position: [number, number, number];
+  rotation?: number;
+  t: Tex;
+}) {
   const items = useMemo(() => {
     const r = rng(Math.round(position[0] * 100 + position[2] * 10 + 3));
     return Array.from({ length: 15 }, (_, i) => ({
       x: -0.36 + (i % 5) * 0.18,
       y: 0.2 + Math.floor(i / 5) * 0.42,
-      tint: ["#ffffff", "#f1f4f8", "#fdf3e6", "#e9f1ff"][Math.floor(r() * 4)],
+      tint: ['#ffffff', '#f1f4f8', '#fdf3e6', '#e9f1ff'][Math.floor(r() * 4)],
     }));
   }, [position]);
   return (
@@ -278,7 +386,7 @@ function Shelf({ position, rotation = 0, t }: { position: [number, number, numbe
         <boxGeometry args={[1.0, 1.44, 0.24]} />
         <Mat c={A.wood} r={0.55} />
       </mesh>
-      {[0.12, 0.54, 0.96].map((y) => (
+      {[0.12, 0.54, 0.96].map(y => (
         <mesh key={y} position={[0, y + 0.18, 0.06]}>
           <boxGeometry args={[0.93, 0.34, 0.16]} />
           <meshStandardMaterial color={A.warm} emissive={A.glow} emissiveIntensity={0.55} />
@@ -311,7 +419,13 @@ function IndoorTree({ position }: { position: [number, number, number] }) {
         <Mat c="#6a4a33" r={0.9} />
       </mesh>
       <group position={[0, 1.15, 0]}>
-        <Foliage count={140} radius={0.34} blob={0.07} seed={77 + Math.round(position[0] * 10)} palette={A.leaf} />
+        <Foliage
+          count={140}
+          radius={0.34}
+          blob={0.07}
+          seed={77 + Math.round(position[0] * 10)}
+          palette={A.leaf}
+        />
       </group>
     </group>
   );
@@ -347,7 +461,13 @@ function Store({ t }: { t: Tex }) {
       {/* Keel's banner on the back wall, seen through the glass */}
       <mesh position={[0.2, 1.28, -h + 0.1]}>
         <planeGeometry args={[2.2, 1.1]} />
-        <meshStandardMaterial map={t.screen} emissive="#ffffff" emissiveMap={t.screen} emissiveIntensity={0.55} toneMapped={false} />
+        <meshStandardMaterial
+          map={t.screen}
+          emissive="#ffffff"
+          emissiveMap={t.screen}
+          emissiveIntensity={0.55}
+          toneMapped={false}
+        />
       </mesh>
       <Shelf position={[-0.95, 0.04, -h + 0.22]} t={t} />
       <Shelf position={[-h + 0.22, 0.04, -0.4]} rotation={Math.PI / 2} t={t} />
@@ -364,8 +484,13 @@ function Store({ t }: { t: Tex }) {
       <Person position={[-0.25, 0.04, 0.85]} shirt="#7b3b3b" rotation={2.8} hair="#8a5a2b" />
 
       {/* ceiling light strips (seen through glass) */}
-      {[-1.0, -0.2, 0.6, 1.3].map((z) => (
-        <mesh key={z} position={[0, AH - 0.005, z]} rotation={[Math.PI / 2, 0, 0]} userData={{ noCast: true }}>
+      {[-1.0, -0.2, 0.6, 1.3].map(z => (
+        <mesh
+          key={z}
+          position={[0, AH - 0.005, z]}
+          rotation={[Math.PI / 2, 0, 0]}
+          userData={{ noCast: true }}
+        >
           <planeGeometry args={[AS - 0.3, 0.08]} />
           <meshStandardMaterial color="#fff" emissive="#fff3dc" emissiveIntensity={2.5} toneMapped={false} />
         </mesh>
@@ -397,7 +522,7 @@ function Store({ t }: { t: Tex }) {
       <group position={[h - 0.03, AH / 2, -0.5]} rotation={[0, Math.PI / 2, 0]}>
         <Glass w={AS - 1.2} h={AH} />
       </group>
-      {[-1.6, -0.5, 0.6].map((v) => (
+      {[-1.6, -0.5, 0.6].map(v => (
         <group key={v}>
           <mesh position={[v + 0.0, AH / 2, h - 0.03]}>
             <boxGeometry args={[0.03, AH, 0.05]} />
@@ -418,7 +543,7 @@ function Store({ t }: { t: Tex }) {
         <Mat c={A.silverDark} r={0.3} m={0.7} />
       </mesh>
       {/* glass door handles */}
-      {[-0.95, -0.85].map((x) => (
+      {[-0.95, -0.85].map(x => (
         <mesh key={x} position={[x, 0.75, h + 0.01]}>
           <boxGeometry args={[0.015, 0.5, 0.02]} />
           <Mat c="#dfe2e6" r={0.15} m={0.9} />
@@ -468,7 +593,15 @@ function Store({ t }: { t: Tex }) {
             </mesh>
           </group>
         ))}
-        {[[-1.4, -1.4], [-1.45, 0.3], [-1.2, 1.4], [1.3, -1.4], [0.5, -1.45], [0.35, 0.2], [-0.6, 0.55]].map(([x, z], i) => (
+        {[
+          [-1.4, -1.4],
+          [-1.45, 0.3],
+          [-1.2, 1.4],
+          [1.3, -1.4],
+          [0.5, -1.45],
+          [0.35, 0.2],
+          [-0.6, 0.55],
+        ].map(([x, z], i) => (
           <Shrub key={i} position={[x, 0.43, z]} s={0.8} seed={60 + i} pot="#b8bcc2" />
         ))}
       </group>
@@ -491,8 +624,15 @@ function ModernLamp({ position }: { position: [number, number, number] }) {
         <cylinderGeometry args={[0.075, 0.1, 0.17, 8]} />
         <meshStandardMaterial color="#fff1cf" emissive={A.glow} emissiveIntensity={3} toneMapped={false} />
       </mesh>
-      {[0, 1, 2, 3].map((i) => (
-        <mesh key={i} position={[Math.cos((i * Math.PI) / 2 + 0.4) * 0.09, 1.99, Math.sin((i * Math.PI) / 2 + 0.4) * 0.09]}>
+      {[0, 1, 2, 3].map(i => (
+        <mesh
+          key={i}
+          position={[
+            Math.cos((i * Math.PI) / 2 + 0.4) * 0.09,
+            1.99,
+            Math.sin((i * Math.PI) / 2 + 0.4) * 0.09,
+          ]}
+        >
           <boxGeometry args={[0.012, 0.18, 0.012]} />
           <Mat c={A.black} r={0.4} />
         </mesh>
@@ -508,19 +648,19 @@ function ModernLamp({ position }: { position: [number, number, number] }) {
 function Bench({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
   return (
     <group position={position} rotation={[0, rotation, 0]}>
-      {[-0.09, -0.03, 0.03, 0.09].map((z) => (
+      {[-0.09, -0.03, 0.03, 0.09].map(z => (
         <mesh key={z} position={[0, 0.22, z]}>
           <boxGeometry args={[0.85, 0.03, 0.05]} />
           <Mat c={A.wood} r={0.6} />
         </mesh>
       ))}
-      {[0.3, 0.37].map((y) => (
+      {[0.3, 0.37].map(y => (
         <mesh key={y} position={[0, y, -0.13]} rotation={[-0.2, 0, 0]}>
           <boxGeometry args={[0.85, 0.05, 0.025]} />
           <Mat c={A.wood} r={0.6} />
         </mesh>
       ))}
-      {[-0.34, 0.34].map((x) => (
+      {[-0.34, 0.34].map(x => (
         <group key={x} position={[x, 0, 0]}>
           <mesh position={[0, 0.1, 0]}>
             <boxGeometry args={[0.04, 0.2, 0.24]} />
@@ -536,7 +676,17 @@ function Bench({ position, rotation = 0 }: { position: [number, number, number];
   );
 }
 
-function Shrub({ position, s = 1, seed = 1, pot = "#9aa0a8" }: { position: [number, number, number]; s?: number; seed?: number; pot?: string }) {
+function Shrub({
+  position,
+  s = 1,
+  seed = 1,
+  pot = '#9aa0a8',
+}: {
+  position: [number, number, number];
+  s?: number;
+  seed?: number;
+  pot?: string;
+}) {
   return (
     <group position={position} scale={s}>
       <mesh position={[0, 0.12, 0]}>
@@ -573,7 +723,14 @@ export default function AppleBlock() {
   const t = T();
   return (
     <group>
-      <Platform relief={t.relief} reliefBump={t.reliefBump} tiles={t.pavers} tilesBump={t.paversBump} plinth="#a7acb3" cap="#d8d8da" />
+      <Platform
+        relief={t.relief}
+        reliefBump={t.reliefBump}
+        tiles={t.pavers}
+        tilesBump={t.paversBump}
+        plinth="#a7acb3"
+        cap="#d8d8da"
+      />
       <Store t={t} />
       <group position={[0, 0.045, 0]}>
         <ModernLamp position={[-2.8, 0, 2.8]} />
@@ -585,7 +742,7 @@ export default function AppleBlock() {
         <Shrub position={[1.3, 0, 1.8]} seed={4} />
         <Shrub position={[1.8, 0, 1.3]} seed={5} />
         <Shrub position={[1.8, 0, -1.95]} seed={6} />
-        {[-2.6, -1.9, -1.2].map((x) => (
+        {[-2.6, -1.9, -1.2].map(x => (
           <Bollard key={x} position={[x, 0, 2.9]} />
         ))}
         <mesh position={[2.15, 0.18, 1.95]}>

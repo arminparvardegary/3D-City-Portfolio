@@ -1,24 +1,27 @@
-
-import { RoundedBox } from "@react-three/drei";
-import { BRAND, imgTex } from "./brand";
-import { Block, Mat, Person, ctex, stucco } from "./kit";
-import { Base, Bench, Bollard, Curtain, FONT, GLOW, Label, Planter, ProductShelf, WARM } from "./shop";
+import { RoundedBox } from '@react-three/drei';
+import { BRAND, imgTex } from './brand';
+import { Block, Mat, Person, ctex, stucco } from './kit';
+import { Base, Bench, Bollard, Curtain, FONT, GLOW, Label, Planter, ProductShelf, WARM } from './shop';
 
 const GG = {
-  blue: "#c9a957",      // AAQ gold (was Google blue)
-  blueDark: "#58585a",  // AAQ grey
-  white: "#f6f5f1",
-  trim: "#e9e7e1",
-  colors: ["#3fb8a8", "#3fb8a8", "#1f6f66"],   // AAQ
+  blue: '#c9a957', // AAQ gold (was Google blue)
+  blueDark: '#58585a', // AAQ grey
+  white: '#f6f5f1',
+  trim: '#e9e7e1',
+  colors: ['#3fb8a8', '#3fb8a8', '#1f6f66'], // AAQ
 };
-const PRODUCTS = ["#f4f4f2", "#202124", "#a8c7fa", "#f6c3c0", "#c4eed0", "#fde293", "#e8eaed"];
+const PRODUCTS = ['#f4f4f2', '#202124', '#a8c7fa', '#f6c3c0', '#c4eed0', '#fde293', '#e8eaed'];
 
 function T() {
   return {
     // AAQ Properties: the real logo (gold buildings, grey name).
     // The logo cropped to its content (the PNG has wide margins), so it fills the sign.
-    logo: imgTex("aaq-logo", 1400, 1000, [BRAND.aaq.logo!], (g, [im]) => { if (im) g.drawImage(im, 229, 186, 1036, 740, 0, 0, 1400, 1000); }),
-    small: imgTex("aaq-small", 700, 500, [BRAND.aaq.logo!], (g, [im]) => { if (im) g.drawImage(im, 229, 186, 1036, 740, 0, 0, 700, 500); }),
+    logo: imgTex('aaq-logo', 1400, 1000, [BRAND.aaq.logo!], (g, [im]) => {
+      if (im) g.drawImage(im, 229, 186, 1036, 740, 0, 0, 1400, 1000);
+    }),
+    small: imgTex('aaq-small', 700, 500, [BRAND.aaq.logo!], (g, [im]) => {
+      if (im) g.drawImage(im, 229, 186, 1036, 740, 0, 0, 700, 500);
+    }),
   };
 }
 type Tex = ReturnType<typeof T>;
@@ -37,7 +40,14 @@ function Window({ w, h }: { w: number; h: number }) {
       </RoundedBox>
       <mesh position={[0, 0, 0.042]}>
         <planeGeometry args={[w, h]} />
-        <meshPhysicalMaterial color="#9cc3e8" emissive="#ffe2b0" emissiveIntensity={0.15} roughness={0.04} clearcoat={1} envMapIntensity={1.5} />
+        <meshPhysicalMaterial
+          color="#9cc3e8"
+          emissive="#ffe2b0"
+          emissiveIntensity={0.15}
+          roughness={0.04}
+          clearcoat={1}
+          envMapIntensity={1.5}
+        />
       </mesh>
       <mesh position={[0, 0, 0.05]}>
         <boxGeometry args={[0.035, h, 0.02]} />
@@ -58,10 +68,15 @@ function Window({ w, h }: { w: number; h: number }) {
 function Boxes({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
   return (
     <group position={position} rotation={[0, rotation, 0]}>
-      {[[0, 0.1, 0, 0.3], [0.32, 0.1, 0.04, 0.3], [0.12, 0.3, 0.02, 0.26], [0.02, 0.48, 0.0, 0.2]].map(([x, y, z, s], i) => (
+      {[
+        [0, 0.1, 0, 0.3],
+        [0.32, 0.1, 0.04, 0.3],
+        [0.12, 0.3, 0.02, 0.26],
+        [0.02, 0.48, 0.0, 0.2],
+      ].map(([x, y, z, s], i) => (
         <mesh key={i} position={[x, y, z]} rotation={[0, i * 0.2, 0]}>
           <boxGeometry args={[s, s * 0.66, s * 0.8]} />
-          <Mat c={i % 2 ? "#c79a62" : "#b98a52"} r={0.85} />
+          <Mat c={i % 2 ? '#c79a62' : '#b98a52'} r={0.85} />
         </mesh>
       ))}
     </group>
@@ -86,9 +101,27 @@ function Store({ t }: { t: Tex }) {
         <boxGeometry args={[0.04, G, S - 0.2]} />
         <meshStandardMaterial color={WARM} emissive={GLOW} emissiveIntensity={0.25} roughness={0.9} />
       </mesh>
-      <ProductShelf position={[-0.3, 0.04, -h + 0.28]} w={1.8} h={1.15} palette={PRODUCTS} seed={5} wood="#f2f1ed" />
-      <ProductShelf position={[-h + 0.28, 0.04, 0.25]} rotation={Math.PI / 2} w={1.4} h={1.15} palette={PRODUCTS} seed={6} wood="#f2f1ed" />
-      {[[0.2, 0.2], [0.75, 0.95]].map(([x, z], i) => (
+      <ProductShelf
+        position={[-0.3, 0.04, -h + 0.28]}
+        w={1.8}
+        h={1.15}
+        palette={PRODUCTS}
+        seed={5}
+        wood="#f2f1ed"
+      />
+      <ProductShelf
+        position={[-h + 0.28, 0.04, 0.25]}
+        rotation={Math.PI / 2}
+        w={1.4}
+        h={1.15}
+        palette={PRODUCTS}
+        seed={6}
+        wood="#f2f1ed"
+      />
+      {[
+        [0.2, 0.2],
+        [0.75, 0.95],
+      ].map(([x, z], i) => (
         <group key={i} position={[x, 0.04, z]}>
           <RoundedBox args={[0.9, 0.04, 0.42]} radius={0.015} smoothness={2} position={[0, 0.42, 0]}>
             <Mat c="#f2f1ed" r={0.4} />
@@ -100,7 +133,7 @@ function Store({ t }: { t: Tex }) {
           {[-0.3, -0.1, 0.1, 0.3].map((px, k) => (
             <mesh key={k} position={[px, 0.47, 0.04]} rotation={[-0.4, 0, 0]}>
               <boxGeometry args={[0.05, 0.09, 0.006]} />
-              <Mat c="#202124" r={0.2} e={["#4285F4", "#EA4335", "#FBBC05", "#34A853"][k]} ei={0.6} />
+              <Mat c="#202124" r={0.2} e={['#4285F4', '#EA4335', '#FBBC05', '#34A853'][k]} ei={0.6} />
             </mesh>
           ))}
         </group>
@@ -110,7 +143,7 @@ function Store({ t }: { t: Tex }) {
       <Person position={[0.9, 0.04, 0.6]} shirt="#e9e4dc" rotation={2.2} hair="#8a5a2b" />
       <Person position={[-0.5, 0.04, -0.4]} shirt="#34A853" rotation={Math.PI} />
       <pointLight position={[0.2, 1.1, 0.3]} intensity={4} distance={4.5} decay={1.5} color="#ffd9a3" />
-      {[-0.9, 0.0, 0.9].map((z) => (
+      {[-0.9, 0.0, 0.9].map(z => (
         <mesh key={z} position={[0, G - 0.01, z]} rotation={[Math.PI / 2, 0, 0]} userData={{ noCast: true }}>
           <planeGeometry args={[S - 0.5, 0.06]} />
           <meshStandardMaterial color="#fff" emissive="#fff3dc" emissiveIntensity={2.5} toneMapped={false} />
@@ -134,14 +167,18 @@ function Store({ t }: { t: Tex }) {
         <Mat c={GG.white} r={0.85} bump={plaster} bs={0.6} />
       </mesh>
       {/* blue pilasters at the corners */}
-      {[[h - 0.08, h - 0.08], [-h + 0.08, h - 0.08], [h - 0.08, -h + 0.08]].map(([x, z], i) => (
+      {[
+        [h - 0.08, h - 0.08],
+        [-h + 0.08, h - 0.08],
+        [h - 0.08, -h + 0.08],
+      ].map(([x, z], i) => (
         <mesh key={i} position={[x, TOP / 2, z]}>
           <boxGeometry args={[0.18, TOP, 0.18]} />
           <Mat c={GG.blue} r={0.4} />
         </mesh>
       ))}
       {/* door handles */}
-      {[0.32, 0.42].map((x) => (
+      {[0.32, 0.42].map(x => (
         <mesh key={x} position={[x, 0.7, h + 0.01]}>
           <boxGeometry args={[0.015, 0.4, 0.02]} />
           <Mat c="#d9dce0" r={0.15} m={0.9} />
@@ -174,7 +211,7 @@ function Store({ t }: { t: Tex }) {
       <group position={[1.15, G + BAND + U / 2 + 0.03, h + 0.04]}>
         <Window w={0.6} h={0.8} />
       </group>
-      {[-1.0, -0.2, 0.6].map((z) => (
+      {[-1.0, -0.2, 0.6].map(z => (
         <group key={z} position={[h + 0.01, G + BAND + U / 2 + 0.03, z]} rotation={[0, Math.PI / 2, 0]}>
           <Window w={0.5} h={0.8} />
         </group>
@@ -200,7 +237,7 @@ function Store({ t }: { t: Tex }) {
         <RoundedBox args={[0.8, 0.36, 0.55]} radius={0.03} smoothness={2} position={[-0.6, 0.32, -0.6]}>
           <Mat c="#dadce0" r={0.4} m={0.2} />
         </RoundedBox>
-        {[-0.75, -0.45].map((x) => (
+        {[-0.75, -0.45].map(x => (
           <mesh key={x} position={[x, 0.33, -0.32]} rotation={[Math.PI / 2, 0, 0]}>
             <cylinderGeometry args={[0.1, 0.1, 0.02, 24]} />
             <Mat c="#5f6368" r={0.5} />
@@ -261,7 +298,7 @@ export default function GoogleBlock() {
         <Planter position={[-1.0, 0, 2.15]} w={1.0} color="#e9e7e1" seed={41} />
         <Planter position={[2.15, 0, -1.2]} w={1.0} color="#e9e7e1" seed={42} rotation={Math.PI / 2} />
         <Bench position={[0.9, 0, 2.6]} wood="#c49a6c" />
-        {[2.85, 2.35].map((x) => (
+        {[2.85, 2.35].map(x => (
           <Bollard key={x} position={[x, 0, 0.6]} />
         ))}
         <StreetLight position={[2.8, 0, -2.75]} />

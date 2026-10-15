@@ -1,34 +1,55 @@
-
-import * as THREE from "three";
-import { RoundedBox } from "@react-three/drei";
-import { Block, Mat, Person, ctex, rng } from "./kit";
+import * as THREE from 'three';
+import { RoundedBox } from '@react-three/drei';
+import { Block, Mat, Person, ctex, rng } from './kit';
 import {
-  Base, Bench, CafeTable, Counter, Curtain, FONT, GLOW, Label, LanternLamp, Pendant, Topiary, WARM, brick, brickBump,
-  grassBump, grassTop, slats, woodFloor,
-} from "./shop";
+  Base,
+  Bench,
+  CafeTable,
+  Counter,
+  Curtain,
+  FONT,
+  GLOW,
+  Label,
+  LanternLamp,
+  Pendant,
+  Topiary,
+  WARM,
+  brick,
+  brickBump,
+  grassBump,
+  grassTop,
+  slats,
+  woodFloor,
+} from './shop';
 
 const SB = {
-  green: "#00704a",
-  greenDark: "#1e3932",
-  walnut: "#4a2f1f",
-  wood: "#7a4e2d",
+  green: '#00704a',
+  greenDark: '#1e3932',
+  walnut: '#4a2f1f',
+  wood: '#7a4e2d',
 };
 
 function T() {
   return {
-    logo: ctex("sbux-logo", 512, 512, (g) => {
+    logo: ctex('sbux-logo', 512, 512, g => {
       const c = 256;
       g.fillStyle = SB.green;
-      g.beginPath(); g.arc(c, c, 250, 0, 7); g.fill();
-      g.strokeStyle = "#fff";
+      g.beginPath();
+      g.arc(c, c, 250, 0, 7);
+      g.fill();
+      g.strokeStyle = '#fff';
       g.lineWidth = 8;
-      g.beginPath(); g.arc(c, c, 236, 0, 7); g.stroke();
-      g.beginPath(); g.arc(c, c, 160, 0, 7); g.stroke();
+      g.beginPath();
+      g.arc(c, c, 236, 0, 7);
+      g.stroke();
+      g.beginPath();
+      g.arc(c, c, 160, 0, 7);
+      g.stroke();
       // lettering around the ring
-      g.fillStyle = "#fff";
+      g.fillStyle = '#fff';
       g.font = `800 52px ${FONT}`;
-      g.textAlign = "center";
-      g.textBaseline = "middle";
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
       const ring = (text: string, start: number, step: number, flip: boolean) => {
         [...text].forEach((ch, i) => {
           const a = start + i * step;
@@ -39,15 +60,22 @@ function T() {
           g.restore();
         });
       };
-      ring("STARBUCKS", -Math.PI / 2 - 4 * 0.27, 0.27, false);
-      ring("COFFEE", Math.PI / 2 + 2.5 * 0.3, -0.3, true);
-      g.beginPath(); g.arc(c - 205, c, 9, 0, 7); g.arc(c + 205, c, 9, 0, 7); g.fill();
+      ring('STARBUCKS', -Math.PI / 2 - 4 * 0.27, 0.27, false);
+      ring('COFFEE', Math.PI / 2 + 2.5 * 0.3, -0.3, true);
+      g.beginPath();
+      g.arc(c - 205, c, 9, 0, 7);
+      g.arc(c + 205, c, 9, 0, 7);
+      g.fill();
       // siren: inner disc, face, hair, crown with star
       g.fillStyle = SB.green;
-      g.beginPath(); g.arc(c, c, 150, 0, 7); g.fill();
-      g.fillStyle = "#fff";
-      g.beginPath(); g.ellipse(c, c + 10, 48, 60, 0, 0, 7); g.fill();
-      g.strokeStyle = "#fff";
+      g.beginPath();
+      g.arc(c, c, 150, 0, 7);
+      g.fill();
+      g.fillStyle = '#fff';
+      g.beginPath();
+      g.ellipse(c, c + 10, 48, 60, 0, 0, 7);
+      g.fill();
+      g.strokeStyle = '#fff';
       g.lineWidth = 16;
       for (const s of [-1, 1]) {
         g.beginPath();
@@ -60,44 +88,57 @@ function T() {
         g.stroke();
       }
       g.beginPath();
-      g.moveTo(c - 54, c - 50); g.lineTo(c - 40, c - 100); g.lineTo(c - 14, c - 70); g.lineTo(c, c - 112);
-      g.lineTo(c + 14, c - 70); g.lineTo(c + 40, c - 100); g.lineTo(c + 54, c - 50); g.closePath();
+      g.moveTo(c - 54, c - 50);
+      g.lineTo(c - 40, c - 100);
+      g.lineTo(c - 14, c - 70);
+      g.lineTo(c, c - 112);
+      g.lineTo(c + 14, c - 70);
+      g.lineTo(c + 40, c - 100);
+      g.lineTo(c + 54, c - 50);
+      g.closePath();
       g.fill();
       g.fillStyle = SB.green;
-      g.beginPath(); g.ellipse(c - 17, c + 2, 7, 4, 0, 0, 7); g.ellipse(c + 17, c + 2, 7, 4, 0, 0, 7); g.fill();
+      g.beginPath();
+      g.ellipse(c - 17, c + 2, 7, 4, 0, 0, 7);
+      g.ellipse(c + 17, c + 2, 7, 4, 0, 0, 7);
+      g.fill();
       g.strokeStyle = SB.green;
       g.lineWidth = 4;
-      g.beginPath(); g.arc(c, c + 30, 14, 0.2, Math.PI - 0.2); g.stroke();
-      g.fillStyle = "#fff";
-      g.beginPath(); g.arc(c, c - 82, 9, 0, 7); g.fill();
+      g.beginPath();
+      g.arc(c, c + 30, 14, 0.2, Math.PI - 0.2);
+      g.stroke();
+      g.fillStyle = '#fff';
+      g.beginPath();
+      g.arc(c, c - 82, 9, 0, 7);
+      g.fill();
     }),
-    menu: ctex("sbux-menu", 512, 192, (g) => {
+    menu: ctex('sbux-menu', 512, 192, g => {
       const r = rng(9);
-      g.fillStyle = "#1f2321";
+      g.fillStyle = '#1f2321';
       g.fillRect(0, 0, 512, 192);
       for (let p = 0; p < 3; p++) {
         const x = 16 + p * 166;
-        g.strokeStyle = "rgba(255,255,255,.25)";
+        g.strokeStyle = 'rgba(255,255,255,.25)';
         g.strokeRect(x, 12, 150, 168);
-        g.fillStyle = "#f3efe6";
+        g.fillStyle = '#f3efe6';
         g.font = `700 22px ${FONT}`;
-        g.fillText(["Espresso", "Frappuccino", "Tea"][p], x + 12, 40);
+        g.fillText(['Espresso', 'Frappuccino', 'Tea'][p], x + 12, 40);
         g.font = `400 14px ${FONT}`;
         for (let i = 0; i < 6; i++) {
-          g.fillStyle = "rgba(243,239,230,.8)";
+          g.fillStyle = 'rgba(243,239,230,.8)';
           g.fillRect(x + 12, 60 + i * 18, 70 + r() * 40, 3);
           g.fillText((2 + r() * 4).toFixed(2), x + 112, 64 + i * 18);
         }
       }
     }),
-    awningText: ctex("sbux-awning", 512, 64, (g) => {
+    awningText: ctex('sbux-awning', 512, 64, g => {
       g.fillStyle = SB.green;
       g.fillRect(0, 0, 512, 64);
-      g.fillStyle = "rgba(255,255,255,.92)";
+      g.fillStyle = 'rgba(255,255,255,.92)';
       g.font = `700 30px ${FONT}`;
-      g.textAlign = "center";
-      g.textBaseline = "middle";
-      g.fillText("STARBUCKS COFFEE", 256, 34);
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText('STARBUCKS COFFEE', 256, 34);
     }),
   };
 }
@@ -116,10 +157,15 @@ function Awning({ w, depth = 0.5, map }: { w: number; depth?: number; map?: THRE
         <meshStandardMaterial attach="material-1" color={SB.green} />
         <meshStandardMaterial attach="material-2" color={SB.green} />
         <meshStandardMaterial attach="material-3" color={SB.green} />
-        <meshStandardMaterial attach="material-4" map={map ?? null} color={map ? "#ffffff" : SB.green} roughness={0.8} />
+        <meshStandardMaterial
+          attach="material-4"
+          map={map ?? null}
+          color={map ? '#ffffff' : SB.green}
+          roughness={0.8}
+        />
         <meshStandardMaterial attach="material-5" color={SB.green} />
       </mesh>
-      {[-1, 1].map((s) => (
+      {[-1, 1].map(s => (
         <mesh key={s} position={[(s * w) / 2, -0.15, depth / 2]} rotation={[0, Math.PI / 2, 0]}>
           <planeGeometry args={[depth, 0.18]} />
           <meshStandardMaterial color={SB.green} side={THREE.DoubleSide} roughness={0.8} />
@@ -139,7 +185,7 @@ function EspressoMachine({ position }: { position: [number, number, number] }) {
         <boxGeometry args={[0.42, 0.02, 0.22]} />
         <Mat c="#cfd3d8" r={0.2} m={0.9} />
       </mesh>
-      {[-0.1, 0.1].map((x) => (
+      {[-0.1, 0.1].map(x => (
         <mesh key={x} position={[x, 0.06, 0.12]}>
           <cylinderGeometry args={[0.02, 0.02, 0.06, 12]} />
           <Mat c="#cfd3d8" r={0.2} m={0.9} />
@@ -158,9 +204,17 @@ function PastryCase({ position }: { position: [number, number, number] }) {
         <meshPhysicalMaterial color="#e8f2f5" transparent opacity={0.2} roughness={0.02} depthWrite={false} />
       </mesh>
       {Array.from({ length: 6 }, (_, i) => (
-        <mesh key={i} position={[-0.18 + (i % 3) * 0.18, 0.56 + Math.floor(i / 3) * 0.11, 0]} scale={[1, 0.6, 1]}>
+        <mesh
+          key={i}
+          position={[-0.18 + (i % 3) * 0.18, 0.56 + Math.floor(i / 3) * 0.11, 0]}
+          scale={[1, 0.6, 1]}
+        >
           <sphereGeometry args={[0.04, 12, 8]} />
-          <meshStandardMaterial color={["#c98a4b", "#e2b36b", "#7a4a2b"][Math.floor(r() * 3)]} emissive={GLOW} emissiveIntensity={0.2} />
+          <meshStandardMaterial
+            color={['#c98a4b', '#e2b36b', '#7a4a2b'][Math.floor(r() * 3)]}
+            emissive={GLOW}
+            emissiveIntensity={0.2}
+          />
         </mesh>
       ))}
     </group>
@@ -206,7 +260,7 @@ function Store({ t }: { t: Tex }) {
         <boxGeometry args={[0.8, H + 0.05, 0.24]} />
         <Mat c={SB.walnut} r={0.55} />
       </mesh>
-      {[0, 1, 2, 3, 4, 5].map((i) => (
+      {[0, 1, 2, 3, 4, 5].map(i => (
         <mesh key={i} position={[-h + 0.06 + i * 0.13, H / 2, h + 0.082]}>
           <boxGeometry args={[0.012, H, 0.01]} />
           <Mat c="#2d1b11" r={0.6} />
@@ -284,7 +338,13 @@ function Store({ t }: { t: Tex }) {
       <PastryCase position={[-0.15, 0.04, -h + 0.55]} />
       <mesh position={[-0.5, 1.4, -h + 0.17]}>
         <planeGeometry args={[1.5, 0.56]} />
-        <meshStandardMaterial map={t.menu} emissive="#ffffff" emissiveMap={t.menu} emissiveIntensity={0.7} toneMapped={false} />
+        <meshStandardMaterial
+          map={t.menu}
+          emissive="#ffffff"
+          emissiveMap={t.menu}
+          emissiveIntensity={0.7}
+          toneMapped={false}
+        />
       </mesh>
       <CafeTable position={[0.95, 0.04, -0.2]} chair={SB.walnut} top="#e2cfae" />
       <CafeTable position={[0.95, 0.04, 0.85]} chair={SB.walnut} top="#e2cfae" />
@@ -292,7 +352,12 @@ function Store({ t }: { t: Tex }) {
       <Person position={[-0.6, 0.04, -h + 0.25]} shirt={SB.green} hair="#2b211b" />
       <Person position={[-0.1, 0.04, -0.6]} shirt="#e9e4dc" rotation={Math.PI} />
       <Person position={[0.95, 0.04, 0.6]} shirt="#b5523b" rotation={Math.PI} hair="#8a5a2b" />
-      {[[-0.6, -0.9], [0.9, -0.2], [0.9, 0.85], [-0.2, 0.8]].map(([x, z], i) => (
+      {[
+        [-0.6, -0.9],
+        [0.9, -0.2],
+        [0.9, 0.85],
+        [-0.2, 0.8],
+      ].map(([x, z], i) => (
         <Pendant key={i} position={[x, H - 0.3, z]} color={SB.greenDark} />
       ))}
       <pointLight position={[0.2, 1.4, 0.2]} intensity={4} distance={4.5} decay={1.5} color="#ffcf8a" />
@@ -303,7 +368,14 @@ function Store({ t }: { t: Tex }) {
           <Mat c="#6b5a4a" r={0.8} />
         </Block>
         <group position={[0, 0.1, 0]}>
-          <Block w={S + 0.16} d={S + 0.16} h={0.16} radii={[0.04, 0.04, 0.04, 0.04]} hole={0.12} bevel={0.025}>
+          <Block
+            w={S + 0.16}
+            d={S + 0.16}
+            h={0.16}
+            radii={[0.04, 0.04, 0.04, 0.04]}
+            hole={0.12}
+            bevel={0.025}
+          >
             <Mat c={SB.greenDark} r={0.5} />
           </Block>
         </group>
@@ -311,7 +383,14 @@ function Store({ t }: { t: Tex }) {
           <planeGeometry args={[S - 0.1, S - 0.1]} />
           <meshStandardMaterial map={grassTop()} bumpMap={grassBump()} bumpScale={2} roughness={1} />
         </mesh>
-        {[[-1.2, -1.2, 0.75], [-0.6, -1.35, 0.55], [1.25, -1.2, 0.6], [1.3, 1.15, 0.7], [-1.25, 0.6, 0.6], [0.2, -0.3, 0.45]].map(([x, z, s], i) => (
+        {[
+          [-1.2, -1.2, 0.75],
+          [-0.6, -1.35, 0.55],
+          [1.25, -1.2, 0.6],
+          [1.3, 1.15, 0.7],
+          [-1.25, 0.6, 0.6],
+          [0.2, -0.3, 0.45],
+        ].map(([x, z, s], i) => (
           <Topiary key={i} position={[x, 0.16, z]} h={s} pot={null} seed={i + 3} />
         ))}
       </group>
@@ -327,7 +406,7 @@ export default function StarbucksBlock() {
       <Store t={t} />
       <group position={[0, 0.045, 0]}>
         {/* benches along the glass, topiaries in pots */}
-        {[-0.9, 0.35].map((z) => (
+        {[-0.9, 0.35].map(z => (
           <Bench key={z} position={[2.15, 0, z]} rotation={-Math.PI / 2} wood="#8a5a35" />
         ))}
         {[-1.6, -0.25, 1.0].map((z, i) => (

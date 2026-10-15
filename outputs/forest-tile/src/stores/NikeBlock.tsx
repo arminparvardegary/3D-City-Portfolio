@@ -1,17 +1,32 @@
-
-import { Suspense, useMemo } from "react";
-import * as THREE from "three";
-import { RoundedBox, useGLTF } from "@react-three/drei";
-import { BRAND, url } from "./brand";
-import { Block, Foliage, Mat, Person, ctex } from "./kit";
+import { Suspense, useMemo } from 'react';
+import * as THREE from 'three';
+import { RoundedBox, useGLTF } from '@react-three/drei';
+import { BRAND, url } from './brand';
+import { Block, Foliage, Mat, Person, ctex } from './kit';
 import {
-  Base, Bench, Bin, ClothesRack, Curtain, FONT, GLOW, LEAF, Label, LanternLamp, ProductShelf, Shrub, SignBox, WARM,
-  grassBump, grassTop, signTex, woodFloor,
-} from "./shop";
+  Base,
+  Bench,
+  Bin,
+  ClothesRack,
+  Curtain,
+  FONT,
+  GLOW,
+  LEAF,
+  Label,
+  LanternLamp,
+  ProductShelf,
+  Shrub,
+  SignBox,
+  WARM,
+  grassBump,
+  grassTop,
+  signTex,
+  woodFloor,
+} from './shop';
 
-const N = { black: "#141416", frame: "#1b1c1f", panel: "#2a2c30" };
-const SHOES = ["#f4f4f2", "#1b1c1f", "#e5483b", "#f2a33a", "#3a7bd5", "#c8ccd1", "#6ad1a8", "#f1d34a"];
-const APPAREL = ["#1b1c1f", "#e9e7e2", "#5b6370", "#9aa3ad", "#c8423a", "#2f4a7a"];
+const N = { black: '#141416', frame: '#1b1c1f', panel: '#2a2c30' };
+const SHOES = ['#f4f4f2', '#1b1c1f', '#e5483b', '#f2a33a', '#3a7bd5', '#c8ccd1', '#6ad1a8', '#f1d34a'];
+const APPAREL = ['#1b1c1f', '#e9e7e2', '#5b6370', '#9aa3ad', '#c8423a', '#2f4a7a'];
 
 function swoosh(g: CanvasRenderingContext2D, x: number, y: number, s: number) {
   g.save();
@@ -31,25 +46,31 @@ function swoosh(g: CanvasRenderingContext2D, x: number, y: number, s: number) {
 function T() {
   return {
     // Rush Graphics: the wordmark where the swoosh was.
-    swoosh: ctex("rush-mark", 512, 256, (g) => {
-      g.fillStyle = "#fff";
+    swoosh: ctex('rush-mark', 512, 256, g => {
+      g.fillStyle = '#fff';
       g.font = `italic 900 170px ${FONT}`;
-      g.textAlign = "center";
-      g.textBaseline = "middle";
-      g.fillText("RUSH", 256, 116);
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText('RUSH', 256, 116);
       g.fillStyle = BRAND.rush.color;
       g.fillRect(96, 206, 320, 14);
     }),
-    wordmark: ctex("rush-wordmark", 256, 256, (g) => {
-      g.fillStyle = "#fff";
+    wordmark: ctex('rush-wordmark', 256, 256, g => {
+      g.fillStyle = '#fff';
       g.font = `italic 900 92px ${FONT}`;
-      g.textAlign = "center";
-      g.fillText("RUSH", 128, 112);
+      g.textAlign = 'center';
+      g.fillText('RUSH', 128, 112);
       g.fillStyle = BRAND.rush.color;
       g.font = `800 34px ${FONT}`;
-      g.fillText("GRAPHICS", 128, 170);
+      g.fillText('GRAPHICS', 128, 170);
     }),
-    sign: signTex("rush-sign", "RUSH GRAPHICS", { bg: N.black, fg: BRAND.rush.color, size: 56, weight: 900, family: `italic ${FONT}` }),
+    sign: signTex('rush-sign', 'RUSH GRAPHICS', {
+      bg: N.black,
+      fg: BRAND.rush.color,
+      size: 56,
+      weight: 900,
+      family: `italic ${FONT}`,
+    }),
   };
 }
 type Tex = ReturnType<typeof T>;
@@ -68,22 +89,47 @@ function Floor({ y, t }: { y: number; t: Tex }) {
         <boxGeometry args={[S - 0.1, 0.04, S - 0.1]} />
         <meshStandardMaterial map={woodFloor()} roughness={0.45} />
       </mesh>
-      <ProductShelf position={[-0.4, 0.04, -h + 0.2]} w={1.6} h={1.1} palette={SHOES} seed={Math.round(y * 10) + 1} wood="#d4b48a" />
-      <ProductShelf position={[-h + 0.2, 0.04, 0.2]} rotation={Math.PI / 2} w={1.4} h={1.1} palette={SHOES} seed={Math.round(y * 10) + 2} wood="#d4b48a" />
+      <ProductShelf
+        position={[-0.4, 0.04, -h + 0.2]}
+        w={1.6}
+        h={1.1}
+        palette={SHOES}
+        seed={Math.round(y * 10) + 1}
+        wood="#d4b48a"
+      />
+      <ProductShelf
+        position={[-h + 0.2, 0.04, 0.2]}
+        rotation={Math.PI / 2}
+        w={1.4}
+        h={1.1}
+        palette={SHOES}
+        seed={Math.round(y * 10) + 2}
+        wood="#d4b48a"
+      />
       <ClothesRack position={[0.7, 0.04, -0.6]} palette={APPAREL} seed={Math.round(y * 10) + 3} />
-      <ClothesRack position={[0.5, 0.04, 0.55]} rotation={Math.PI / 2} palette={APPAREL} seed={Math.round(y * 10) + 4} />
+      <ClothesRack
+        position={[0.5, 0.04, 0.55]}
+        rotation={Math.PI / 2}
+        palette={APPAREL}
+        seed={Math.round(y * 10) + 4}
+      />
       <RoundedBox args={[0.7, 0.32, 0.45]} radius={0.02} smoothness={2} position={[-0.35, 0.2, 0.55]}>
         <Mat c="#d4b48a" r={0.5} />
       </RoundedBox>
-      {[-0.55, -0.35, -0.15].map((x) => (
+      {[-0.55, -0.35, -0.15].map(x => (
         <mesh key={x} position={[x, 0.4, 0.55]}>
           <boxGeometry args={[0.12, 0.06, 0.06]} />
           <Mat c={SHOES[Math.abs(Math.round(x * 10)) % SHOES.length]} r={0.5} />
         </mesh>
       ))}
       {/* ceiling light strips */}
-      {[-1.0, -0.2, 0.6, 1.3].map((z) => (
-        <mesh key={z} position={[0, (y === 0 ? G : U) - 0.01, z]} rotation={[Math.PI / 2, 0, 0]} userData={{ noCast: true }}>
+      {[-1.0, -0.2, 0.6, 1.3].map(z => (
+        <mesh
+          key={z}
+          position={[0, (y === 0 ? G : U) - 0.01, z]}
+          rotation={[Math.PI / 2, 0, 0]}
+          userData={{ noCast: true }}
+        >
           <planeGeometry args={[S - 0.4, 0.06]} />
           <meshStandardMaterial color="#fff" emissive="#fff3dc" emissiveIntensity={2.5} toneMapped={false} />
         </mesh>
@@ -103,7 +149,13 @@ function Store({ t }: { t: Tex }) {
       <Person position={[0.9, G + SLAB, 0.2]} shirt="#2f4a7a" rotation={-2} />
       <Person position={[-0.3, G + SLAB, -0.4]} shirt="#1b1c1f" rotation={Math.PI} bag="#f2a33a" />
       <pointLight position={[0, 1.0, 0.2]} intensity={4} distance={4.5} decay={1.5} color="#ffd39a" />
-      <pointLight position={[0, G + SLAB + 0.9, 0.2]} intensity={4} distance={4.5} decay={1.5} color="#ffd39a" />
+      <pointLight
+        position={[0, G + SLAB + 0.9, 0.2]}
+        intensity={4}
+        distance={4.5}
+        decay={1.5}
+        color="#ffd39a"
+      />
 
       {/* slab between floors */}
       <mesh position={[0, G + SLAB / 2, 0]}>
@@ -129,7 +181,11 @@ function Store({ t }: { t: Tex }) {
       </mesh>
 
       {/* thick black corner frame */}
-      {[[h - 0.08, h - 0.08], [-h + 0.08, h - 0.08], [h - 0.08, -h + 0.08]].map(([x, z], i) => (
+      {[
+        [h - 0.08, h - 0.08],
+        [-h + 0.08, h - 0.08],
+        [h - 0.08, -h + 0.08],
+      ].map(([x, z], i) => (
         <mesh key={i} position={[x, TOP / 2, z]}>
           <boxGeometry args={[0.16, TOP, 0.16]} />
           <Mat c={N.frame} r={0.4} m={0.5} />
@@ -149,7 +205,7 @@ function Store({ t }: { t: Tex }) {
       <group position={[-0.05, G - 0.22, h + 0.03]}>
         <SignBox w={0.9} h={0.3} d={0.08} color={N.black} map={t.sign} ei={1} />
       </group>
-      {[-0.1, 0.0].map((x) => (
+      {[-0.1, 0.0].map(x => (
         <mesh key={x} position={[x, 0.62, h + 0.01]}>
           <boxGeometry args={[0.015, 0.45, 0.02]} />
           <Mat c="#d9dce0" r={0.15} m={0.9} />
@@ -180,11 +236,19 @@ function Store({ t }: { t: Tex }) {
           <planeGeometry args={[S - 0.05, S - 0.05]} />
           <meshStandardMaterial map={grassTop()} bumpMap={grassBump()} bumpScale={2} roughness={1} />
         </mesh>
-        {[0, 1, 2, 3].map((i) => (
+        {[0, 1, 2, 3].map(i => (
           <group key={i} rotation={[0, (i * Math.PI) / 2, 0]}>
             <mesh position={[0, 0.36, S / 2 + 0.02]} userData={{ noCast: true }}>
               <planeGeometry args={[S + 0.08, 0.42]} />
-              <meshPhysicalMaterial color="#dfeaf1" transparent opacity={0.18} roughness={0.02} clearcoat={1} depthWrite={false} side={2} />
+              <meshPhysicalMaterial
+                color="#dfeaf1"
+                transparent
+                opacity={0.18}
+                roughness={0.02}
+                clearcoat={1}
+                depthWrite={false}
+                side={2}
+              />
             </mesh>
             <mesh position={[0, 0.58, S / 2 + 0.02]}>
               <boxGeometry args={[S + 0.1, 0.03, 0.04]} />
@@ -195,7 +259,13 @@ function Store({ t }: { t: Tex }) {
         <RoundedBox args={[0.9, 0.22, 0.7]} radius={0.03} smoothness={2} position={[-0.2, 0.25, -0.4]}>
           <Mat c="#d9dce0" r={0.4} m={0.2} />
         </RoundedBox>
-        {[[-1.4, -1.4], [1.4, -1.4], [1.4, 1.4], [-1.4, 1.4], [0.8, 0.4]].map(([x, z], i) => (
+        {[
+          [-1.4, -1.4],
+          [1.4, -1.4],
+          [1.4, 1.4],
+          [-1.4, 1.4],
+          [0.8, 0.4],
+        ].map(([x, z], i) => (
           <Shrub key={i} position={[x, 0.14, z]} s={0.9} seed={90 + i} pot="#2a2c30" />
         ))}
       </group>
@@ -222,15 +292,28 @@ function SquareTree({ position, seed }: { position: [number, number, number]; se
 
 // The real Rush Graphics logo (3D) on the roof, glowing coral.
 function RushLogo({ y }: { y: number }) {
-  const { scene } = useGLTF(url("logos/rush.glb"));
+  const { scene } = useGLTF(url('logos/rush.glb'));
   const logo = useMemo(() => {
     const o = scene.clone(true);
-    const box = new THREE.Box3().setFromObject(o), size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
+    const box = new THREE.Box3().setFromObject(o),
+      size = box.getSize(new THREE.Vector3()),
+      c = box.getCenter(new THREE.Vector3());
     const k = 1.7 / Math.max(size.x, size.y, size.z);
     o.position.set(-c.x * k, -box.min.y * k, -c.z * k);
     o.scale.setScalar(k);
-    const m = new THREE.MeshStandardMaterial({ color: BRAND.rush.color, emissive: BRAND.rush.color, emissiveIntensity: 0.9, roughness: 0.35, metalness: 0.2 });
-    o.traverse((n) => { if ((n as THREE.Mesh).isMesh) { (n as THREE.Mesh).material = m; n.castShadow = true; } });
+    const m = new THREE.MeshStandardMaterial({
+      color: BRAND.rush.color,
+      emissive: BRAND.rush.color,
+      emissiveIntensity: 0.9,
+      roughness: 0.35,
+      metalness: 0.2,
+    });
+    o.traverse(n => {
+      if ((n as THREE.Mesh).isMesh) {
+        (n as THREE.Mesh).material = m;
+        n.castShadow = true;
+      }
+    });
     return o;
   }, [scene]);
   return <primitive object={logo} position={[0, y, 0]} />;
@@ -242,7 +325,9 @@ export default function NikeBlock() {
     <group>
       <Base kind="nike" />
       <Store t={t} />
-      <Suspense fallback={null}><RushLogo y={TOP + 0.3} /></Suspense>
+      <Suspense fallback={null}>
+        <RushLogo y={TOP + 0.3} />
+      </Suspense>
       <group position={[0, 0.045, 0]}>
         <Bench position={[-1.0, 0, 2.55]} />
         <Bench position={[2.55, 0, -0.9]} rotation={-Math.PI / 2} />

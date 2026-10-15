@@ -1,53 +1,117 @@
-
-import { useMemo } from "react";
-import * as THREE from "three";
-import { RoundedBox } from "@react-three/drei";
-import { BRAND, contain, imgTex } from "./brand";
-import { Block, Mat, Person, ctex, rng, stucco } from "./kit";
+import { useMemo } from 'react';
+import * as THREE from 'three';
+import { RoundedBox } from '@react-three/drei';
+import { BRAND, contain, imgTex } from './brand';
+import { Block, Mat, Person, ctex, rng, stucco } from './kit';
 import {
-  Base, Bin, Bollard, CafeTable, Counter, Curtain, FONT, GLOW, Label, LEAF, Pendant, Planter, SignBox, WARM, signTex,
-} from "./shop";
+  Base,
+  Bin,
+  Bollard,
+  CafeTable,
+  Counter,
+  Curtain,
+  FONT,
+  GLOW,
+  Label,
+  LEAF,
+  Pendant,
+  Planter,
+  SignBox,
+  WARM,
+  signTex,
+} from './shop';
 
 const M = {
-  red: "#2b2320",   // Big Uppetite dark (was McDonald's red)
-  redDark: "#1c1715",
-  yellow: "#ffc93a",   // Big Uppetite yellow
-  frame: "#2a2c30",
-  metal: "#3a3d42",
+  red: '#2b2320', // Big Uppetite dark (was McDonald's red)
+  redDark: '#1c1715',
+  yellow: '#ffc93a', // Big Uppetite yellow
+  frame: '#2a2c30',
+  metal: '#3a3d42',
 };
 
 function T() {
   return {
     // Big Uppetite: the real logo, white on the dark sign.
-    sign: imgTex("bu-sign", 1024, 256, [BRAND.bigup.logoWhite!], (g, [im]) => { g.fillStyle = M.red; g.fillRect(0, 0, 1024, 256); contain(g, im, 60, 20, 904, 200); }),
+    sign: imgTex('bu-sign', 1024, 256, [BRAND.bigup.logoWhite!], (g, [im]) => {
+      g.fillStyle = M.red;
+      g.fillRect(0, 0, 1024, 256);
+      contain(g, im, 60, 20, 904, 200);
+    }),
     // Big Uppetite: a BU mark in its yellow where the arches were.
     // The "bu" letters of the logo in a yellow circle.
-    arches: imgTex("bu-mark", 256, 256, [BRAND.bigup.logo!], (g, [im]) => {
-      g.fillStyle = M.yellow; g.beginPath(); g.arc(128, 128, 118, 0, Math.PI * 2); g.fill();
-      if (im) { const sw = 336, sh = 337, k = 150 / sh; g.drawImage(im, 0, 0, sw, sh, 128 - (sw * k) / 2, 128 - 75, sw * k, 150); }
+    arches: imgTex('bu-mark', 256, 256, [BRAND.bigup.logo!], (g, [im]) => {
+      g.fillStyle = M.yellow;
+      g.beginPath();
+      g.arc(128, 128, 118, 0, Math.PI * 2);
+      g.fill();
+      if (im) {
+        const sw = 336,
+          sh = 337,
+          k = 150 / sh;
+        g.drawImage(im, 0, 0, sw, sh, 128 - (sw * k) / 2, 128 - 75, sw * k, 150);
+      }
     }),
     // Big Uppetite is a marketing agency: a live campaign dashboard on the wall.
-    menu: ctex("bu-dashboard", 512, 160, (g) => {
+    menu: ctex('bu-dashboard', 512, 160, g => {
       const r = rng(4);
-      g.fillStyle = "#14161b"; g.fillRect(0, 0, 512, 160);
-      g.fillStyle = "#fff"; g.font = `700 20px ${FONT}`; g.textAlign = "left"; g.fillText("CAMPAIGN  LIVE", 14, 26);
-      g.fillStyle = M.yellow; g.beginPath(); g.arc(178, 19, 6, 0, 7); g.fill();
-      [["Reach", "+248%"], ["Clicks", "92K"], ["Leads", "1.4K"]].forEach(([k, v], i) => {
-        const x = 14 + i * 84; g.fillStyle = "#23262e"; g.fillRect(x, 40, 76, 50);
-        g.fillStyle = "#9aa0aa"; g.font = `600 13px ${FONT}`; g.fillText(k, x + 8, 58);
-        g.fillStyle = "#fff"; g.font = `800 22px ${FONT}`; g.fillText(v, x + 8, 82); });
-      g.fillStyle = "#23262e"; g.fillRect(270, 40, 228, 108);
-      for (let i = 0; i < 9; i++) { const h = 20 + r() * 70; g.fillStyle = i % 3 ? "#4a4f5c" : M.yellow; g.fillRect(282 + i * 24, 140 - h, 14, h); }
-      g.strokeStyle = "#fff"; g.lineWidth = 3; g.beginPath(); g.moveTo(14, 140);
-      for (let i = 1; i <= 8; i++) g.lineTo(14 + i * 30, 140 - i * 4 - r() * 14); g.stroke();
+      g.fillStyle = '#14161b';
+      g.fillRect(0, 0, 512, 160);
+      g.fillStyle = '#fff';
+      g.font = `700 20px ${FONT}`;
+      g.textAlign = 'left';
+      g.fillText('CAMPAIGN  LIVE', 14, 26);
+      g.fillStyle = M.yellow;
+      g.beginPath();
+      g.arc(178, 19, 6, 0, 7);
+      g.fill();
+      [
+        ['Reach', '+248%'],
+        ['Clicks', '92K'],
+        ['Leads', '1.4K'],
+      ].forEach(([k, v], i) => {
+        const x = 14 + i * 84;
+        g.fillStyle = '#23262e';
+        g.fillRect(x, 40, 76, 50);
+        g.fillStyle = '#9aa0aa';
+        g.font = `600 13px ${FONT}`;
+        g.fillText(k, x + 8, 58);
+        g.fillStyle = '#fff';
+        g.font = `800 22px ${FONT}`;
+        g.fillText(v, x + 8, 82);
+      });
+      g.fillStyle = '#23262e';
+      g.fillRect(270, 40, 228, 108);
+      for (let i = 0; i < 9; i++) {
+        const h = 20 + r() * 70;
+        g.fillStyle = i % 3 ? '#4a4f5c' : M.yellow;
+        g.fillRect(282 + i * 24, 140 - h, 14, h);
+      }
+      g.strokeStyle = '#fff';
+      g.lineWidth = 3;
+      g.beginPath();
+      g.moveTo(14, 140);
+      for (let i = 1; i <= 8; i++) g.lineTo(14 + i * 30, 140 - i * 4 - r() * 14);
+      g.stroke();
     }),
-    poster: ctex("bu-campaign", 256, 384, (g) => {
+    poster: ctex('bu-campaign', 256, 384, g => {
       const grd = g.createLinearGradient(0, 0, 0, 384);
-      grd.addColorStop(0, "#1b1d23"); grd.addColorStop(1, "#3a2f1a");
-      g.fillStyle = grd; g.fillRect(0, 0, 256, 384);
-      g.fillStyle = M.yellow; g.beginPath(); g.arc(128, 150, 70, 0, 7); g.fill();
-      g.fillStyle = "#1b1d23"; g.font = `900 64px ${FONT}`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("BU", 128, 154);
-      g.fillStyle = "#fff"; g.font = `800 34px ${FONT}`; g.fillText("BRANDS", 128, 270); g.fillText("THAT GROW", 128, 308);
+      grd.addColorStop(0, '#1b1d23');
+      grd.addColorStop(1, '#3a2f1a');
+      g.fillStyle = grd;
+      g.fillRect(0, 0, 256, 384);
+      g.fillStyle = M.yellow;
+      g.beginPath();
+      g.arc(128, 150, 70, 0, 7);
+      g.fill();
+      g.fillStyle = '#1b1d23';
+      g.font = `900 64px ${FONT}`;
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText('BU', 128, 154);
+      g.fillStyle = '#fff';
+      g.font = `800 34px ${FONT}`;
+      g.fillText('BRANDS', 128, 270);
+      g.fillText('THAT GROW', 128, 308);
     }),
   };
 }
@@ -57,17 +121,34 @@ type Tex = ReturnType<typeof T>;
 function GoldenArches({ h = 0.9 }: { h?: number }) {
   const geo = useMemo(() => {
     const pts = [
-      [-0.5, 0], [-0.49, 0.45], [-0.42, 0.82], [-0.3, 0.98], [-0.18, 0.86], [-0.06, 0.55], [0, 0.42],
-      [0.06, 0.55], [0.18, 0.86], [0.3, 0.98], [0.42, 0.82], [0.49, 0.45], [0.5, 0],
+      [-0.5, 0],
+      [-0.49, 0.45],
+      [-0.42, 0.82],
+      [-0.3, 0.98],
+      [-0.18, 0.86],
+      [-0.06, 0.55],
+      [0, 0.42],
+      [0.06, 0.55],
+      [0.18, 0.86],
+      [0.3, 0.98],
+      [0.42, 0.82],
+      [0.49, 0.45],
+      [0.5, 0],
     ].map(([x, y]) => new THREE.Vector3(x, y, 0));
-    const g = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, "centripetal"), 120, 0.055, 16);
+    const g = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, 'centripetal'), 120, 0.055, 16);
     g.scale(1, 1, 0.55);
     return g;
   }, []);
   return (
     <group scale={h}>
       <mesh geometry={geo}>
-        <meshPhysicalMaterial color={M.yellow} emissive="#ffb000" emissiveIntensity={0.35} roughness={0.25} clearcoat={1} />
+        <meshPhysicalMaterial
+          color={M.yellow}
+          emissive="#ffb000"
+          emissiveIntensity={0.35}
+          roughness={0.25}
+          clearcoat={1}
+        />
       </mesh>
       {/* steel post holding the sign */}
       <mesh position={[0, 0.2, -0.05]}>
@@ -89,7 +170,14 @@ function Palm({ position, s = 1 }: { position: [number, number, number]; s?: num
     const pos = geo.attributes.position;
     for (let i = 0; i < pos.count; i++) pos.setZ(i, pos.getY(i) ** 2 * 0.9);
     geo.computeVertexNormals();
-    return { geo, list: Array.from({ length: 14 }, (_, i) => ({ a: (i / 14) * Math.PI * 2 + r() * 0.3, t: 0.5 + r() * 0.6, c: LEAF[Math.floor(r() * LEAF.length)] })) };
+    return {
+      geo,
+      list: Array.from({ length: 14 }, (_, i) => ({
+        a: (i / 14) * Math.PI * 2 + r() * 0.3,
+        t: 0.5 + r() * 0.6,
+        c: LEAF[Math.floor(r() * LEAF.length)],
+      })),
+    };
   }, [position]);
   return (
     <group position={position} scale={s}>
@@ -133,9 +221,7 @@ const TOP = G + BAND + U;
 
 function Store({ t }: { t: Tex }) {
   const h = S / 2;
-  const wall = (
-    <meshStandardMaterial color={WARM} emissive={GLOW} emissiveIntensity={0.3} roughness={0.9} />
-  );
+  const wall = <meshStandardMaterial color={WARM} emissive={GLOW} emissiveIntensity={0.3} roughness={0.9} />;
   return (
     <group position={[-0.25, 0.05, -0.35]}>
       {/* floors */}
@@ -167,7 +253,11 @@ function Store({ t }: { t: Tex }) {
       </mesh>
 
       {/* corner posts */}
-      {[[h - 0.06, h - 0.06], [-h + 0.06, h - 0.06], [h - 0.06, -h + 0.06]].map(([x, z], i) => (
+      {[
+        [h - 0.06, h - 0.06],
+        [-h + 0.06, h - 0.06],
+        [h - 0.06, -h + 0.06],
+      ].map(([x, z], i) => (
         <mesh key={i} position={[x, TOP / 2, z]}>
           <boxGeometry args={[0.12, TOP, 0.12]} />
           <Mat c={M.frame} r={0.4} m={0.5} />
@@ -197,7 +287,7 @@ function Store({ t }: { t: Tex }) {
         <Curtain w={S - 0.95} h={G} bays={3} frame={M.frame} />
       </group>
       {/* door handles */}
-      {[0.02, 0.1].map((x) => (
+      {[0.02, 0.1].map(x => (
         <mesh key={x} position={[x, 0.7, h + 0.01]}>
           <boxGeometry args={[0.015, 0.4, 0.02]} />
           <Mat c="#d9dce0" r={0.15} m={0.9} />
@@ -236,9 +326,15 @@ function Store({ t }: { t: Tex }) {
       <Counter position={[0.2, 0.04, -h + 0.45]} w={1.8} color={M.red} />
       <mesh position={[0.2, 1.05, -h + 0.1]}>
         <planeGeometry args={[1.9, 0.6]} />
-        <meshStandardMaterial map={t.menu} emissive="#ffffff" emissiveMap={t.menu} emissiveIntensity={1.1} toneMapped={false} />
+        <meshStandardMaterial
+          map={t.menu}
+          emissive="#ffffff"
+          emissiveMap={t.menu}
+          emissiveIntensity={1.1}
+          toneMapped={false}
+        />
       </mesh>
-      {[-0.4, 0.4].map((x) => (
+      {[-0.4, 0.4].map(x => (
         <mesh key={x} position={[x, 0.66, -h + 0.42]}>
           <boxGeometry args={[0.18, 0.24, 0.12]} />
           <Mat c="#cfd3d8" r={0.3} m={0.6} />
@@ -256,14 +352,25 @@ function Store({ t }: { t: Tex }) {
       <CafeTable position={[1.0, G + BAND, -0.4]} chair={M.red} top="#f2f2ef" round={false} />
       <Person position={[-0.7, G + BAND, 0.95]} shirt="#5a6b52" rotation={Math.PI} />
       <Person position={[0.85, G + BAND, -0.4]} shirt="#ececec" rotation={-Math.PI / 2} hair="#c9a46a" />
-      {[-0.8, 0.2, 1.0].map((x) =>
-        [-0.5, 0.6].map((z) => <Pendant key={`${x}${z}`} position={[x, G - 0.15, z]} color={M.red} />),
+      {[-0.8, 0.2, 1.0].map(x =>
+        [-0.5, 0.6].map(z => <Pendant key={`${x}${z}`} position={[x, G - 0.15, z]} color={M.red} />),
       )}
       <pointLight position={[0, 1.1, 0.2]} intensity={4} distance={4.5} decay={1.5} color="#ffd39a" />
-      <pointLight position={[0, G + BAND + 0.8, 0.2]} intensity={3} distance={4} decay={1.5} color="#ffd39a" />
+      <pointLight
+        position={[0, G + BAND + 0.8, 0.2]}
+        intensity={3}
+        distance={4}
+        decay={1.5}
+        color="#ffd39a"
+      />
       {/* upstairs ceiling lights */}
-      {[-0.8, 0.2, 1.1].map((z) => (
-        <mesh key={z} position={[0, TOP - 0.005, z]} rotation={[Math.PI / 2, 0, 0]} userData={{ noCast: true }}>
+      {[-0.8, 0.2, 1.1].map(z => (
+        <mesh
+          key={z}
+          position={[0, TOP - 0.005, z]}
+          rotation={[Math.PI / 2, 0, 0]}
+          userData={{ noCast: true }}
+        >
           <planeGeometry args={[S - 0.4, 0.06]} />
           <meshStandardMaterial color="#fff" emissive="#fff3dc" emissiveIntensity={2.5} toneMapped={false} />
         </mesh>
@@ -283,8 +390,7 @@ function Store({ t }: { t: Tex }) {
           <planeGeometry args={[S - 0.1, S - 0.1]} />
           <Mat c="#8b8f95" r={0.9} bump={stucco()} bs={1} />
         </mesh>
-        <group position={[-0.55, 0.14, h - 0.3]}>
-        </group>
+        <group position={[-0.55, 0.14, h - 0.3]}></group>
         <RoundedBox args={[0.7, 0.32, 0.5]} radius={0.03} smoothness={2} position={[0.6, 0.3, -0.7]}>
           <Mat c="#d9dce0" r={0.4} m={0.2} />
         </RoundedBox>
@@ -305,7 +411,7 @@ export default function McDonaldsBlock() {
       <group position={[0, 0.045, 0]}>
         <Planter position={[-1.3, 0, 2.15]} w={1.0} color="#7a5a42" seed={3} />
         <Planter position={[2.15, 0, -1.3]} w={1.0} color="#7a5a42" seed={4} rotation={Math.PI / 2} />
-        {[-2.6, -2.1].map((x) => (
+        {[-2.6, -2.1].map(x => (
           <Bollard key={x} position={[x, 0, 2.9]} />
         ))}
         <Bin position={[2.8, 0, 2.8]} />
