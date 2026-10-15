@@ -1016,7 +1016,6 @@ export default function MiBlock() {
       <Building t={t} />
       <group position={[0, 0.045, 0]}>
         <Tree position={[-2.55, 0, 0.75]} />
-        <Washer position={[-2.7, 0, 1.95]} />
         <StreetLamp position={[-1.6, 0, 2.1]} />
         <StreetLamp position={[0.2, 0, 2.35]} flip />
         <CameraProp position={[0.95, 0, 2.7]} />
