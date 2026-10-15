@@ -12,7 +12,7 @@ import { createPeople } from './people.js';
 import { buildCity } from './drive/build.js';
 import { buildBridge } from './drive/bridge.js';
 import { createTraffic } from './drive/traffic.js';
-import { G,CURB,HALF,LANE,PARK,ST,AV,MAN,BKN,NS,BRIDGE,blocks,bridgeHeight,onBridgeBand,onLand } from './drive/layout.js';
+import { G,CURB,HALF,LANE,PARK,EDGE,ST,AV,MAN,BKN,NS,BRIDGE,blocks,bridgeHeight,onBridgeBand,onLand } from './drive/layout.js';
 
 // New York as the world you drive (world units, about 1.5 m each). The plan is
 // in drive/layout.js: Manhattan, the East River, a strip of Brooklyn, water all
@@ -43,8 +43,8 @@ export function buildNYCWorld({prep,materials,player}){
   const IDS=['rush','hindra','aaq','bigup'],NAMES=['Rush Graphics','Hindra Studio','AAQ Properties','Big Uppetite'];
   // Parallel bays in the parking lane of street 78, in front of each store; Keel's
   // on the other side of the same street.
-  const parking=buildParking({top,places:[...spots.map((p,i)=>({id:IDS[i],name:NAMES[i],x:p.x,z:ST[5]+PARK,side:1})),
-    {id:'keel',name:'Keel',x:kx,z:ST[5]-PARK,side:-1}]});
+  const parking=buildParking({top,places:[...spots.map((p,i)=>({id:IDS[i],name:NAMES[i],x:p.x,z:ST[5]+(EDGE+HALF)/2,side:1})),
+    {id:'keel',name:'Keel',x:kx,z:ST[5]-(EDGE+HALF)/2,side:-1}]});
   group.add(parking.root);
   const bridge=buildBridge({prep});group.add(bridge.root);
   for(const o of [city.root])o.traverse(m=>{if(m.isMesh)[].concat(m.material).forEach(x=>prep?.(x));});

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { BRAND, imgTex, contain, round, url } from '../stores/brand.ts';
+import { EDGE, HALF } from './drive/layout.js';
 
 // A parking bay in front of each of Armin's places (his four companies and Keel).
 // Made to be found: a painted bay with a big P, an orange outline that glows and
@@ -27,13 +28,18 @@ function logoPanel(id){
     g.textAlign='left';g.fillText('Keel',(S-w-d)/2,S*.9);g.fillStyle=B.color;g.fillText('.',(S-w-d)/2+w,S*.9);});
 }
 
-// The floating "PARK HERE" label, drawn again once the hand font has loaded.
+// The floating "PARK HERE" label: drawn at 2048 x 1024 so it stays crisp up close,
+// with a dark outline instead of a blurry shadow, and drawn again once the hand
+// font has loaded.
 function parkLabel(name){
-  const c=document.createElement('canvas');c.width=512;c.height=256;const g=c.getContext('2d'),t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
-  const draw=()=>{g.clearRect(0,0,512,256);g.fillStyle='#fff';g.textAlign='center';g.textBaseline='middle';
-    g.shadowColor='rgba(0,0,0,.45)';g.shadowBlur=12;g.font=`700 92px ${HAND}`;g.fillText('PARK HERE',256,70);
-    g.font=`700 56px ${HAND}`;g.fillStyle='#ffd08a';g.fillText(name,256,140);
-    g.strokeStyle='#fff';g.lineWidth=10;g.lineCap='round';g.beginPath();g.moveTo(256,178);g.lineTo(256,240);g.moveTo(226,212);g.lineTo(256,242);g.lineTo(286,212);g.stroke();t.needsUpdate=true;};
+  const W=2048,H=1024,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d'),t=new THREE.CanvasTexture(c);
+  t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;t.generateMipmaps=true;t.minFilter=THREE.LinearMipmapLinearFilter;
+  const text=(str,y,size,fill)=>{g.font=`700 ${size}px ${HAND}`;g.lineJoin='round';g.lineWidth=size*.12;g.strokeStyle='rgba(16,10,40,.85)';g.strokeText(str,W/2,y);g.fillStyle=fill;g.fillText(str,W/2,y);};
+  const draw=()=>{g.clearRect(0,0,W,H);g.textAlign='center';g.textBaseline='middle';
+    text('PARK HERE',290,380,'#ffffff');text(name,560,220,'#ffd08a');
+    g.lineCap='round';g.lineJoin='round';
+    for(const [w,col] of [[64,'rgba(16,10,40,.85)'],[38,'#ffffff']]){g.lineWidth=w;g.strokeStyle=col;g.beginPath();g.moveTo(W/2,700);g.lineTo(W/2,950);g.moveTo(W/2-110,850);g.lineTo(W/2,960);g.lineTo(W/2+110,850);g.stroke();}
+    t.needsUpdate=true;};
   draw();document.fonts?.ready.then(draw);
   return t;
 }
@@ -48,17 +54,19 @@ export function buildParking({places,top}){
   for(const P of places){
     // A parallel bay in the street's parking lane, right in front of the place.
     // side: +1 the curb (and the place) is toward +z, -1 toward -z.
-    const {id,name,x,z,side}=P,LX=6.2,LZ=2.5,y=top-.25+.012;   // street level (top is the sidewalk)
+    // The bay fills the parking lane exactly: from the white edge line to the curb.
+    const {id,name,x,z,side}=P,LX=6.2,LZ=HALF-EDGE-.1,y=top-.25+.012;   // street level (top is the sidewalk)
     // Paint: T marks at both ends and the outer lane line, a big P.
-    for(const s2 of [-1,1]){add(new THREE.BoxGeometry(.14,.02,LZ),paint,x+s2*LX/2,y,z);add(new THREE.BoxGeometry(.6,.02,.14),paint,x+s2*LX/2,y,z-side*LZ/2);}
-    const p=add(new THREE.PlaneGeometry(1.5,1.5),new THREE.MeshStandardMaterial({map:pTex,transparent:true,roughness:.6}),x,y+.005,z);
+    for(const s2 of [-1,1])add(new THREE.BoxGeometry(.14,.02,LZ),paint,x+s2*LX/2,y,z);   // end marks; the edge line and the curb are the sides
+    const p=add(new THREE.PlaneGeometry(1.4,1.4),new THREE.MeshStandardMaterial({map:pTex,transparent:true,roughness:.6}),x,y+.005,z);
     p.rotation.set(-Math.PI/2,0,side>0?Math.PI:0);
     // Glowing outline, its own material so it can pulse.
     const glow=new THREE.MeshStandardMaterial({color:'#ffb05a',emissive:'#ff9a3c',emissiveIntensity:1.2,transparent:true,opacity:.9,depthWrite:false});
-    for(const s2 of [-1,1])add(new THREE.BoxGeometry(.08,.03,LZ+.2),glow,x+s2*(LX/2+.12),y+.004,z);
-    for(const s2 of [-1,1])add(new THREE.BoxGeometry(LX+.32,.03,.08),glow,x,y+.004,z+s2*(LZ/2+.1));
+    for(const s2 of [-1,1])add(new THREE.BoxGeometry(.08,.03,LZ-.2),glow,x+s2*(LX/2-.2),y+.004,z);
+    for(const s2 of [-1,1])add(new THREE.BoxGeometry(LX-.32,.03,.08),glow,x,y+.004,z+s2*(LZ/2-.14));   // inside the lane, never over the lines
     // "PARK HERE" above the bay.
-    const label=new THREE.Sprite(new THREE.SpriteMaterial({map:parkLabel(name),transparent:true,depthWrite:false,fog:false}));
+    // Colour just under the bloom threshold: the label glows softly but its edges stay sharp.
+    const label=new THREE.Sprite(new THREE.SpriteMaterial({map:parkLabel(name),color:'#b8b2d0',transparent:true,depthWrite:false,fog:false}));
     label.scale.set(3.6,1.8,1);label.position.set(x,top+3.1,z);label.renderOrder=5;root.add(label);
     // The logo sign on the sidewalk at the end of the bay: a post and a lit square panel, both faces.
     const sx=x+LX/2-.4,sz=z+side*(LZ/2+1.25+.9);
