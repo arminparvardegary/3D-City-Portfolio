@@ -82,7 +82,7 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
   // solid white edge lines between the travel and parking lanes. At each crossing:
   // continental crosswalks just past the curb return, a stop bar 1.2 m before
   // them on the lane coming in, lane arrows for the allowed moves, curb ramps with
-  // yellow tactile pads, and storm drains at the curb. Manholes in the lanes.
+  // yellow tactile pads. Manholes in the lanes.
   const {nodes,edges}=network();
   // Corners at the city's edge are a full curve: the centre line turns on a 12 unit
   // radius around C, the inside curb on 6, the outside on 18 (the corner fills in).
@@ -142,8 +142,6 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
         if(dot>.9)moves.s=true;else if(cr>.5)moves.r=true;else if(cr<-.5)moves.l=true;}
       const head=Math.atan2(d[0],d[1]),ax=n.x+fx*(BAR+5.5)-rx*LANE,az=n.z+fz*(BAR+5.5)-rz*LANE;
       for(const g of arrow(moves))add(g.rotateY(head),white,[ax,G+.006,az]);
-      // Storm drain at the curb, on the right of the incoming lane.
-      add(new THREE.BoxGeometry(1.1,.03,.5).rotateY(ang+Math.PI/2),iron,[n.x+fx*(BAR+1.5)-rx*(HALF-.3),G+.004,n.z+fz*(BAR+1.5)-rz*(HALF-.3)]);
     }
   }
 
