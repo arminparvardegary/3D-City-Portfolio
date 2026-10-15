@@ -14,6 +14,13 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 const D=(speed,power,brake,grip,steer,mass,engine,horn,swing=1)=>({speed,power,brake,grip,steer,mass,engine,horn,swing});
 export const MODELS=[
   {id:'sports',name:'Sports',drive:D(1,1,1,1,1,1350,'flat6','sport')},
+  // The Cybertruck (Armin's own model file): the fastest car, 120 km/h, heavy but
+  // electric, so it pulls hard and almost silently. Its materials are named, not coloured, so each gets its look here;
+  // the light bar is one mesh, split into a white front and a red back.
+  {id:'cybertruck',name:'Cybertruck',garageOnly:true,splitLights:'light',
+    mats:{car_paint_mat:'paint',body_mat:'#2a2c30',trunk_mat:'#3a3d42',interior_mat:'#1c1d21',glass_windows_mat:'glass',glass_light_mat:'clear',wheel_mat:'#16171a'},
+    scale:1.3,paints:['#b8bdc3','#141518'],   // bigger than the cars round it; stainless or black only
+    paint:'#b8bdc3',drive:D(120/5.4/18,1.4,1.05,.95,.86,3100,'ev','car',.9)},
   {id:'roadster',name:'Roadster',drive:D(.95,.92,1,1.06,1.08,1150,'flat6','sport',1.05)},
   {id:'muscle',name:'Muscle',drive:D(.96,1.08,.88,.86,.92,1650,'v8','muscle',1.2)},
   {id:'muscle-2',name:'Muscle 2',drive:D(.94,1.04,.88,.86,.92,1700,'v8','muscle',1.2)},
@@ -38,9 +45,16 @@ export const MODELS=[
 const SCALE=1/150;   // centimetres to world units (one unit is about 1.5 m)
 const cache=new Map();
 
+// Wheel meshes: "..._wheel_front_left" (Rgsdev) or "wheel_FL" (Cybertruck).
+const WHEEL=/wheel_(front|rear)_(left|right)|wheel_[FB][LR]$/i;
 // Material by its name in the FBX.
-function convert(m,paintName){
+function convert(m,paintName,M){
   const n=(m.name||'').toLowerCase(),c=m.color?.clone()??new THREE.Color('#888');
+  const want=M?.mats?.[m.name];
+  if(want==='paint')return {kind:'paint',mat:new THREE.MeshPhysicalMaterial({color:M.paint??c,metalness:.85,roughness:.32,clearcoat:.4,clearcoatRoughness:.2,envMapIntensity:1.4})};   // brushed steel
+  if(want==='glass')return {kind:'glass',mat:new THREE.MeshPhysicalMaterial({color:'#0b1118',metalness:.25,roughness:.04,clearcoat:1,envMapIntensity:1.8})};
+  if(want==='clear')return {kind:'glass',mat:new THREE.MeshPhysicalMaterial({color:'#dfe6ee',metalness:.1,roughness:.05,transparent:true,opacity:.22,envMapIntensity:1.5})};
+  if(want)return {kind:'solid',mat:new THREE.MeshStandardMaterial({color:want,roughness:.55,metalness:.25})};
   // The paint: the body colour that covers the most of the car (decided per model).
   if(n===paintName)return {kind:'paint',mat:new THREE.MeshPhysicalMaterial({color:c,metalness:.45,roughness:.3,clearcoat:1,clearcoatRoughness:.08,envMapIntensity:1.2})};
   // Other body colours (stripes, trim) stay as they are; "body light blue" is paint, not a lamp.
@@ -55,11 +69,22 @@ function convert(m,paintName){
 }
 
 // Load and prepare every model (call once, before the world is built).
+// One light mesh holding the whole light bar: its triangles are sorted into the
+// front (white headlights) and the back (red tail lights).
+function splitLightBar(o){
+  const g=o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone(),p=g.attributes.position,n=p.count/3;
+  const cz=i=>p.getZ(i*3)+p.getZ(i*3+1)+p.getZ(i*3+2),order=[...Array(n).keys()].sort((a,b)=>cz(b)-cz(a)),front=order.filter(i=>cz(i)>0).length;
+  for(const name of Object.keys(g.attributes)){const a=g.attributes[name],k=a.itemSize,src=a.array,dst=new src.constructor(src.length);
+    order.forEach((t,j)=>dst.set(src.subarray(t*3*k,(t+1)*3*k),j*3*k));g.setAttribute(name,new THREE.BufferAttribute(dst,k,a.normalized));}
+  g.clearGroups();g.addGroup(0,front*3,0);g.addGroup(front*3,(n-front)*3,1);
+  const head=new THREE.MeshStandardMaterial({name:'headlight'}),rear=new THREE.MeshStandardMaterial({name:'rear light'});
+  o.geometry=g;o.material=[head,rear];
+}
 export async function loadModels(prep){
   const loader=new FBXLoader(),base=import.meta.env.BASE_URL;
   await Promise.all(MODELS.map(async M=>{
     const root=await loader.loadAsync(`${base}cars/${M.id}.fbx`);
-    root.scale.setScalar(SCALE);root.updateMatrixWorld(true);
+    root.scale.setScalar(SCALE*(M.scale??1));root.updateMatrixWorld(true);
     const box=new THREE.Box3().setFromObject(root),size=box.getSize(new THREE.Vector3());
     const wheels=[],body=[];let paintColor=null;
     // Surface area of each body material, to find the main paint.
@@ -71,11 +96,12 @@ export async function loadModels(prep){
         area.set(n,(area.get(n)??0)+a);}});
     // Black is trim (bumpers, sills) on these models, except the limousine, which is black.
     const ranked=[...area].sort((a,b)=>b[1]-a[1]).map(e=>e[0]),paintName=M.id==='limousine'?ranked[0]:ranked.find(n=>!n.includes('black'))??ranked[0];
+    if(M.splitLights)root.traverse(o=>{if(o.isMesh&&o.name===M.splitLights)splitLightBar(o);});
     root.traverse(o=>{if(!o.isMesh)return;
-      const mats=[].concat(o.material).map(m=>{const r=convert(m,paintName);prep?.(r.mat);if(r.kind==='paint'&&!paintColor)paintColor='#'+r.mat.color.getHexString();return r;});
+      const mats=[].concat(o.material).map(m=>{const r=convert(m,paintName,M);prep?.(r.mat);if(r.kind==='paint'&&!paintColor)paintColor='#'+r.mat.color.getHexString();return r;});
       o.material=Array.isArray(o.material)?mats.map(r=>r.mat):mats[0].mat;o.userData.kinds=mats.map(r=>r.kind);
       o.castShadow=true;o.receiveShadow=true;
-      (/wheel_(front|rear)_(left|right)/i.test(o.name)?wheels:body).push(o);});
+      (WHEEL.test(o.name)?wheels:body).push(o);});
     // The body's footprint for collisions, measured from the mesh: half width of
     // the body sides (below the mirrors, which stick out at 60 to 80% of the
     // height), and the real front and back (models are not centred).
@@ -83,7 +109,7 @@ export async function loadModels(prep){
     root.traverse(o=>{if(!o.isMesh||/wheel/i.test(o.name))return;const p=o.geometry.attributes.position;
       for(let i=0;i<p.count;i++){bv.fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);bz0=Math.min(bz0,bv.z);bz1=Math.max(bz1,bv.z);if(bv.y-box.min.y<size.y*.6)bodyHW=Math.max(bodyHW,Math.abs(bv.x));}});
     // Wheels: centre, radius, front or rear.
-    const W=wheels.map(o=>{const b=new THREE.Box3().setFromObject(o),c=b.getCenter(new THREE.Vector3());return {o,c,r:b.getSize(new THREE.Vector3()).y/2,front:/front/i.test(o.name)};});
+    const W=wheels.map(o=>{const b=new THREE.Box3().setFromObject(o),c=b.getCenter(new THREE.Vector3());return {o,c,r:b.getSize(new THREE.Vector3()).y/2,front:/front|wheel_F[LR]$/i.test(o.name)};});
     const lift=-box.min.y,fz=W.filter(w=>w.front).map(w=>w.c.z),rz=W.filter(w=>!w.front).map(w=>w.c.z);
     const front=fz.length?Math.max(...fz):size.z*.3,rear=rz.length?rz.reduce((a,b)=>a+b,0)/rz.length:-size.z*.3;
     cache.set(M.id,{M,root,lift,L:size.z,Wd:size.x,H:size.y,body:{hw:Math.max(bodyHW,...W.map(w=>Math.abs(w.c.x)+.1)),z0:bz0,z1:bz1},wheels:W,wheelR:W[0]?.r??.3,track:W[0]?Math.abs(W[0].c.x):size.x*.4,front,rear,rearMost:W.length?Math.min(...W.map(w=>w.c.z)):rear,paintColor:paintColor??'#b5121b'});
@@ -134,7 +160,6 @@ export function buildModelVehicle(id,parent){
 // Traffic: every model merged into three batches (body, glass, lights), each
 // coloured by its materials, plus a fourth for the wheels, which are drawn on
 // their own so they can roll and steer. All the traffic is four draw calls.
-const WHEEL=/wheel_(front|rear)_(left|right)/i;
 // One mesh as a vertex coloured geometry per material bucket, moved by matrix.
 function bakeMesh(o,matrix,out,only){const g0=o.geometry,mats=[].concat(o.material),k=o.userData.kinds||[];
   const groups=g0.groups.length?g0.groups:[{start:0,count:g0.index?g0.index.count:g0.attributes.position.count,materialIndex:0}];

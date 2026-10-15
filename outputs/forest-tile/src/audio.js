@@ -81,6 +81,7 @@ export function createAudio({car,world,maxSpeed=()=>9.6}){
     i4:    {base:38,range:165,amps:[.04,.55,.08,1,.28,.38,.12],lump:.03,lumpDiv:4,bright:1.2,loud:.8},   // buzzy four
     v6:    {base:32,range:140,amps:[.25,1,.3,.6,.3,.16,.06],lump:.07,lumpDiv:6,bright:1.05,loud:.9},     // smooth SUV
     v12:   {base:46,range:170,amps:[.04,.7,.2,.6,.45,.4,.28],lump:.015,lumpDiv:12,bright:1.3,loud:.75},  // silky limo
+    ev:    {base:70,range:520,amps:[0,.7,0,.35,.08,.04,0],lump:0,lumpDiv:1,bright:1.7,loud:.08,breath:0},   // electric: almost silent, a faint motor whine
     diesel:{base:15,range:62,amps:[.75,1,.65,.55,.35,.25,.12],lump:.32,lumpDiv:2,bright:.65,loud:1.25}, // big clattering diesel
   };
   // Horns: tones (Hz), wave and filter; sirens sweep while H is held.
@@ -143,8 +144,8 @@ export function createAudio({car,world,maxSpeed=()=>9.6}){
     const fire=V.base+E.rpm*V.range;for(const {o,mul} of E.partials)set(o.frequency,fire*mul,.04);set(E.lfo.frequency,fire/V.lumpDiv,.1);
     set(E.tone.frequency,(520+E.rpm*900+thr*1100)*V.bright);
     set(E.eng.gain,(.22+E.rpm*.28+thr*.18)*(E.shift>0?.65:1)*V.loud,.07);
-    set(E.intake.g.gain,thr*(.02+E.rpm*.05));set(E.intake.f.frequency,420+E.rpm*900);
-    if(lastThr>.5&&thr<.5&&v>3)for(let i=0;i<3;i++)setTimeout(burble,60+i*90+Math.random()*60);lastThr=thr;
+    set(E.intake.g.gain,thr*(.02+E.rpm*.05)*(V.breath??1));set(E.intake.f.frequency,420+E.rpm*900);
+    if(V.lump>0&&lastThr>.5&&thr<.5&&v>3)for(let i=0;i<3;i++)setTimeout(burble,60+i*90+Math.random()*60);lastThr=thr;
     // Cabin noise.
     set(N.roll.g.gain,.04+k*.12);set(N.roll.f.frequency,180+k*260);
     set(N.wind.g.gain,k*k*.08);set(N.wind.f.frequency,600+k*1200);

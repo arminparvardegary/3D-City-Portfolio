@@ -62,7 +62,11 @@ export function createVisit({onOpen,onClose,garage}){
   document.querySelector('.scene').append(prompt,card);
   let bay=null,open=null,pick=null;
   // Garage: the highlighted car and paint show on the turntable; Enter drives it.
+  // Each car's own paints (the Cybertruck only comes in stainless or black).
+  function paintsFor(i){const list=garage.colorsFor?.(i)??garage.colors,box=card.querySelector('.paints');if(!list.includes(pick.color))pick.color=list[0];
+    if(box&&box.dataset.for!==String(i)){box.dataset.for=String(i);box.innerHTML=list.map(c=>`<button data-c="${c}" aria-label="Paint ${c}" style="background:${c}"></button>`).join('');}}
   function showPick(){
+    paintsFor(pick.i);
     card.querySelectorAll('.models [data-i]').forEach(el=>{const on=+el.dataset.i===pick.i;el.classList.toggle('hi',on);if(on)el.scrollIntoView({block:'nearest'});});
     card.querySelectorAll('.paints [data-c]').forEach(el=>el.setAttribute('aria-pressed',String(el.dataset.c===pick.color)));
     garage.preview?.(pick.i,pick.color);}

@@ -275,12 +275,14 @@ addHeadlights();
 // The car you drive: model and paint, chosen in the Lux Garage and remembered.
 const PAINTS=['#b5121b','#0f0f12','#f4f2ee','#c9a45c','#1f3a6b','#0f3a2c','#7a1f3d','#8a9099','#f5bf0a','#3c6fd1'];
 let carChoice={i:Math.max(0,VEHICLES.findIndex(v=>v.name===CAR_MODEL)),color:world.carColor??'#b5121b'};
-const applyCar=({i,color})=>{car.select(i);car.paint.color.set(color);addHeadlights();carChoice={i,color};try{localStorage.setItem('nyc-car',JSON.stringify(carChoice));}catch{}needsRender=true;};
-try{const saved=JSON.parse(localStorage.getItem('nyc-car')||'null');if(CHASE&&saved&&VEHICLES[saved.i])applyCar(saved);}catch{}
+// Saved by name (positions shift when a car is added to the list).
+const applyCar=({i,color})=>{const allowed=VEHICLES[i]?.paints;if(allowed&&!allowed.includes(color))color=allowed[0];car.select(i);car.paint.color.set(color);addHeadlights();carChoice={i,color};try{localStorage.setItem('nyc-car',JSON.stringify({...carChoice,name:VEHICLES[i]?.name}));}catch{}needsRender=true;};
+try{const saved=JSON.parse(localStorage.getItem('nyc-car')||'null');if(CHASE&&saved){const before=VEHICLES.filter(v=>v.name!=='Cybertruck'),name=saved.name??before[saved.i]?.name,i=VEHICLES.findIndex(v=>v.name===name);   // older saves: a position in the list before the Cybertruck
+  if(VEHICLES[i])applyCar({i,color:saved.color});}}catch{}
 // Parking: stop in a bay in front of a place and press Enter for its card; the
 // camera turns to the store while the card is open.
 const visit=world.parking?createVisit({
-  garage:{models:VEHICLES.map(v=>v.name),colors:PAINTS,current:()=>carChoice,choose:(i,color)=>applyCar({i,color}),preview:(i,color)=>world.garage?.preview(i,color)},
+  garage:{models:VEHICLES.map(v=>v.name),colors:PAINTS,colorsFor:i=>VEHICLES[i]?.paints??PAINTS,current:()=>carChoice,choose:(i,color)=>applyCar({i,color}),preview:(i,color)=>world.garage?.preview(i,color)},
   onOpen:b=>{if(b.id==='garage'&&world.garage){   // the camera goes in to the preview turntable; the arrows pick, not drive
       const t=world.garage.table;car.lock(true);const gy=car.shown?.y??0,sd=Math.sign(b.x-t.x)||1;focus={x:t.x,z:t.z,y:gy+.75,eye:{x:t.x+sd*3,y:gy+2.3,z:t.z+5.6},zoom};followHold=0;needsRender=true;return;}
     const ax=b.axis==='z'?'x':'z',side=Math.sign(ax==='x'?b.x-b.store.x:b.z-b.store.z)||1;focus={x:b.store.x,z:b.store.z,y:3.2,dist:21,side,axis:ax,zoom};followHold=0;needsRender=true;},
