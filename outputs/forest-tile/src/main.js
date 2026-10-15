@@ -317,7 +317,7 @@ function updateView(dt){
 // place is being shown (the experience story, the Experience list), the camera
 // glides to face it and comes back behind the car when you drive off.
 let chaseYaw=null,lookYaw=0,lookPitch=0,looking=false,fov=FEEL.chase.fov;
-// Q looks left, E looks right (held); letting go swings the view back behind the car.
+// Q looks left, E looks right, both together look back (held); letting go swings the view back behind the car.
 const glance={KeyQ:0,KeyE:0};
 addEventListener('keydown',e=>{if(e.code in glance&&!e.metaKey&&!e.ctrlKey&&!/INPUT|TEXTAREA/.test(e.target.tagName))glance[e.code]=1;});
 addEventListener('keyup',e=>{if(e.code in glance)glance[e.code]=0;});
@@ -331,8 +331,9 @@ function chaseView(dt){
   if(focus){const fd=focus.dist??16;look.set(focus.x,focus.y??4,focus.z-3);eye.set(focus.x+2.5*fd/16,(focus.y??4)+4.5*fd/16,focus.z+fd);}
   else{
     chaseYaw=dampAngle(chaseYaw,p.h,C.turnLag*(1+p.speed*.05),dt);
-    const side=glance.KeyQ-glance.KeyE;
-    if(side)lookYaw=damp(lookYaw,side*1.45,7,dt);
+    const side=glance.KeyQ-glance.KeyE,back=glance.KeyQ&&glance.KeyE;
+    if(back)lookYaw=damp(lookYaw,lookYaw<0?-Math.PI:Math.PI,8,dt);   // Q and E together: look behind
+    else if(side)lookYaw=damp(lookYaw,side*1.45,7,dt);
     else if(!looking){lookYaw=damp(lookYaw,0,side?7:3.2,dt);lookPitch=damp(lookPitch,0,2.4,dt);}
     const yaw=chaseYaw+lookYaw,D=C.distance+p.speed*C.speedPull,H=C.height+lookPitch*D;
     const lh=p.h+lookYaw;   // look the way the camera is turned

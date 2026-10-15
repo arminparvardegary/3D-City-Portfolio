@@ -64,3 +64,18 @@ export function buildKeel({block:b,top}){
   occluders.push(new THREE.Box3(new THREE.Vector3(cx-W/2,top,cz-D/2),new THREE.Vector3(cx+W/2,top+H+signH+2,cz+D/2)));
   return {root,solids,occluders,place:{x:cx,z:cz,y:top+4,dist:28}};
 }
+
+// Just the giant "Keel." name on two posts, for the roof of Keel's store.
+export function buildKeelSign({x,z,y,width}){
+  const root=new THREE.Group();root.name='keel-sign';
+  const white=new THREE.MeshStandardMaterial({color:'#f4f5f7',roughness:.35,metalness:.05});
+  const signTex=canvasTexture(2048,614,g=>{
+    g.fillStyle='#ffffff';g.fillRect(0,0,2048,614);
+    g.font=`700 470px ${FONT}`;g.textBaseline='alphabetic';const t='Keel',w=g.measureText(t).width,dot=g.measureText('.').width,x0=(2048-w-dot)/2;
+    g.fillStyle=INK;g.fillText(t,x0,500);g.fillStyle=BLUE;g.fillText('.',x0+w,500);});
+  const sign=new THREE.MeshStandardMaterial({map:signTex,emissiveMap:signTex,emissive:'#ffffff',emissiveIntensity:.42,roughness:.6});
+  const h=width*.3,board=new THREE.Mesh(new THREE.BoxGeometry(width,h,.4),[white,white,white,white,sign,white]);
+  board.position.set(x,y+1.4+h/2,z);board.castShadow=true;root.add(board);
+  for(const s of [-1,1]){const p=new THREE.Mesh(new THREE.BoxGeometry(.4,1.5,.4),white);p.position.set(x+s*width*.35,y+.75,z);p.castShadow=true;root.add(p);}
+  return root;
+}

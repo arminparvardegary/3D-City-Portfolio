@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import * as THREE from "three";
 import { RoundedBox } from "@react-three/drei";
+import { BRAND, contain, imgTex, round } from "./brand";
 import { Block, Foliage, Mat, Person, Platform, brushed, ctex, noise, rng, stucco } from "./kit";
 
 const A = {
@@ -119,48 +120,29 @@ function T() {
       g.fillRect(509, 0, 3, 512);
       g.fillRect(0, 254, 512, 3);
     }),
-    logo: ctex("ap-logo", 256, 256, (g) => {
-      g.translate(128, 142);
-      g.fillStyle = "#fff";
-      g.beginPath();
-      g.arc(-32, -8, 50, 0, Math.PI * 2);
-      g.arc(32, -8, 50, 0, Math.PI * 2);
-      g.fill();
-      g.beginPath();
-      g.ellipse(-24, 30, 46, 52, 0.2, 0, Math.PI * 2);
-      g.ellipse(24, 30, 46, 52, -0.2, 0, Math.PI * 2);
-      g.fill();
-      g.globalCompositeOperation = "destination-out";
-      g.beginPath();
-      g.arc(0, -62, 18, 0, Math.PI * 2);
-      g.arc(0, 86, 12, 0, Math.PI * 2);
-      g.fill();
-      g.beginPath();
-      g.arc(92, -4, 32, 0, Math.PI * 2);
-      g.fill();
-      g.globalCompositeOperation = "source-over";
-      g.beginPath();
-      g.ellipse(14, -88, 13, 28, 0.7, 0, Math.PI * 2);
-      g.fill();
+    // Keel: the avatar as the store logo, the name, and the landing banner on the display wall.
+    logo: imgTex("keel-logo", 256, 256, [BRAND.keel.logo!], (g, [im]) => {
+      g.fillStyle = "#fff"; g.beginPath(); g.arc(128, 128, 124, 0, Math.PI * 2); g.fill();
+      round(g, im, 128, 128, 116);
     }),
-    text: ctex("ap-text", 512, 128, (g) => {
+    text: ctex("keel-text", 512, 128, (g) => {
       g.fillStyle = "#fff";
-      g.font = `600 64px ${font}`;
+      g.font = `700 76px ${font}`;
       g.textAlign = "center";
       g.textBaseline = "middle";
-      g.fillText("Apple Store", 256, 66);
+      g.fillText("Keel.", 256, 66);
     }),
-    screen: ctex("ap-screen", 512, 256, (g) => {
-      const grd = g.createLinearGradient(0, 0, 512, 256);
-      grd.addColorStop(0, "#1b3b8f");
-      grd.addColorStop(0.45, "#7a3bd1");
-      grd.addColorStop(1, "#ff8a3d");
-      g.fillStyle = grd;
-      g.fillRect(0, 0, 512, 256);
-      g.fillStyle = "rgba(255,255,255,.9)";
-      g.font = `700 54px ${font}`;
-      g.textAlign = "center";
-      g.fillText("iPhone", 256, 140);
+    screen: imgTex("keel-banner", 1600, 800, [BRAND.keel.banner!], (g, [pose]) => {
+      const grd = g.createLinearGradient(0, 0, 0, 800);
+      grd.addColorStop(0, "#ffffff"); grd.addColorStop(1, "#eaf0ff");
+      g.fillStyle = grd; g.fillRect(0, 0, 1600, 800);
+      g.fillStyle = "#1d1d1f"; g.font = `700 190px ${font}`; g.textBaseline = "alphabetic"; g.textAlign = "left";
+      g.fillText("Meet", 80, 260); g.fillStyle = BRAND.keel.color; g.fillText("Keel.", 80, 450);
+      g.fillStyle = "#6e6e73"; g.font = `500 58px ${font}`;
+      g.fillText("The AI assistant", 84, 570); g.fillText("you text like a friend.", 84, 640);
+      g.fillStyle = BRAND.keel.color; g.beginPath(); g.roundRect(80, 680, 470, 96, 48); g.fill();
+      g.fillStyle = "#fff"; g.font = `600 44px ${font}`; g.fillText("keeltwin.com", 150, 742);
+      contain(g, pose, 820, 20, 760, 780);
     }),
     laptop: ctex("ap-laptop", 128, 80, (g) => {
       const grd = g.createLinearGradient(0, 0, 128, 80);
@@ -363,9 +345,10 @@ function Store({ t }: { t: Tex }) {
       </group>
 
       {/* video wall + shelves */}
-      <mesh position={[0.25, 1.35, -h + 0.1]}>
-        <planeGeometry args={[1.5, 0.75]} />
-        <meshStandardMaterial map={t.screen} emissive="#ffffff" emissiveMap={t.screen} emissiveIntensity={1.1} toneMapped={false} />
+      {/* Keel's banner on the back wall, seen through the glass */}
+      <mesh position={[0.2, 1.28, -h + 0.1]}>
+        <planeGeometry args={[2.2, 1.1]} />
+        <meshStandardMaterial map={t.screen} emissive="#ffffff" emissiveMap={t.screen} emissiveIntensity={0.55} toneMapped={false} />
       </mesh>
       <Shelf position={[-0.95, 0.04, -h + 0.22]} t={t} />
       <Shelf position={[-h + 0.22, 0.04, -0.4]} rotation={Math.PI / 2} t={t} />

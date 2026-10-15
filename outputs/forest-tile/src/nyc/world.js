@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { THEME } from '../world/theme.js';
-import { buildKeel } from './keel.js';
+import { buildKeelSign } from './keel.js';
 import { mountStores } from '../stores/mount.tsx';
 import AppleBlock from '../stores/AppleBlock.tsx';
 import NikeBlock from '../stores/NikeBlock.tsx';
@@ -21,20 +21,23 @@ import { G,CURB,HALF,LANE,ST,AV,MAN,BKN,NS,BRIDGE,blocks,bridgeHeight,onBridgeBa
 export function buildNYCWorld({prep,materials,player}){
   const group=new THREE.Group();group.name='new-york';
   const bl=blocks(),find=(i,j)=>bl.find(b=>b.i===i&&b.j===j);
-  // Armin's block: Keel HQ at (1, 4). Experience and skills are off for now; their
-  // blocks are ordinary city.
+  // Armin's blocks: Keel's store at (1, 4); his four companies' stores across the
+  // street at (0, 5) and (1, 5).
   const top=G+CURB;
   const city=buildCity({reserved:new Set(['1,4','0,5','1,5']),pave:new Set(['1,4','0,5','1,5'])});
   group.add(city.root);
-  const keel=buildKeel({block:find(1,4),top});group.add(keel.root);
-  // Work experience stores across the street, facing Keel (north).
+  // Keel's store (one floor, glass front, the "Meet Keel." banner inside), with
+  // the giant name on its roof.
+  const kb=find(1,4),KS=2,kx=(kb.x0+kb.x1)/2,kz=(kb.z0+kb.z1)/2;
+  const keel={solids:[[kx,kz,3.2*KS,3.2*KS]],occluders:[],place:{x:kx,z:kz,y:top+4,dist:30}};
+  group.add(buildKeelSign({x:kx,z:kz,y:top+.55*KS+2.25*KS,width:12}));
+  // Work experience stores across the street, facing Keel (north); a block's origin is the top of its 0.55 high platform.
   const S=1.7,PW=6.4*S,row=(b,i)=>({x:(b.x0+b.x1)/2+(i?1:-1)*(PW/2+.3),z:(b.z0+b.z1)/2});
   const b15=find(1,5),b05=find(0,5),spots=[row(b15,0),row(b15,1),row(b05,0),row(b05,1)];
-  const stores=mountStores(group,[NikeBlock,MiBlock,GoogleBlock,McDonaldsBlock].map((C,i)=>({C,x:spots[i].x,y:top+.55*S,z:spots[i].z,rot:Math.PI,scale:S})));   // a block's origin is the top of its 0.55 high platform
+  const stores=mountStores(group,[...[NikeBlock,MiBlock,GoogleBlock,McDonaldsBlock].map((C,i)=>({C,x:spots[i].x,y:top+.55*S,z:spots[i].z,rot:Math.PI,scale:S})),{C:AppleBlock,x:kx,y:top+.55*KS,z:kz,rot:0,scale:KS}]);
   const storeSolids=spots.map(p=>[p.x,p.z,PW/2,PW/2]);
   const bridge=buildBridge({prep});group.add(bridge.root);
   for(const o of [city.root])o.traverse(m=>{if(m.isMesh)[].concat(m.material).forEach(x=>prep?.(x));});
-  keel.root.traverse(m=>{if(m.isMesh)[].concat(m.material).forEach(x=>prep?.(x));});
   // Traffic: about twenty cars of every type, each with its own speed.
   const traffic=createTraffic({phase:city.phase,player,prep,parked:city.parking});group.add(traffic.root);
   // People on every sidewalk loop.
