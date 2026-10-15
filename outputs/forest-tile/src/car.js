@@ -103,6 +103,12 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
       if(i&&G[i-1]!==null&&Math.abs(G[i]-G[i-1])>1e-4){let a=K[i-1],b=K[i];const ga=G[i-1];for(let n=0;n<10;n++){const m=(a+b)/2;if(Math.abs((g(m)??ga)-ga)<1e-4)a=m;else b=m;}
         const hi=Math.max(G[i],G[i-1]),edge=G[i]>G[i-1]?b:a,e2=lift(hi,edge);if(e2>best)best=e2;}}
     return best;}
+  // Rear wheel steering (the Cybertruck): up to 10 degrees. Slow, the rear wheels
+  // turn against the front ones for a tighter turn; past about 50 km/h they turn
+  // with them, so lane changes stay calm. Other cars: rear wheels straight.
+  function rearSteer(s,speed){const d=VEHICLES[current]?.drive?.rearSteer;if(!d)return 0;
+    const cross=50/5.4,k=speed<cross?-(1-speed/cross):Math.min(1,(speed-cross)/cross)*.35;
+    return THREE.MathUtils.clamp(s/MAX_STEER*d*k,-d,d);}
   // Where the car stands: the road under its wheels sets its height, pitch and bank.
   function stand(){
       // Follow the road height; tilt with the slope between the front and back of the car.
@@ -234,7 +240,7 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
     steer=damp(steer,want,Math.abs(want)>Math.abs(steer)?C.steerIn:C.steerOut,dt);
     // Yaw: what the wheels ask for, capped by grip, reached over a short response time.
     const grip=hand?C.grip*C.handGrip:C.grip;
-    let yawWant=v/parts.wheelbase*Math.tan(steer);
+    let yawWant=v/parts.wheelbase*(Math.tan(steer)-Math.tan(rearSteer(steer,speed)));
     const cap=grip/Math.max(speed,.6);yawWant=THREE.MathUtils.clamp(yawWant,-cap,cap);
     if(hand&&speed>1.2)yawWant*=C.handSwing;                // the tail swings round when the rear locks
     if(front&&speed>1.5)yawWant*=.3;                        // locked fronts barely steer
@@ -328,7 +334,7 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
     parts.rig.position.x=shown.x;parts.rig.position.z=shown.z;parts.rig.rotation.y=shown.h;
     parts.rig.position.y=rigY+lerp(prev.y,cy,t);parts.rig.rotation.x=-lerp(prev.slope,slope,t);parts.rig.rotation.z=lerp(prev.bank,bank,t);shown.y=parts.rig.position.y;
     const s=lerp(prev.steer,steer,t),wr=lerp(prev.roll,rollAngle,t);
-    for(const w of parts.wheels){w.rotation.x=wr/(w.userData.r??parts.wheelR);if(w.userData.front)w.userData.steer.rotation.y=s;}
+    for(const w of parts.wheels){w.rotation.x=wr/(w.userData.r??parts.wheelR);if(w.userData.front)w.userData.steer.rotation.y=s;else w.userData.steer.rotation.y=rearSteer(s,Math.abs(v));}
     // Suspension: the body is rigid, but each wheel travels up or down to meet
     // the road right under it (a wheel on a curb, the middle axle of a long
     // vehicle over the bridge's crest), within its travel.

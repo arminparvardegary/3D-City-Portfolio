@@ -20,7 +20,7 @@ export const MODELS=[
   {id:'cybertruck',name:'Cybertruck',garageOnly:true,splitLights:'light',
     mats:{car_paint_mat:'paint',body_mat:'#2a2c30',trunk_mat:'#3a3d42',interior_mat:'#1c1d21',glass_windows_mat:'glass',glass_light_mat:'clear',wheel_mat:'#16171a'},
     scale:1.3,paints:['#b8bdc3','#141518'],   // bigger than the cars round it; stainless or black only
-    paint:'#b8bdc3',drive:D(120/5.4/18,1.4,1.05,.95,.86,3100,'ev','car',.9)},
+    paint:'#b8bdc3',drive:{...D(120/5.4/18,1.4,1.05,.95,.86,3100,'ev','car',.9),rearSteer:10*Math.PI/180}},
   {id:'roadster',name:'Roadster',drive:D(.95,.92,1,1.06,1.08,1150,'flat6','sport',1.05)},
   {id:'muscle',name:'Muscle',drive:D(.96,1.08,.88,.86,.92,1650,'v8','muscle',1.2)},
   {id:'muscle-2',name:'Muscle 2',drive:D(.94,1.04,.88,.86,.92,1700,'v8','muscle',1.2)},
