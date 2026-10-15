@@ -2,6 +2,7 @@
 import { useMemo } from "react";
 import * as THREE from "three";
 import { RoundedBox } from "@react-three/drei";
+import { BRAND, contain, imgTex } from "./brand";
 import { Block, Mat, Person, ctex, rng, stucco } from "./kit";
 import {
   Base, Bin, Bollard, CafeTable, Counter, Curtain, FONT, GLOW, Label, LEAF, Pendant, Planter, SignBox, WARM, signTex,
@@ -17,17 +18,13 @@ const M = {
 
 function T() {
   return {
-    sign: signTex("bu-sign", "Big Uppetite", { bg: M.red, fg: M.yellow, size: 70, weight: 900 }),
+    // Big Uppetite: the real logo, white on the dark sign.
+    sign: imgTex("bu-sign", 1024, 256, [BRAND.bigup.logoWhite!], (g, [im]) => { g.fillStyle = M.red; g.fillRect(0, 0, 1024, 256); contain(g, im, 60, 20, 904, 200); }),
     // Big Uppetite: a BU mark in its yellow where the arches were.
-    arches: ctex("bu-mark", 256, 256, (g) => {
-      g.clearRect(0, 0, 256, 256);
-      g.fillStyle = M.yellow;
-      g.beginPath(); g.arc(128, 128, 118, 0, Math.PI * 2); g.fill();
-      g.fillStyle = M.red;
-      g.font = `900 120px ${FONT}`;
-      g.textAlign = "center";
-      g.textBaseline = "middle";
-      g.fillText("BU", 128, 136);
+    // The "bu" letters of the logo in a yellow circle.
+    arches: imgTex("bu-mark", 256, 256, [BRAND.bigup.logo!], (g, [im]) => {
+      g.fillStyle = M.yellow; g.beginPath(); g.arc(128, 128, 118, 0, Math.PI * 2); g.fill();
+      if (im) { const sw = 336, sh = 337, k = 150 / sh; g.drawImage(im, 0, 0, sw, sh, 128 - (sw * k) / 2, 128 - 75, sw * k, 150); }
     }),
     menu: ctex("bu-menu", 512, 160, (g) => {
       const r = rng(4);

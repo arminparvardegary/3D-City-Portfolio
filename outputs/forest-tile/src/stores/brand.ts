@@ -4,8 +4,8 @@ import * as THREE from "three";
 export const BRAND = {
   rush: { name: "Rush Graphics", short: "RUSH", sub: "GRAPHICS", color: "#ff6b5e", dark: "#141416" },
   hindra: { name: "Hindra Studio", short: "HINDRA", sub: "STUDIO", color: "#5ab4f0", dark: "#121212", logo: "logos/hindra.png" },
-  aaq: { name: "AAQ Real Estate", short: "AAQ", sub: "REAL ESTATE", color: "#3fb8a8", dark: "#1f6f66" },
-  bigup: { name: "Big Uppetite", short: "Big Uppetite", sub: "BU", color: "#ffc93a", dark: "#2a211a" },
+  aaq: { name: "AAQ Properties", short: "AAQ", sub: "PROPERTIES", color: "#c9a957", dark: "#58585a", logo: "logos/aaq.png" },
+  bigup: { name: "Big Uppetite", short: "Big Uppetite", sub: "BU", color: "#ffc93a", dark: "#2a211a", logo: "logos/biguppetite.svg", logoWhite: "logos/biguppetite-white.svg" },
   keel: { name: "Keel", short: "Keel", sub: "Your AI assistant", color: "#2f6bff", dark: "#1d1d1f", logo: "keel/avatar.webp", banner: "keel/pose-chat.webp" },
 };
 export const url = (p: string) => `${import.meta.env.BASE_URL}${p}`;

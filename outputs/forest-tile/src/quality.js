@@ -5,11 +5,13 @@
 // Measured on the full harbour district at 1280 x 800 (Apple M4, GPU bound):
 // High ~14 ms (70 fps), Balanced ~8 ms (120 fps), Performance ~4 ms.
 export const PRESETS={
-  high:{label:'High',maxDpr:1.5,minScale:.75,msaa:4,shadowMap:2048,shadowTaps:16,
+  // Sharp first: full Retina resolution, and the adaptive scale never goes soft.
+  // Edges are smoothed by SMAA after the frame (MSAA x4 at this resolution cost 2x the frame).
+  high:{label:'High',maxDpr:2,minScale:.85,msaa:0,shadowMap:2048,shadowTaps:16,
     ao:{enabled:true,halfRes:true,aoSamples:12,denoiseSamples:6,denoiseIterations:1},decor:1},
-  balanced:{label:'Balanced',maxDpr:1.25,minScale:.7,msaa:2,shadowMap:2048,shadowTaps:12,
+  balanced:{label:'Balanced',maxDpr:2,minScale:.85,msaa:0,shadowMap:2048,shadowTaps:12,
     ao:{enabled:true,halfRes:true,aoSamples:8,denoiseSamples:4,denoiseIterations:1},decor:.65},
-  performance:{label:'Performance',maxDpr:1,minScale:.65,msaa:0,shadowMap:1024,shadowTaps:8,
+  performance:{label:'Performance',maxDpr:1.5,minScale:.85,msaa:0,shadowMap:1024,shadowTaps:8,
     ao:{enabled:false,halfRes:true,aoSamples:8,denoiseSamples:4,denoiseIterations:1},decor:.3},
 };
 export const ORDER=['high','balanced','performance'];

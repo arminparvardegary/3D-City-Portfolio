@@ -1,6 +1,6 @@
 import './style.css';
 import * as THREE from 'three';
-import { EffectComposer, RenderPass, EffectPass, ToneMappingEffect, ToneMappingMode, HueSaturationEffect, BloomEffect } from 'postprocessing';
+import { EffectComposer, RenderPass, EffectPass, ToneMappingEffect, ToneMappingMode, HueSaturationEffect, BloomEffect, SMAAEffect, SMAAPreset } from 'postprocessing';
 import { N8AOPostPass } from 'n8ao';
 import { ART, TILE_SPEC } from './config.js';
 import { createMaterials } from './materials.js';
@@ -51,7 +51,8 @@ const scene=new THREE.Scene();
 // New York is driven from behind the car (a chase camera, like a racing game);
 // the campus keeps the fixed isometric view.
 const WORLD=new URLSearchParams(location.search).get('world')==='campus'?'campus':'nyc',CHASE=WORLD==='nyc';
-const camera=CHASE?new THREE.PerspectiveCamera(FEEL.chase.fov,1,.1,700):new THREE.OrthographicCamera(-10,10,8,-8,1,400);
+// The chase view draws to 450: fog hides everything past 300, drawing further only costs.
+const camera=CHASE?new THREE.PerspectiveCamera(FEEL.chase.fov,1,.1,450):new THREE.OrthographicCamera(-10,10,8,-8,1,400);
 const target=new THREE.Vector3(...ART.camera.target);
 // The view looks from one of four corners (azimuth); it turns only to keep the car in sight.
 const HOME_AZ=THREE.MathUtils.degToRad(ART.camera.azimuth),el=THREE.MathUtils.degToRad(ART.camera.elevation);
@@ -113,6 +114,8 @@ const saturation=new HueSaturationEffect({saturation:.08});
 // A gentle bloom: only the brightest highlights (lamps, sun glints) glow, as on film.
 const bloom=new BloomEffect({luminanceThreshold:.62,luminanceSmoothing:.25,intensity:.35,mipmapBlur:true,radius:.75});
 composer.addPass(new EffectPass(camera,bloom,toneMapping,saturation));
+// Smooth edges at full resolution, cheaply: SMAA after tone mapping.
+composer.addPass(new EffectPass(camera,new SMAAEffect({preset:SMAAPreset.HIGH})));
 const TONE={neutral:ToneMappingMode.NEUTRAL,agx:ToneMappingMode.AGX,aces:ToneMappingMode.ACES_FILMIC};
 function applyArt(){
   applyLighting(art,lights,scene);if(typeof placeSun==='function')placeSun();
@@ -354,7 +357,8 @@ function chaseView(dt){
   const wantFov=C.fov+C.fovBoost*Math.min(1,p.speed/FEEL.car.maxSpeed);
   if(Math.abs(wantFov-fov)>.01){fov=damp(fov,wantFov,3,dt);camera.fov=fov;camera.updateProjectionMatrix();}
   // Shadows follow the car.
-  if(Math.abs(target.x-p.x)+Math.abs(target.z-p.z)>.5){target.set(p.x,target.y,p.z);placeSun();}
+  // Shadows are redrawn every 3 units of travel, not every frame (the shadow area is wide enough).
+  if(Math.abs(target.x-p.x)+Math.abs(target.z-p.z)>3){target.set(p.x,target.y,p.z);placeSun();}
   if(trauma>0){trauma=Math.max(0,trauma-F.shakeDecay*dt);shakeClock+=dt;const k=trauma*trauma*F.shake*.6,t=shakeClock;
     camRight.setFromMatrixColumn(camera.matrixWorld,0);camUp.setFromMatrixColumn(camera.matrixWorld,1);
     camera.position.addScaledVector(camRight,k*(Math.sin(t*47.3)*.6+Math.sin(t*83.1+1.3)*.4)).addScaledVector(camUp,k*(Math.sin(t*53.9+2.1)*.6+Math.sin(t*97.7)*.4));}
