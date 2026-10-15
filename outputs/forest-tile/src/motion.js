@@ -28,15 +28,16 @@ export function spring(s,goal,time,dt){
 }
 
 export const FEEL={
-  car:{maxSpeed:9.6,maxReverse:3,engine:8.4,brake:12,coast:1.4,drag:.03,grip:12,steerIn:4.2,steerOut:6.5,handGrip:.35,handSwing:1.6},
+  // Tuned by Armin in the Feel panel.
+  car:{maxSpeed:18,maxReverse:3.4,engine:9.9,brake:13,coast:1.4,drag:.045,grip:13,steerIn:7.5,steerOut:9,handGrip:.6,handSwing:1.95},
   // Body on springs: stiffness (1/s²) and damping (1/s). Damping under 2·√stiffness
   // gives a small, weighty overshoot.
-  suspension:{stiffness:85,damping:10,pitch:.0065,roll:.005,maxPitch:.055,maxRoll:.065,bump:.06},
-  drift:{slip:.55,markLife:7,markWidth:.2,dust:.6},
-  camera:{follow:.32,lookAhead:.42,speedZoomOut:.16,panGlide:3.2,zoomGlide:5,shake:.35,shakeDecay:2.6},
+  suspension:{stiffness:105,damping:15.5,pitch:.0095,roll:.0095,maxPitch:.065,maxRoll:.065,bump:.095},
+  drift:{slip:.9,markLife:9,markWidth:.23,dust:.8},
+  camera:{follow:.24,lookAhead:.6,speedZoomOut:.16,panGlide:3.2,zoomGlide:5,shake:.35,shakeDecay:2.6},
   props:{restDelay:4,resetTime:1.6},
   // Chase camera (New York): distance behind, height above, how far ahead it looks,
   // how quickly it swings round after the car, pull back per unit of speed,
   // smoothing time, field of view and how much it widens at top speed.
-  chase:{distance:7.5,height:3,lookAhead:4,turnLag:3.6,speedPull:.22,follow:.14,fov:58,fovBoost:12},
+  chase:{distance:8,height:2.2,lookAhead:10,turnLag:3.6,speedPull:.3,follow:.14,fov:40,fovBoost:11},
 };
