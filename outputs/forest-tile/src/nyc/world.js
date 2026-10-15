@@ -83,7 +83,7 @@ export function buildNYCWorld({prep,materials,player}){
   return {
     group,solids,places,labels:[],row:null,lot:null,occluders,surface,trafficCars:traffic.cars,
     obstacles:()=>traffic.obstacles(),circles:bridge.circles,
-    bounds:{x0:MAN.x0-1,x1:BKN.x1+1,z0:NS.z0-1,z1:NS.z1+1},
+    bounds:{x0:MAN.x0-6,x1:BKN.x1+6,z0:NS.z0-6,z1:NS.z1+6},
     // Start on the street in front of Keel HQ, heading west: Keel on the right.
     start:{x:AV[2]+12,z:ST[5]-LANE,h:-Math.PI/2},
     vehicle:'Sport',carColor:'#b5121b',zoom:.62,fixedZoom:true,

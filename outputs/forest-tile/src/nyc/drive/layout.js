@@ -66,4 +66,6 @@ export function bridgeHeight(x){
 }
 export const DECK_HALF=5.2;      // the bridge deck is narrower than a street: two lanes, no parking
 export const onBridgeBand=(x,z)=>Math.abs(z-BRIDGE.z)<=DECK_HALF&&x>BRIDGE.landM-1&&x<BRIDGE.landB+1;
-export const onLand=(x,z)=>z>=NS.z0&&z<=NS.z1&&((x>=MAN.x0&&x<=MAN.x1)||(x>=BKN.x0&&x<=BKN.x1));
+// A wooden boardwalk, WHARF wide, runs round every shore; it is ground too.
+export const WHARF=4;
+export const onLand=(x,z)=>z>=NS.z0-WHARF&&z<=NS.z1+WHARF&&((x>=MAN.x0-WHARF&&x<=MAN.x1+WHARF)||(x>=BKN.x0-WHARF&&x<=BKN.x1+WHARF));

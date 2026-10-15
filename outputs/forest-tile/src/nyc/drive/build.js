@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { createKit } from '../../diorama/kit.js';
 import { FACADE, storyFacade, towerFacade,storyGlow,towerGlow } from './facades.js';
-import { G,CURB,HALF,LANE,EDGE,PARK,WALK,MAN,BKN,NS,AV,BAV,ST,BRIDGE,DECK_HALF,blocks,network,CORNER_R } from './layout.js';
+import { G,CURB,HALF,LANE,EDGE,PARK,WALK,MAN,BKN,NS,AV,BAV,ST,BRIDGE,DECK_HALF,WHARF,blocks,network,CORNER_R } from './layout.js';
 
 // The city itself (world units): land and water, sidewalks with curbs, street
 // markings and crosswalks, traffic lights, street lamps and trees, Central Park,
@@ -67,14 +67,14 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
   const paving=mat('#bcb8b1',{map:FACADE.paving(),roughness:.85});paving.userData.uvSize=4;
   // Promenades are walkable: the car can climb onto them.
   const walkRect=(x0,x1,z0,z1)=>{box(x1-x0,CURB,z1-z0,(x0+x1)/2,G,(z0+z1)/2,paving);walks.push({x0,x1,z0,z1});};
-  // Promenades round the island and along the river, with railings.
+  // Promenades round the island and along the river (the boardwalk's railing is at the water).
   const rail=(x0,z0,x1,z1)=>{const len=Math.hypot(x1-x0,z1-z0),n=Math.ceil(len/2.5),ang=Math.atan2(x1-x0,z1-z0);
     add(new THREE.BoxGeometry(.12,.1,len).rotateY(ang),metal,[(x0+x1)/2,top+1.05,(z0+z1)/2]);
     for(let i=0;i<=n;i++){const t=i/n;box(.1,1.05,.1,x0+(x1-x0)*t,top,z0+(z1-z0)*t,metal);}};
-  {const e=AV[0]-HALF;walkRect(MAN.x0,e,NS.z0,NS.z1);rail(MAN.x0+.3,NS.z0,MAN.x0+.3,NS.z1);
-    walkRect(e,MAN.x1,NS.z0,ST[0]-HALF);walkRect(e,MAN.x1,ST.at(-1)+HALF,NS.z1);rail(MAN.x0,NS.z0+.3,MAN.x1,NS.z0+.3);rail(MAN.x0,NS.z1-.3,MAN.x1,NS.z1-.3);
-    walkRect(AV.at(-1)+HALF,MAN.x1,ST[0]-HALF,ST.at(-1)+HALF,true);rail(MAN.x1-.3,NS.z0,MAN.x1-.3,BRIDGE.z-DECK_HALF-.4);rail(MAN.x1-.3,BRIDGE.z+DECK_HALF+.4,MAN.x1-.3,NS.z1);   // open where the bridge leaves the shore
-    walkRect(BKN.x0,BAV[0]-HALF,ST[0]-HALF,ST.at(-1)+HALF,true);rail(BKN.x0+.3,NS.z0,BKN.x0+.3,BRIDGE.z-DECK_HALF-.4);rail(BKN.x0+.3,BRIDGE.z+DECK_HALF+.4,BKN.x0+.3,NS.z1);
+  {const e=AV[0]-HALF;walkRect(MAN.x0,e,NS.z0,NS.z1);
+    walkRect(e,MAN.x1,NS.z0,ST[0]-HALF);walkRect(e,MAN.x1,ST.at(-1)+HALF,NS.z1);
+    walkRect(AV.at(-1)+HALF,MAN.x1,ST[0]-HALF,ST.at(-1)+HALF,true);
+    walkRect(BKN.x0,BAV[0]-HALF,ST[0]-HALF,ST.at(-1)+HALF,true);
     walkRect(BKN.x0,BKN.x1,NS.z0,ST[0]-HALF);walkRect(BKN.x0,BKN.x1,ST.at(-1)+HALF,NS.z1);walkRect(BAV[1]+HALF,BKN.x1,ST[0]-HALF,ST.at(-1)+HALF);}
 
   // --- Street engineering: markings, crosswalks, stop bars, arrows, drainage, parking --
@@ -350,6 +350,57 @@ export function buildCity({reserved=new Set(),pave=new Set(),fills=[]}={}){
   }
   const steam=[];for(let k=0;k<3&&parking.length;k++){const p=parking.splice(Math.floor(rand()*parking.length),1)[0];steam.push(p);
     cyl(.32,.42,1.5,16,p.x,G,p.z,orange);for(const y of [.35,.9])cyl(.37-y*.06,.4-y*.06,.18,16,p.x,G+y,p.z,cap);}
+
+  // --- Waterfront boardwalk ------------------------------------------------------------
+  // Wooden planks on piles round every shore, WHARF wide. At the water a solid
+  // railing (stone posts, an iron rail, a warm glow strip under it) keeps the car
+  // out of the sea. Lamps lean over the boardwalk, benches face the water, flower
+  // planters and trees in between. Nothing is built where the bridge leaves the shore.
+  {const plankTex=(()=>{const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d');
+      for(let i=0;i<8;i++){const v=140+Math.floor(rand()*40);g.fillStyle=`rgb(${v},${v*.74|0},${v*.52|0})`;g.fillRect(0,i*32,256,31);g.fillStyle='rgba(0,0,0,.4)';g.fillRect(0,i*32+31,256,1);
+        for(let k=0;k<3;k++){g.fillStyle='rgba(60,35,20,.25)';g.fillRect(rand()*256,i*32+4+rand()*22,30+rand()*60,1);}}
+      const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;})();
+    const plank=mat('#ffffff',{map:plankTex,roughness:.85});plank.userData.uvSize=4;
+    const pile=mat('#4a3526',{roughness:.9}),post=mat('#b9b2a6',{roughness:.7}),iron=mat('#23252a',{roughness:.45,metalness:.6});
+    const glow=mat('#ffd08a',{emissive:'#ffae4a',emissiveIntensity:3}),seat=mat('#8a5a3a',{roughness:.7});
+    const blooms=['#ff7aa8','#ffd25a','#ff8a5c','#c9a2ff','#ffffff'].map(c=>mat(c,{roughness:.8,emissive:c,emissiveIntensity:.15}));
+    const W=WHARF,band=(x,z)=>Math.abs(z-BRIDGE.z)<DECK_HALF+1.5&&x>BRIDGE.landM-2&&x<BRIDGE.landB+2;
+    const strips=[];
+    for(const L of [MAN,BKN]){
+      strips.push({axis:'x',a0:L.x0-W,a1:L.x1+W,edge:NS.z0-W,s:1},{axis:'x',a0:L.x0-W,a1:L.x1+W,edge:NS.z1+W,s:-1},
+        {axis:'z',a0:NS.z0-W,a1:NS.z1+W,edge:L.x0-W,s:1},{axis:'z',a0:NS.z0-W,a1:NS.z1+W,edge:L.x1+W,s:-1});
+    }
+    // A point d in from the water at distance a along the strip.
+    const at=(S,a,d)=>S.axis==='x'?[a,S.edge+S.s*d]:[S.edge+S.s*d,a];
+    for(const S of strips){
+      // Deck and piles.
+      const [p0x,p0z]=at(S,S.a0,0),[p1x,p1z]=at(S,S.a1,W),x0=Math.min(p0x,p1x),x1=Math.max(p0x,p1x),z0=Math.min(p0z,p1z),z1=Math.max(p0z,p1z);
+      box(x1-x0,.35,z1-z0,(x0+x1)/2,top-.35,(z0+z1)/2,plank);walks.push({x0,x1,z0,z1});
+      for(let a=S.a0+1;a<S.a1;a+=4){const [px,pz]=at(S,a,.4);cyl(.17,.2,2.6,8,px,-2.3,pz,pile);}
+      // Railing at the water, in runs that stop at the bridge.
+      let run=null;const flush=()=>{if(!run)return;const [ax,az]=at(S,run[0],.25),[bx,bz]=at(S,run[1],.25),len=run[1]-run[0];
+        const g=S.axis==='x'?[len,.12,.12]:[.12,.12,len],h=S.axis==='x'?[len,.05,.05]:[.05,.05,len];
+        add(new THREE.BoxGeometry(...g),iron,[(ax+bx)/2,top+1.05,(az+bz)/2]);add(new THREE.BoxGeometry(...h),glow,[(ax+bx)/2,top+.98,(az+bz)/2]);
+        add(new THREE.BoxGeometry(...g),iron,[(ax+bx)/2,top+.5,(az+bz)/2]);
+        solids.push([(ax+bx)/2,(az+bz)/2,S.axis==='x'?len/2:.2,S.axis==='x'?.2:len/2]);run=null;};
+      for(let a=S.a0;a<=S.a1+1e-6;a+=2.5){const [px,pz]=at(S,a,.25);if(band(px,pz)){flush();continue;}
+        box(.32,1.15,.32,px,top,pz,post);run?run[1]=a:run=[a,a];}
+      flush();
+      // Lamps, benches facing the sea, planters and trees along the inner side.
+      for(let a=S.a0+6,k=0;a<S.a1-4;a+=12,k++){
+        const [lx,lz]=at(S,a,.9);if(band(lx,lz))continue;
+        const [ix,iz]=S.axis==='x'?[0,S.s]:[S.s,0];lamp(lx,lz,ix,iz);
+        const [bx,bz]=at(S,a+6,1.6);if(!band(bx,bz)&&a+6<S.a1-3){
+          const yaw=S.axis==='x'?0:Math.PI/2,bw=S.axis==='x'?[1.7,.1,.5]:[.5,.1,1.7];
+          box(...bw,bx,top+.42,bz,seat);const [kx,kz]=at(S,a+6,1.95);box(...(S.axis==='x'?[1.7,.5,.1]:[.1,.5,1.7]),kx,top+.52,kz,seat);
+          for(const o of [-.7,.7]){const [qx,qz]=S.axis==='x'?[bx+o,bz]:[bx,bz+o];box(.08,.42,.4,qx,top,qz,iron);}
+          solids.push([bx,bz,S.axis==='x'?.9:.35,S.axis==='x'?.35:.9]);}
+        const [fx,fz]=at(S,a+3,3.2);if(!band(fx,fz)&&k%2===0){box(1.4,.45,.7,fx,top,fz,post);solids.push([fx,fz,.75,.4]);
+          for(let f=0;f<7;f++)add(new THREE.SphereGeometry(.13,8,6),blooms[(f+k)%blooms.length],[fx-.55+f*.18,top+.55+(f%2)*.05,fz+(f%3-1)*.15]);}
+        const [tx,tz]=at(S,a+9,3.1);if(!band(tx,tz)&&k%2===1&&a+9<S.a1-2)tree(tx,tz,.85);
+      }
+    }
+  }
 
   // --- Liberty Island, in the harbour south of the bridge -----------------------------
   // Out in the harbour, south of the bridge.
