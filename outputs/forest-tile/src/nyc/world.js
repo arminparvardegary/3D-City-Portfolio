@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { THEME } from '../world/theme.js';
 import { buildKeelSign } from './keel.js';
-import { buildParking, experienceWall } from './parking.js';
+import { buildParking, experienceBoard } from './parking.js';
 import { mountStores } from '../stores/mount.tsx';
 import AppleBlock from '../stores/AppleBlock.tsx';
 import NikeBlock from '../stores/NikeBlock.tsx';
@@ -46,9 +46,10 @@ export function buildNYCWorld({prep,materials,player}){
   const parking=buildParking({top,places:[...spots.map((p,i)=>({id:IDS[i],name:NAMES[i],x:p.x,z:ST[5]+(EDGE+HALF)/2,side:1})),
     {id:'keel',name:'Keel',x:kx,z:ST[5]-(EDGE+HALF)/2,side:-1}]});
   group.add(parking.root);
-  // "WORK EXPERIENCE" on the dark side wall of the first store (Rush), facing the
-  // crossing you come from; the arrow points along the row.
-  group.add(experienceWall({x:spots[0].x+3.56,y:top+2.5,z:spots[0].z,w:5.4,h:4.2,arrow:1}));
+  // A smart board on the plaza at the start of the row, turned toward the crossing
+  // you come from (east, on street 78).
+  const bx=spots[0].x+PW/2+4.6,bz=rb.z0+5.6,board=experienceBoard({x:bx,z:bz,top,yaw:Math.atan2(AV[2]-bx,ST[5]-bz)});
+  group.add(board.root);
   const bridge=buildBridge({prep});group.add(bridge.root);
   for(const o of [city.root])o.traverse(m=>{if(m.isMesh)[].concat(m.material).forEach(x=>prep?.(x));});
   // Traffic: about twenty cars of every type, each with its own speed.
@@ -82,7 +83,7 @@ export function buildNYCWorld({prep,materials,player}){
       const w=120+rnd()*160;sp.scale.set(w,w*.55,1);sp.position.set(-330+rnd()*660,110+rnd()*60,-330+rnd()*660);sp.renderOrder=-1;group.add(sp);clouds.push(sp);}}
   const steamMat=new THREE.SpriteMaterial({map:puffTex,transparent:true,depthWrite:false,opacity:.5,color:'#f2f3f5'});
   const steam=city.steam.flatMap(p=>Array.from({length:7},(_,i)=>{const sp=new THREE.Sprite(steamMat.clone());sp.userData={x:p.x,z:p.z,age:i/7*3};group.add(sp);return sp;}));
-  const solids=[...city.solids,...keel.solids,...storeSolids,...bridge.solids,...parking.solids];
+  const solids=[...city.solids,...keel.solids,...storeSolids,...bridge.solids,...parking.solids,board.solid];
   const occluders=[...city.occluders,...bridge.occluders,...keel.occluders];
   const places={keel:keel.place};
   // Where the car can drive and how high: the streets and sidewalks on land, and

@@ -83,21 +83,32 @@ export function buildParking({places,top}){
   };
 }
 
-// "WORK EXPERIENCE" painted on the dark side wall at the end of the row, lit at
-// night, with an arrow along the row (drawn again once the hand font loads).
-export function experienceWall({x,y,z,w,h,arrow=-1}){
-  const W=2048,H=Math.round(2048*h/w),c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d'),t=new THREE.CanvasTexture(c);
+// A smart board standing on the plaza at the start of the row: a glowing screen
+// in a slim dark frame on a pedestal, "MY WORK EXPERIENCE", lit at night, with an
+// arrow along the row. The screen is drawn again once the hand font loads.
+export function experienceBoard({x,z,top,yaw=0,arrow=1}){
+  const w=4.6,h=3.2,W=2048,H=Math.round(W*h/w),c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d'),t=new THREE.CanvasTexture(c);
   t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;
-  const draw=()=>{g.fillStyle='#141416';g.fillRect(0,0,W,H);g.textAlign='center';g.textBaseline='middle';
-    g.fillStyle='#ff9a4a';g.font=`700 ${H*.14}px ${HAND}`;g.fillText('MY',W/2,H*.16);
-    g.fillStyle='#ffffff';g.font=`700 ${H*.3}px ${HAND}`;g.fillText('WORK',W/2,H*.37);g.fillText('EXPERIENCE',W/2,H*.62);
-    g.fillStyle='#b9b0ef';g.font=`700 ${H*.1}px ${HAND}`;g.fillText('4 companies  ·  2019 to 2026',W/2,H*.8);
-    // The arrow points along the row of stores.
-    g.strokeStyle='#ff9a4a';g.lineWidth=H*.025;g.lineCap='round';g.lineJoin='round';const ay=H*.91,ax=W/2,len=W*.22,d=arrow;
+  const draw=()=>{const grd=g.createLinearGradient(0,0,0,H);grd.addColorStop(0,'#1c1640');grd.addColorStop(1,'#0e0b24');g.fillStyle=grd;g.fillRect(0,0,W,H);
+    g.textAlign='center';g.textBaseline='middle';
+    g.fillStyle='#ff9a4a';g.font=`700 ${H*.13}px ${HAND}`;g.fillText('MY',W/2,H*.15);
+    g.fillStyle='#ffffff';g.font=`700 ${H*.27}px ${HAND}`;g.fillText('WORK',W/2,H*.36);g.fillText('EXPERIENCE',W/2,H*.6);
+    g.fillStyle='#b9b0ef';g.font=`700 ${H*.1}px ${HAND}`;g.fillText('4 companies  ·  2019 to 2026',W/2,H*.78);
+    g.strokeStyle='#ff9a4a';g.lineWidth=H*.025;g.lineCap='round';g.lineJoin='round';const ay=H*.9,ax=W/2,len=W*.2,d=arrow;
     g.beginPath();g.moveTo(ax-d*len,ay);g.lineTo(ax+d*len,ay);g.moveTo(ax+d*len-d*H*.05,ay-H*.05);g.lineTo(ax+d*len,ay);g.lineTo(ax+d*len-d*H*.05,ay+H*.05);g.stroke();
     t.needsUpdate=true;};
   draw();document.fonts?.ready.then(draw);
-  const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshStandardMaterial({map:t,emissiveMap:t,emissive:'#ffffff',emissiveIntensity:.55,roughness:.8}));
-  m.position.set(x,y,z);m.rotation.y=Math.PI/2;m.receiveShadow=true;
-  return m;
+  const root=new THREE.Group();root.position.set(x,top,z);root.rotation.y=yaw;
+  const frame=new THREE.MeshStandardMaterial({color:'#15161a',roughness:.35,metalness:.6});
+  const mesh=(geo,mat,px,py,pz)=>{const m=new THREE.Mesh(geo,mat);m.position.set(px,py,pz);m.castShadow=m.receiveShadow=true;root.add(m);return m;};
+  const sy=1.1+h/2;
+  mesh(new THREE.BoxGeometry(w+.24,h+.24,.22),frame,0,sy,0);
+  mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshStandardMaterial({map:t,emissiveMap:t,emissive:'#ffffff',emissiveIntensity:.9,roughness:.25}),0,sy,.115);
+  mesh(new THREE.BoxGeometry(.5,1.1,.32),frame,0,.55,0);                  // the stand
+  mesh(new THREE.BoxGeometry(2.2,.12,1.1),frame,0,.06,0);                 // the foot
+  // A soft glow on the ground in front of the screen.
+  const glow=new THREE.Mesh(new THREE.PlaneGeometry(w*.9,1.6),new THREE.MeshBasicMaterial({color:'#6a5cff',transparent:true,opacity:.18,depthWrite:false}));
+  glow.rotation.x=-Math.PI/2;glow.position.set(0,.01,1);root.add(glow);
+  const solid=[x,z,1.4,1.4];
+  return {root,solid};
 }
