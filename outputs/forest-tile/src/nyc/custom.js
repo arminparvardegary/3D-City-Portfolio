@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { buildParking } from './parking.js';
+import { buildParking, wordsBoard } from './parking.js';
+import { placeOf } from '../plan/plan.js';
 import { buildLux, buildGarage } from './lux.js';
 import { buildVehicle } from '../vehicles.js';
 import { mountStores } from '../stores/mount.tsx';
@@ -22,7 +23,7 @@ const DESIGN = {
   agency: McDonaldsBlock,
   hq: AppleBlock,
 };
-const SPECIAL = new Set(['place', 'boutique', 'garage']);
+const SPECIAL = new Set(['place', 'boutique', 'garage', 'skills', 'tools']);
 const BAY = (EDGE + HALF) / 2; // parking lane centre, from the road's centre line
 
 // A city made in the builder (PLAN), built with the same pieces as Armin's New
@@ -94,8 +95,31 @@ export function buildCustomWorld({ prep, materials, player }) {
   special.forEach((b, n) => {
     const f = front(b),
       kind = b.cell.kind;
-    if (kind === 'place') {
-      const p = b.cell.place,
+    if (kind === 'skills' || kind === 'tools') {
+      // A board listing the skills or tools, facing the road, with a bay whose card lists them too.
+      const words = PLAN[kind],
+        title = kind === 'skills' ? 'SKILLS' : 'TOOLS';
+      const board = wordsBoard({
+        x: f.cx,
+        z: f.cz,
+        top,
+        yaw: f.rot,
+        title,
+        words: words.length ? words : ['…'],
+      });
+      group.add(board.root);
+      solids.push(board.solid);
+      if (f.bay)
+        bays.push({
+          id: kind,
+          name: kind === 'skills' ? 'Skills' : 'Tools',
+          list: { title, words },
+          ...f.bay,
+          store: { x: f.cx, z: f.cz },
+        });
+    } else if (kind === 'place') {
+      // An experience or education entry: its store and its card.
+      const p = placeOf(PLAN, b.cell.ref),
         words = p.name.trim().split(/\s+/);
       // The place's brand on its store: name, logo, colour, tagline and link.
       const brand = {
@@ -141,8 +165,12 @@ export function buildCustomWorld({ prep, materials, player }) {
   const stores = mountStores(group, storeList);
   const parking = buildParking({ top, places: bays });
   group.add(parking.root);
-  // Each bay keeps its place's card data (the visit card reads it).
-  for (const b of parking.bays) b.place = bays.find(q => q.id === b.id)?.place;
+  // Each bay keeps its card data (the visit card reads it).
+  for (const b of parking.bays) {
+    const src = bays.find(q => q.id === b.id);
+    b.place = src?.place;
+    b.list = src?.list;
+  }
 
   city.root.traverse(m => {
     if (m.isMesh) [].concat(m.material).forEach(x => prep?.(x));

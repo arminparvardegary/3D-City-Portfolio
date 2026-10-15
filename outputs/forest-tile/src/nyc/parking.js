@@ -283,6 +283,12 @@ export function experienceBoard({ x, z, top, yaw = 0, arrow = 1 }) {
   };
   draw();
   document.fonts?.ready.then(draw);
+  return standBoard({ x, z, top, yaw, w, h, t });
+}
+
+// A smart board on a pedestal: a lit screen (texture t, w x h) in a slim dark
+// frame, with a soft glow on the ground in front of it.
+function standBoard({ x, z, top, yaw, w, h, t }) {
   const root = new THREE.Group();
   root.position.set(x, top, z);
   root.rotation.y = yaw;
@@ -321,4 +327,73 @@ export function experienceBoard({ x, z, top, yaw = 0, arrow = 1 }) {
   root.add(glow);
   const solid = [x, z, 1.4, 1.4];
   return { root, solid };
+}
+
+// A board listing words (skills, tools) as chips under a big title, drawn
+// again once the hand font loads. scale makes it bigger (a block of its own).
+export function wordsBoard({ x, z, top, yaw = 0, kicker = 'MY', title, words, scale = 1.6 }) {
+  const w = 4.6 * scale,
+    h = 3.2 * scale,
+    W = 2048,
+    H = Math.round((W * h) / w),
+    c = document.createElement('canvas');
+  c.width = W;
+  c.height = H;
+  const g = c.getContext('2d'),
+    t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 8;
+  const draw = () => {
+    const grd = g.createLinearGradient(0, 0, 0, H);
+    grd.addColorStop(0, '#1c1640');
+    grd.addColorStop(1, '#0e0b24');
+    g.fillStyle = grd;
+    g.fillRect(0, 0, W, H);
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillStyle = '#ff9a4a';
+    g.font = `700 ${H * 0.1}px ${HAND}`;
+    g.fillText(kicker, W / 2, H * 0.11);
+    g.fillStyle = '#ffffff';
+    g.font = `700 ${H * 0.2}px ${HAND}`;
+    g.fillText(title, W / 2, H * 0.27);
+    // Chips, centred row by row; the font shrinks until they all fit.
+    for (let size = H * 0.075; size > H * 0.03; size *= 0.9) {
+      g.font = `600 ${size}px ${SANS}`;
+      const pad = size * 0.7,
+        gap = size * 0.45,
+        rowH = size * 1.9,
+        rows = [[]];
+      let line = 0;
+      for (const word of words) {
+        const cw = g.measureText(word).width + pad * 2;
+        if (line + cw > W * 0.9 && rows.at(-1).length) {
+          rows.push([]);
+          line = 0;
+        }
+        rows.at(-1).push([word, cw]);
+        line += cw + gap;
+      }
+      if (H * 0.42 + rows.length * rowH > H * 0.95) continue;
+      rows.forEach((row, r) => {
+        const total = row.reduce((s2, [, cw]) => s2 + cw + gap, -gap);
+        let cx = (W - total) / 2;
+        const cy = H * 0.42 + r * rowH + rowH / 2;
+        for (const [word, cw] of row) {
+          g.fillStyle = 'rgba(127,134,255,.22)';
+          g.beginPath();
+          g.roundRect(cx, cy - size * 0.8, cw, size * 1.6, size * 0.8);
+          g.fill();
+          g.fillStyle = '#f4f0ff';
+          g.fillText(word, cx + cw / 2, cy + 2);
+          cx += cw + gap;
+        }
+      });
+      break;
+    }
+    t.needsUpdate = true;
+  };
+  draw();
+  document.fonts?.ready.then(draw);
+  return standBoard({ x, z, top, yaw, w, h, t });
 }

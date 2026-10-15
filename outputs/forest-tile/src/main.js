@@ -33,6 +33,15 @@ startAnalytics();
 import { buildNYCWorld } from './nyc/world.js';
 import { buildCustomWorld } from './nyc/custom.js';
 import { PLAN } from './nyc/drive/layout.js';
+
+// A builder city is someone else's portfolio: the tab shows their name, not Armin's.
+if (PLAN) {
+  const who = [PLAN.profile.name, PLAN.profile.title].filter(Boolean).join(' · ');
+  document.title = who || PLAN.name || 'My portfolio city';
+  document
+    .querySelector('meta[name="description"]')
+    ?.setAttribute('content', PLAN.profile.about || document.title);
+}
 import { createStory } from './world/story.js';
 import { JOBS, PROFILE } from './data/profile.js';
 import { createAudio } from './audio.js';
@@ -532,7 +541,7 @@ function openPlace(id) {
   } // the Keel billboard
   experience.open(id === 'work' ? experience.first : id);
 }
-if (WORLD === 'nyc') createIntro({ onPlace: focusOn, person: PLAN?.owner });
+if (WORLD === 'nyc') createIntro({ onPlace: focusOn, person: PLAN?.profile });
 
 // --- Experience story: park in a bay at Experience Row and press Enter ------------
 const story = world.lot

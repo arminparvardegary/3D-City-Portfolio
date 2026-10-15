@@ -40,12 +40,17 @@ button {
   border-radius: 10px;
 }
 
+/* The page: a top bar with the steps, then the current step. */
 .app {
-  display: grid;
-  grid-template: 'top top top' auto 'left map right' minmax(0, 1fr) / 220px 1fr 300px; /* the panels scroll, the page never does */
-  height: 100%;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
+  min-height: 100%;
   padding: 12px;
+}
+.body {
+  flex: 1;
+  min-height: 0;
 }
 .panel {
   background: var(--panel);
@@ -71,14 +76,49 @@ button {
   letter-spacing: 0.02em;
   white-space: nowrap;
 }
-.top .name {
+.steps {
   flex: 1;
-  min-width: 0;
   display: flex;
-  gap: 8px;
-}
-.top .name input {
+  justify-content: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.05);
   min-width: 0;
+}
+.steps button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 18px;
+  color: var(--dim);
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    background 0.25s var(--ease),
+    color 0.25s var(--ease);
+}
+.steps button b {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 12px;
+}
+.steps button:hover {
+  color: var(--ink);
+}
+.steps button[aria-current='true'] {
+  background: rgba(255, 154, 74, 0.22);
+  color: var(--ink);
+}
+.steps button[aria-current='true'] b {
+  background: var(--warm);
+  color: #1a1035;
 }
 .status {
   font-size: 13px;
@@ -103,6 +143,16 @@ button {
 .btn:hover {
   background: rgba(255, 255, 255, 0.14);
 }
+.btn:disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+a.btn {
+  display: inline-flex;
+  align-items: center;
+  color: inherit;
+  text-decoration: none;
+}
 .btn:active {
   transform: scale(0.95);
 }
@@ -121,6 +171,8 @@ button {
 /* Fields */
 input[type='text'],
 input[type='url'],
+input[type='email'],
+input[type='tel'],
 select,
 textarea {
   width: 100%;
@@ -150,8 +202,14 @@ label {
 }
 
 /* Palette */
+/* Step 3: palette, map, the square you picked. */
+.build {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr) 300px;
+  gap: 12px;
+  height: 100%;
+}
 .left {
-  grid-area: left;
   padding: 16px;
   overflow: auto;
 }
@@ -193,6 +251,9 @@ label {
   flex: none;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
 }
+.tool.placed .swatch {
+  box-shadow: 0 0 0 2px #21e06e;
+}
 .tool small {
   display: block;
   color: var(--dim);
@@ -206,7 +267,6 @@ label {
 
 /* Map */
 .map {
-  grid-area: map;
   position: relative;
   min-width: 0;
   min-height: 0;
@@ -242,9 +302,13 @@ label {
 }
 .hint {
   position: absolute;
-  right: 14px;
-  bottom: 14px;
-  max-width: 320px;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  width: max-content;
+  max-width: calc(100% - 28px);
+  text-align: center;
   padding: 8px 12px;
   border-radius: 14px;
   background: var(--panel);
@@ -254,7 +318,6 @@ label {
 
 /* Inspector */
 .right {
-  grid-area: right;
   padding: 16px;
   overflow: auto;
   display: grid;
@@ -303,31 +366,234 @@ label {
   color: #1a1035;
 }
 
-/* Desktop: one screen, nothing scrolls but the panels. */
+/* Steps 1, 2 and 4: one centred page that scrolls. */
+.page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 28px 32px 32px;
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+.page.wide {
+  max-width: 860px;
+}
+.page h2 {
+  margin: 0;
+  font: 700 44px/1 var(--hand);
+  color: var(--warm);
+  letter-spacing: 0.03em;
+}
+.page h3 {
+  margin: 8px 0 0;
+  font: 700 30px/1 var(--hand);
+  letter-spacing: 0.03em;
+}
+.lead {
+  margin: -6px 0 4px;
+  color: var(--dim);
+}
+.field-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: var(--dim);
+}
+.sections,
+.section,
+.cards {
+  display: grid;
+  gap: 12px;
+}
+.sections {
+  gap: 24px;
+}
+.section > .add {
+  justify-self: start;
+}
+.card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.card-head b {
+  font-size: 17px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tools-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tools-row .btn {
+  height: 34px;
+  padding: 0 12px;
+}
+input[type='color'] {
+  width: 100%;
+  height: 40px;
+  padding: 4px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+}
+.phones {
+  display: grid;
+  gap: 8px;
+}
+.phones > .btn,
+.phone .btn {
+  justify-self: start;
+}
+.phone {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+.chips-input {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.chips-input:focus-within {
+  box-shadow: inset 0 0 0 2px rgba(255, 154, 74, 0.7);
+}
+.chips-input input {
+  flex: 1;
+  min-width: 160px;
+  height: 32px;
+  background: none;
+  box-shadow: none;
+}
+.chips-input input:focus {
+  box-shadow: none;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 32px;
+  padding: 0 4px 0 12px;
+  border-radius: 16px;
+  background: rgba(255, 154, 74, 0.2);
+  font-weight: 600;
+}
+.chip button {
+  width: 24px;
+  height: 24px;
+  border-radius: 12px;
+  color: var(--dim);
+}
+.chip button:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--ink);
+}
+.publish {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: n;
+  display: grid;
+  gap: 12px;
+}
+.publish li {
+  counter-increment: n;
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 4px 14px;
+  padding: 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.05);
+}
+.publish li::before {
+  content: counter(n);
+  grid-row: span 3;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 20px;
+  background: var(--warm);
+  color: #1a1035;
+  font: 700 26px/1 var(--hand);
+}
+.publish li > span {
+  color: var(--dim);
+}
+.publish li > .btn {
+  justify-self: start;
+  margin-top: 8px;
+}
+code {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 13px;
+}
+.right .btn {
+  justify-self: start;
+}
+
+/* Desktop: the build step fills one screen and only its panels scroll. */
 @media (min-width: 901px) {
-  html,
-  body {
+  .app {
+    height: 100%;
+  }
+  .body {
+    overflow: auto;
+  }
+  .body[data-step='build'] {
     overflow: hidden;
   }
   .map {
     padding-bottom: 56px; /* room for the size controls under the grid */
   }
 }
-/* Phones: the panels stack, the map first. */
+/* Phones: the steps bar wraps; on the build step the map comes first. */
 @media (max-width: 900px) {
-  .app {
-    grid-template: 'top' auto 'map' 55vh 'left' auto 'right' auto / 1fr;
-    height: auto;
-  }
   .top {
     flex-wrap: wrap;
   }
-  .top .name {
+  .steps {
     order: 3;
     flex-basis: 100%;
+    overflow-x: auto;
+    justify-content: flex-start;
+  }
+  .build {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .map {
+    order: -1;
+    height: 60vh;
+  }
+  .hint {
+    display: none;
   }
   .tools {
     grid-template-columns: repeat(2, 1fr);
+  }
+  .page {
+    padding: 22px 18px;
+  }
+  .row2 {
+    grid-template-columns: 1fr;
   }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -103,6 +103,23 @@ const card = css`
   .go:active {
     transform: scale(0.97);
   }
+  .about {
+    margin: 0 0 14px;
+    font-size: 15px;
+    line-height: 1.45;
+    color: ${DIM};
+  }
+  .contact {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    margin: 0 0 16px;
+    font-size: 14px;
+  }
+  .contact a {
+    color: #ff9a4a;
+    text-decoration: none;
+  }
   .links {
     display: flex;
     justify-content: center;
@@ -165,7 +182,17 @@ const pillClass = css`
   }
 `;
 
-// person: the owner of a builder city ({ name, title }); Armin when omitted.
+// Email and phone numbers as links you can tap (only the ones that are filled in).
+const contacts = p => {
+  const links = [
+    p.email && `<a href="mailto:${esc(p.email)}">${esc(p.email)}</a>`,
+    ...(p.phones ?? []).map(n => `<a href="tel:${esc(n.replace(/[^\d+]/g, ''))}">${esc(n)}</a>`),
+  ].filter(Boolean);
+  return links.length ? `<p class="contact">${links.join('')}</p>` : '';
+};
+
+// person: the owner of a builder city (its profile: name, title, about, age,
+// email, phones; any may be empty); Armin when omitted.
 // Text from a plan goes into HTML: escape it.
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 
@@ -173,17 +200,20 @@ export function createIntro({ onPlace, person }) {
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const el = document.createElement('section');
   el.className = card;
-  el.setAttribute('aria-label', 'About Armin');
+  const who = (person ? person.name : PROFILE.name) || 'My portfolio';
+  el.setAttribute('aria-label', `About ${who}`);
   el.innerHTML = `<p class="label">Portfolio</p>
-    <h1>${esc(person?.name ?? PROFILE.name)}</h1>
-    <p class="role">${person ? esc(person.title) : `${PROFILE.role} · Founder of <b>Keel</b>`}</p>
+    <h1>${esc(who)}</h1>
+    <p class="role">${person ? esc([person.title, person.age && `${person.age} years old`].filter(Boolean).join(' · ')) : `${PROFILE.role} · Founder of <b>Keel</b>`}</p>
+    ${person?.about ? `<p class="about">${esc(person.about)}</p>` : ''}
+    ${person ? contacts(person) : ''}
     <p class="hint"><span class="p">P</span><span>Park at any company and press <kbd>Enter</kbd></span></p>
     <button class="go">Start driving</button>
     <nav class="links">${person ? '' : '<button data-go="keel">See Keel ›</button>'}<a class="build" href="${import.meta.env.BASE_URL}editor.html">${person ? 'Edit this city ›' : 'Build your own city ›'}</a></nav>`;
   const pill = document.createElement('button');
   pill.className = pillClass;
   pill.hidden = true;
-  pill.textContent = (person?.name ?? PROFILE.name).split(' ')[0];
+  pill.textContent = who.split(' ')[0];
   document.querySelector('.scene').append(el, pill);
 
   // The card lifts in and its rows follow.

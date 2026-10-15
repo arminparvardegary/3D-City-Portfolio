@@ -1,23 +1,27 @@
 // A city plan: everything the builder lets people choose, as plain data. The
 // game builds the city from it with the same pieces as Armin's New York.
 //
-// The grid: (cols + 1) avenues running north to south at xs and (rows + 1)
-// streets running east to west at zs, PITCH apart. Between them, cols x rows
-// cells. Roads are segments of those lines:
+// Content (steps 1 and 2 of the builder):
+//   profile      name, title, about, age, email, phones (all optional)
+//   experiences  [{ id, company, role, from, to, note, link, logo, color, style }]
+//   education    [{ id, school, degree, from, to, note, link, logo, color, style }]
+//   skills, tools  lists of words
+// The city (step 3): a grid of (cols + 1) avenues and (rows + 1) streets, PITCH
+// apart, with cols x rows squares between them. Roads are segments of those lines:
 //   roads.h[j][i]  along street j, from avenue i to avenue i + 1
 //   roads.v[i][j]  along avenue i, from street j to street j + 1
-// Each cell holds one kind of block (KINDS). A "place" cell is someone's company
-// or project: its store design, name, logo, card text and link.
+// Each square holds one kind of block (KINDS). A "place" square stands for one
+// experience or education entry (ref "exp:<id>" or "edu:<id>"): a store with its
+// logo and a parking bay. "skills" and "tools" squares are boards listing them.
 // Traffic lights stand at every crossing of three or more roads, except at the
 // crossings listed in lightsOff ("i,j").
 
 export const PITCH = 38; // avenue to avenue (a block plus a road)
 export const MIN = 2,
-  MAX = 8; // cells per side
+  MAX = 8; // squares per side
 
-// What a cell can hold, in the order the editor shows them.
+// City blocks the builder offers, in the order it shows them.
 export const KINDS = {
-  place: { label: 'My place', hint: 'A company or project you can park at' },
   boutique: { label: 'Glass boutique', hint: 'A luxury glass store' },
   garage: { label: 'Car garage', hint: 'Visitors choose their car here' },
   low: { label: 'Walk-ups', hint: 'Low brick buildings' },
@@ -32,6 +36,13 @@ export const KINDS = {
   wtc: { label: 'One World Trade', hint: 'Landmark' },
   dome: { label: 'Copper dome', hint: 'Landmark' },
 };
+// Squares that show your content (placed from the builder's "Your things").
+export const CONTENT = {
+  place: { label: 'Place' },
+  skills: { label: 'Skills board' },
+  tools: { label: 'Tools board' },
+};
+export const isKind = k => !!(KINDS[k] || CONTENT[k]);
 
 // The five store designs a place can use (the built-in brand each one starts from).
 export const STYLES = {
@@ -41,39 +52,64 @@ export const STYLES = {
   agency: { label: 'Agency', base: 'bigup' },
   hq: { label: 'Glass HQ', base: 'keel' },
 };
+const COLORS = ['#ff6b5e', '#5ab4f0', '#c9a957', '#ffc93a', '#2f6bff', '#7f86ff'];
 
 export const STORAGE_KEY = 'city-plan';
 export const fullGrid = (n, m, v = true) => Array.from({ length: n }, () => Array(m).fill(v));
+export const newId = () => Math.random().toString(36).slice(2, 9);
 
-export function newPlace(n = 1) {
+export function newExperience(n = 1) {
   return {
-    name: `My Company ${n}`,
-    role: 'Founder',
-    from: '2022',
-    to: 'now',
-    note: 'What I built there, in one or two lines.',
+    id: newId(),
+    company: `Company ${n}`,
+    role: '',
+    from: '',
+    to: '',
+    note: '',
     link: '',
     logo: '',
-    color: ['#ff6b5e', '#5ab4f0', '#c9a957', '#ffc93a', '#2f6bff'][(n - 1) % 5],
+    color: COLORS[(n - 1) % COLORS.length],
     style: Object.keys(STYLES)[(n - 1) % 5],
   };
 }
+export function newEducation(n = 1) {
+  return {
+    id: newId(),
+    school: `School ${n}`,
+    degree: '',
+    from: '',
+    to: '',
+    note: '',
+    link: '',
+    logo: '',
+    color: COLORS[(n + 2) % COLORS.length],
+    style: 'office',
+  };
+}
 
-// A small starter city: a 4 x 3 grid with every road, two places, a park and a garage.
+// A small starter city: a 4 x 3 grid with every road, two sample jobs placed,
+// skills and tools boards, a park and a garage.
 export function starterPlan() {
   const cols = 4,
-    rows = 3;
+    rows = 3,
+    a = newExperience(1),
+    b = newExperience(2);
   const cells = Array.from({ length: rows }, (_, j) =>
     Array.from({ length: cols }, (_, i) => ({ kind: ['mid', 'tall', 'low', 'brownstone'][(i + j) % 4] })),
   );
   cells[0][0] = { kind: 'park' };
-  cells[1][1] = { kind: 'place', place: newPlace(1) };
-  cells[1][2] = { kind: 'place', place: newPlace(2) };
+  cells[1][1] = { kind: 'place', ref: 'exp:' + a.id };
+  cells[1][2] = { kind: 'place', ref: 'exp:' + b.id };
+  cells[0][2] = { kind: 'skills' };
   cells[2][3] = { kind: 'garage' };
   return {
-    version: 1,
+    version: 2,
     name: 'My city',
-    owner: { name: 'Your Name', title: 'Designer' },
+    profile: { name: '', title: '', about: '', age: '', email: '', phones: [] },
+    experiences: [a, b],
+    education: [],
+    skills: ['Design', 'Product', 'Leadership'],
+    tools: [],
     cols,
     rows,
     roads: { h: fullGrid(rows + 1, cols), v: fullGrid(cols + 1, rows) },
@@ -82,33 +118,108 @@ export function starterPlan() {
   };
 }
 
+const str = (v, n) => String(v ?? '').slice(0, n);
+const entry = (e, base, i) => ({
+  ...base,
+  ...e,
+  id: str(e?.id, 20) || newId(),
+  style: STYLES[e?.style] ? e.style : base.style,
+  color: /^#[0-9a-f]{6}$/i.test(e?.color ?? '') ? e.color : base.color,
+  note: str(e?.note, 400),
+  logo: typeof e?.logo === 'string' && /^data:image\//.test(e.logo) ? e.logo : '',
+  i,
+});
+
 // Make any loaded plan safe to build: right sizes, known kinds, roads present.
+// A version 1 plan (places written into the squares) is converted.
 export function normalize(input) {
   const p = structuredClone(input ?? starterPlan());
-  p.version = 1;
-  p.name = String(p.name || 'My city').slice(0, 60);
-  p.owner = {
-    name: String(p.owner?.name || 'Your Name').slice(0, 60),
-    title: String(p.owner?.title || '').slice(0, 60),
+  // Version 1: owner and inline places.
+  if (!p.version || p.version < 2) {
+    p.profile = { name: p.owner?.name ?? '', title: p.owner?.title ?? '' };
+    p.experiences = [];
+    (p.cells ?? []).forEach(row =>
+      row?.forEach((c, i) => {
+        if (c?.kind !== 'place' || !c.place) return;
+        const e = {
+          ...newExperience(p.experiences.length + 1),
+          ...c.place,
+          company: c.place.name ?? 'Company',
+        };
+        delete e.name;
+        p.experiences.push(e);
+        row[i] = { kind: 'place', ref: 'exp:' + e.id };
+      }),
+    );
+  }
+  const out = { version: 2 };
+  out.name = str(p.name || 'My city', 60);
+  const pr = p.profile ?? {};
+  out.profile = {
+    name: str(pr.name, 60),
+    title: str(pr.title, 80),
+    about: str(pr.about, 600),
+    age: str(pr.age, 4),
+    email: str(pr.email, 120),
+    phones: (Array.isArray(pr.phones) ? pr.phones : [])
+      .map(v => str(v, 30))
+      .filter(Boolean)
+      .slice(0, 4),
   };
-  p.cols = Math.min(MAX, Math.max(MIN, p.cols | 0 || 4));
-  p.rows = Math.min(MAX, Math.max(MIN, p.rows | 0 || 3));
+  out.experiences = (Array.isArray(p.experiences) ? p.experiences : [])
+    .slice(0, 24)
+    .map((e, i) => entry(e, newExperience(i + 1), i));
+  out.education = (Array.isArray(p.education) ? p.education : [])
+    .slice(0, 12)
+    .map((e, i) => entry(e, newEducation(i + 1), i));
+  for (const list of [out.experiences, out.education]) list.forEach(e => delete e.i);
+  const words = v =>
+    (Array.isArray(v) ? v : [])
+      .map(w => str(w, 40).trim())
+      .filter(Boolean)
+      .slice(0, 40);
+  out.skills = words(p.skills);
+  out.tools = words(p.tools);
+  out.cols = Math.min(MAX, Math.max(MIN, p.cols | 0 || 4));
+  out.rows = Math.min(MAX, Math.max(MIN, p.rows | 0 || 3));
+  const refs = new Set([
+    ...out.experiences.map(e => 'exp:' + e.id),
+    ...out.education.map(e => 'edu:' + e.id),
+  ]);
+  const placed = new Set();
   const cell = (j, i) => {
     const c = p.cells?.[j]?.[i];
-    if (!c || !KINDS[c.kind]) return { kind: 'mid' };
-    if (c.kind === 'place')
-      return {
-        kind: 'place',
-        place: { ...newPlace(), ...c.place, style: STYLES[c.place?.style] ? c.place.style : 'studio' },
-      };
+    if (!c || !isKind(c.kind)) return { kind: 'mid' };
+    // A place needs an entry that exists and is not already on the map.
+    if (c.kind === 'place') {
+      if (!refs.has(c.ref) || placed.has(c.ref)) return { kind: 'plaza' };
+      placed.add(c.ref);
+      return { kind: 'place', ref: c.ref };
+    }
     return { kind: c.kind };
   };
-  p.cells = Array.from({ length: p.rows }, (_, j) => Array.from({ length: p.cols }, (_, i) => cell(j, i)));
+  out.cells = Array.from({ length: out.rows }, (_, j) =>
+    Array.from({ length: out.cols }, (_, i) => cell(j, i)),
+  );
   const bool = (arr, a, b) =>
     Array.from({ length: a }, (_, x) => Array.from({ length: b }, (_, y) => arr?.[x]?.[y] !== false));
-  p.roads = { h: bool(p.roads?.h, p.rows + 1, p.cols), v: bool(p.roads?.v, p.cols + 1, p.rows) };
-  p.lightsOff = Array.isArray(p.lightsOff) ? p.lightsOff.filter(k => typeof k === 'string') : [];
-  return p;
+  out.roads = { h: bool(p.roads?.h, out.rows + 1, out.cols), v: bool(p.roads?.v, out.cols + 1, out.rows) };
+  out.lightsOff = Array.isArray(p.lightsOff) ? p.lightsOff.filter(k => typeof k === 'string') : [];
+  return out;
+}
+
+// What a place square shows: its entry as a store and a card.
+export function placeOf(plan, ref) {
+  const [type, id] = String(ref).split(':');
+  if (type === 'exp') {
+    const e = plan.experiences.find(x => x.id === id);
+    return e && { ...e, kind: 'Experience', name: e.company, role: e.role };
+  }
+  if (type === 'edu') {
+    const e = plan.education.find(x => x.id === id);
+    return e && { ...e, kind: 'Education', name: e.school, role: e.degree };
+  }
+  return null;
 }
 
 // World positions of the grid lines, centred on the origin.
@@ -132,10 +243,25 @@ export function loadPlan() {
   }
 }
 
-// The plan the game should build: a builder city when the page is opened with
-// ?city=mine (and one is saved), otherwise null, which means Armin's New York.
+// A published city: someone who copied this project to their own site puts
+// their city file there as public/city.json. Loaded once, before the game starts.
+async function fetchPublished() {
+  try {
+    const r = await fetch(`${import.meta.env.BASE_URL}city.json`, { cache: 'no-cache' });
+    if (!r.ok || !(r.headers.get('content-type') ?? '').includes('json')) return null;
+    return normalize(await r.json());
+  } catch {
+    return null;
+  }
+}
+export const PUBLISHED = typeof location === 'undefined' ? null : await fetchPublished();
+
+// The plan the game should build: ?city=mine shows the city being made in this
+// browser (the builder's Drive it); otherwise a published city.json if the site
+// has one; otherwise null, which means Armin's New York.
 export function activePlan() {
   if (typeof location === 'undefined') return null;
-  if (new URLSearchParams(location.search).get('city') !== 'mine') return null;
-  return loadPlan() ?? normalize(starterPlan());
+  if (new URLSearchParams(location.search).get('city') === 'mine')
+    return loadPlan() ?? PUBLISHED ?? normalize(starterPlan());
+  return PUBLISHED;
 }

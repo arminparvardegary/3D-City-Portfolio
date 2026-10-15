@@ -24,15 +24,18 @@ Live: https://forest-tile.vercel.app
 
 Anyone can make a portfolio city like this one, without code: open
 [`/editor.html`](https://forest-tile.vercel.app/editor.html) (or **Build your own city** on the intro card).
+It goes in four steps and saves in your browser as you go (Undo goes back one change).
 
-- **Roads**: drag along the grid lines to lay or remove them. Size the grid up to 8 x 8.
-- **Blocks**: drag one from the left onto a square, or pick it and paint: your places, a glass boutique,
-  a car garage, walk-ups, offices, towers, brownstones, parks, a plaza and four landmarks.
-- **Traffic lights**: on at every crossing of three or more roads; click one to switch it off.
-- **Your places**: name, role, years, what you did, a link, a colour, your logo and one of five store
-  designs. Park in front and press Enter to open the card.
-- **Save**: it saves in your browser as you go; Download and Open move a city as a file.
-- **Drive it**: opens the game with your city (`/?city=mine`).
+1. **About you**: name, job title, age, a few words, email and phone numbers. All optional; the intro card shows them.
+2. **Experience**: jobs and schools (name, role or degree, years, what you did, a link, a colour, your logo
+   and one of five building designs), plus your skills and tools.
+3. **Build**: drag each job, school and the skills and tools boards onto a square (or tap it, then tap a
+   square). Drag along the grid lines to lay or remove roads, click a crossing to switch its traffic lights,
+   and add city blocks: a glass boutique, a car garage, walk ups, offices, towers, brownstones, parks, a
+   plaza and four landmarks. **Drive it** opens the game with your city (`/?city=mine`).
+4. **Publish**: download `city.json`, press **Deploy to Vercel** (it copies this project to your GitHub
+   and puts it online), then upload `city.json` into `outputs/forest-tile/public` in your new repository.
+   A site with a `public/city.json` opens that city as its homepage.
 
 The plan format is in `src/plan/plan.js`; the city is built from it by the same code as mine
 (`src/nyc/drive/layout.js`, `build.js`, `src/nyc/custom.js`).
