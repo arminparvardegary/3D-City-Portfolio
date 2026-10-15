@@ -21,7 +21,13 @@ export function createAudio({car,world,maxSpeed=()=>9.6}){
   icon();document.querySelector('.scene')?.append(btn);
   const save=()=>{try{localStorage.setItem(KEY,on?'on':'off');localStorage.setItem(MKEY,music?'on':'off');}catch{}};
   const setOn=v=>{on=v;save();icon();if(master)master.gain.setTargetAtTime(on?.9:0,ctx.currentTime,.12);if(on)start();};
-  const setMusic=v=>{music=v;save();if(N.music)N.music.gain.setTargetAtTime(music?.55:0,ctx.currentTime,1.2);};
+  // Music button (beside the map button): a note, struck through when off. N does the same.
+  const mbtn=document.createElement('button');mbtn.className='sound-toggle music-toggle';
+  const NOTE='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>';
+  const micon=()=>{mbtn.setAttribute('aria-pressed',String(music));mbtn.setAttribute('aria-label',music?'Music on':'Music off');mbtn.innerHTML=NOTE+(music?'':'<path d="m3 3 18 18"/>')+'</svg>';};
+  micon();document.querySelector('.scene')?.append(mbtn);
+  const setMusic=v=>{music=v;save();micon();if(N.music)N.music.gain.setTargetAtTime(music?.55:0,ctx.currentTime,1.2);};
+  mbtn.onclick=()=>{start();setMusic(!music);};
   btn.onclick=()=>setOn(!on);
 
   const noiseBuffer=(type,seconds=3)=>{const b=ctx.createBuffer(1,ctx.sampleRate*seconds,ctx.sampleRate),d=b.getChannelData(0);let l=0,b0=0,b1=0,b2=0;

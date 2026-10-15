@@ -24,7 +24,7 @@
 .dev-body{max-height:44vh;overflow-y:auto;padding:14px 4px 0 0}.dev-select select{width:100%;margin-top:8px;font:inherit;font-size:11px;padding:5px 8px;border:1px solid #dfe4d3;border-radius:10px;background:#fff;color:#55634a}
 .dev-presets{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}.dev-presets input,.dev-presets select{flex:1 1 120px;font:inherit;font-size:11px;padding:6px 8px;border:1px solid #dfe4d3;border-radius:10px;background:#fff}
 .dev-presets button{font-size:10px;font-weight:600;color:#6c8058;padding:5px 10px;border-radius:14px;background:#e9eddf}
-.dev-hud{position:fixed;right:8px;top:8px;z-index:50;font:11px/1.45 ui-monospace,Menlo,monospace;white-space:pre;color:#3e4f30;background:#fffff6e6;border:1px solid #e0e5d6;border-radius:10px;padding:6px 9px;pointer-events:none}
+.dev-hud{position:fixed;left:8px;bottom:8px;z-index:50;font:11px/1.45 ui-monospace,Menlo,monospace;white-space:pre;color:#3e4f30;background:#fffff6e6;border:1px solid #e0e5d6;border-radius:10px;padding:6px 9px;pointer-events:none}
 
 /* Concept-only page: the scene fills the window, the numbered vehicle concepts sit at the left. */
 #app{height:100svh;min-height:0}.scene{flex:1}
@@ -122,3 +122,6 @@ button:disabled{cursor:default}
 .view-tag{position:absolute;left:50%;bottom:32px;z-index:8;transform:translate(-50%,8px);padding:8px 22px 10px;border-radius:999px;background:rgba(22,16,56,.82);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:#f4f0ff;font:700 30px/1 "Amatic SC","Marker Felt",cursive;opacity:0;pointer-events:none;transition:opacity .3s cubic-bezier(.28,.11,.32,1),transform .3s cubic-bezier(.28,.11,.32,1)}
 .view-tag.on{opacity:1;transform:translate(-50%,0)}
 @media (prefers-reduced-motion:reduce){.view-tag{transition:none}}
+
+/* Music on/off, left of the map button. */
+.music-toggle{right:120px}

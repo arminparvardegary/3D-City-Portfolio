@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // The cars of New York: "Free Low Poly Vehicles Pack" by Rgsdev (CC0, public
@@ -20,7 +21,13 @@ export const MODELS=[
   {id:'cybertruck',name:'Cybertruck',garageOnly:true,splitLights:'light',
     mats:{car_paint_mat:'paint',body_mat:'#2a2c30',trunk_mat:'#3a3d42',interior_mat:'#1c1d21',glass_windows_mat:'glass',glass_light_mat:'clear',wheel_mat:'#16171a'},
     scale:1.3,paints:['#b8bdc3','#141518'],   // bigger than the cars round it; stainless or black only
-    paint:'#b8bdc3',drive:{...D(120/5.4/18,1.4,1.05,.95,.86,3100,'ev','car',.9),rearSteer:10*Math.PI/180}},
+    paint:'#b8bdc3',drive:{...D(110/5.4/18,1.4,1.05,.95,.86,3100,'ev','car',.9),rearSteer:10*Math.PI/180}},   // 110 km/h
+  // Tesla Model S (Armin's model, reduced from 1.7 million triangles to 164k with
+  // its four wheels split apart): the fastest car, 120 km/h, electric.
+  {id:'model-s',name:'Model S',file:'model-s.glb',garageOnly:true,scale:1.1,paint:'#a50e1d',
+    mats:{Car_Paint:'paint',Window:'glass','Glass Shader':'clear','Looking Glass':'glass',Emission:'head',Emission_1:'head',Material:'tail',
+      Rubber:'#141416',Metal:'metal:#c9ccd1','Metal 1':'#3a3d42','Metal 2':'#2a2d33','Metal 3':'#1b1c1f',Logo:'metal:#d9dbe0'},
+    drive:D(120/5.4/18,1.5,1.1,1.08,1,2100,'ev','car')},
   {id:'roadster',name:'Roadster',drive:D(.95,.92,1,1.06,1.08,1150,'flat6','sport',1.05)},
   {id:'muscle',name:'Muscle',drive:D(.96,1.08,.88,.86,.92,1650,'v8','muscle',1.2)},
   {id:'muscle-2',name:'Muscle 2',drive:D(.94,1.04,.88,.86,.92,1700,'v8','muscle',1.2)},
@@ -54,6 +61,9 @@ function convert(m,paintName,M){
   if(want==='paint')return {kind:'paint',mat:new THREE.MeshPhysicalMaterial({color:M.paint??c,metalness:.85,roughness:.32,clearcoat:.4,clearcoatRoughness:.2,envMapIntensity:1.4})};   // brushed steel
   if(want==='glass')return {kind:'glass',mat:new THREE.MeshPhysicalMaterial({color:'#0b1118',metalness:.25,roughness:.04,clearcoat:1,envMapIntensity:1.8})};
   if(want==='clear')return {kind:'glass',mat:new THREE.MeshPhysicalMaterial({color:'#dfe6ee',metalness:.1,roughness:.05,transparent:true,opacity:.22,envMapIntensity:1.5})};
+  if(want==='head')return {kind:'lamp',mat:new THREE.MeshStandardMaterial({color:'#f6f8ff',emissive:'#fff1d0',emissiveIntensity:2.6})};
+  if(want==='tail')return {kind:'lamp',mat:new THREE.MeshStandardMaterial({color:'#5a0006',emissive:'#ff2418',emissiveIntensity:1.8})};
+  if(want?.startsWith('metal:'))return {kind:'solid',mat:new THREE.MeshStandardMaterial({color:want.slice(6),metalness:.9,roughness:.25,envMapIntensity:1.5})};
   if(want)return {kind:'solid',mat:new THREE.MeshStandardMaterial({color:want,roughness:.55,metalness:.25})};
   // The paint: the body colour that covers the most of the car (decided per model).
   if(n===paintName)return {kind:'paint',mat:new THREE.MeshPhysicalMaterial({color:c,metalness:.45,roughness:.3,clearcoat:1,clearcoatRoughness:.08,envMapIntensity:1.2})};
@@ -80,10 +90,16 @@ function splitLightBar(o){
   const head=new THREE.MeshStandardMaterial({name:'headlight'}),rear=new THREE.MeshStandardMaterial({name:'rear light'});
   o.geometry=g;o.material=[head,rear];
 }
+// A GLB keeps one mesh per material, grouped under the part's name: merge each
+// group back into one mesh with material groups (so a wheel is one mesh again).
+function glbRoot(g){const root=g.scene,groups=[];root.traverse(o=>{if(!o.isMesh&&o.children.length&&o.children.every(c=>c.isMesh))groups.push(o);});
+  for(const grp of groups){const geos=[],mats=[];grp.updateMatrix();for(const c of grp.children){c.updateMatrix();geos.push(c.geometry.clone().applyMatrix4(c.matrix));mats.push(c.material);}
+    const m=new THREE.Mesh(mergeGeometries(geos,true),mats);m.name=grp.name;m.position.copy(grp.position);m.quaternion.copy(grp.quaternion);m.scale.copy(grp.scale);grp.parent.add(m);grp.removeFromParent();}
+  return root;}
 export async function loadModels(prep){
-  const loader=new FBXLoader(),base=import.meta.env.BASE_URL;
+  const loader=new FBXLoader(),gltf=new GLTFLoader(),base=import.meta.env.BASE_URL;
   await Promise.all(MODELS.map(async M=>{
-    const root=await loader.loadAsync(`${base}cars/${M.id}.fbx`);
+    const file=M.file??`${M.id}.fbx`,root=file.endsWith('.glb')?glbRoot(await gltf.loadAsync(`${base}cars/${file}`)):await loader.loadAsync(`${base}cars/${file}`);
     root.scale.setScalar(SCALE*(M.scale??1));root.updateMatrixWorld(true);
     const box=new THREE.Box3().setFromObject(root),size=box.getSize(new THREE.Vector3());
     const wheels=[],body=[];let paintColor=null;
