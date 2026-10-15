@@ -97,9 +97,11 @@ function glbRoot(g){const root=g.scene,groups=[];root.traverse(o=>{if(!o.isMesh&
   for(const grp of groups){const geos=[],mats=[];grp.updateMatrix();for(const c of grp.children){c.updateMatrix();geos.push(c.geometry.clone().applyMatrix4(c.matrix));mats.push(c.material);}
     const m=new THREE.Mesh(mergeGeometries(geos,true),mats);m.name=grp.name;m.position.copy(grp.position);m.quaternion.copy(grp.quaternion);m.scale.copy(grp.scale);grp.parent.add(m);grp.removeFromParent();}
   return root;}
-export async function loadModels(prep){
+// garageOnly: false loads the cars the city needs (fast start); true loads the big
+// garage only models (the Teslas, several MB) later, in the background.
+export async function loadModels(prep,{garageOnly}={}){
   const loader=new FBXLoader(),gltf=new GLTFLoader(),base=import.meta.env.BASE_URL;
-  await Promise.all(MODELS.map(async M=>{
+  await Promise.all(MODELS.filter(M=>garageOnly===undefined||!!M.garageOnly===garageOnly).filter(M=>!cache.has(M.id)).map(async M=>{
     const file=M.file??`${M.id}.fbx`,root=file.endsWith('.glb')?glbRoot(await gltf.loadAsync(`${base}cars/${file}`)):await loader.loadAsync(`${base}cars/${file}`);
     root.scale.setScalar(SCALE*(M.scale??1));root.updateMatrixWorld(true);
     const box=new THREE.Box3().setFromObject(root),size=box.getSize(new THREE.Vector3());

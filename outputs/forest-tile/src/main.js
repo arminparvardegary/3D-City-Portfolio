@@ -24,8 +24,8 @@ import { buildNYCWorld } from './nyc/world.js';
 import { createStory } from './world/story.js';
 import { JOBS, PROFILE } from './data/profile.js';
 import { createAudio } from './audio.js';
-import { VEHICLES, useModelVehicles } from './vehicles.js';
-import { loadModels } from './cars/models.js';
+import { VEHICLES, useModelVehicles, addModelVehicles } from './vehicles.js';
+import { loadModels, MODELS } from './cars/models.js';
 import { FEEL, damp, dampAngle, spring } from './motion.js';
 
 const viewport=document.querySelector('#viewport');
@@ -78,7 +78,9 @@ Object.values(materials).forEach(softenShadows);
 const tileGrid=buildGrid(softenShadows);if(new URLSearchParams(location.search).has('tiles'))scene.add(tileGrid.group);
 let carRef=null;   // the world's traffic watches your car (set once the car exists)
 // New York's cars are the downloaded models: load them before the city (traffic) and the car.
-if(WORLD==='nyc'){await loadModels(softenShadows);useModelVehicles();}
+// The city's cars load first; the big garage only models (the Teslas) follow in
+// the background once the city is on screen (see loadGarageExtras).
+if(WORLD==='nyc'){await loadModels(softenShadows,{garageOnly:false});useModelVehicles();}
 const world=WORLD==='nyc'?buildNYCWorld({prep:softenShadows,materials,player:()=>carRef?.shown??null}):buildCampus({prep:softenShadows});scene.add(world.group);
 const tb=tileGrid.bounds,bounds=world.bounds??{x0:tb.x0+.4,x1:tb.x1-.4,z0:tb.z0+.4,z1:tb.z1-.4};
 const skyTint=WORLD==='nyc'?THEME.nyc.sky:THEME.sky;
@@ -282,12 +284,17 @@ const PAINTS=['#b5121b','#0f0f12','#f4f2ee','#c9a45c','#1f3a6b','#0f3a2c','#7a1f
 let carChoice={i:Math.max(0,VEHICLES.findIndex(v=>v.name===CAR_MODEL)),color:world.carColor??'#b5121b'};
 // Saved by name (positions shift when a car is added to the list).
 const applyCar=({i,color})=>{const allowed=VEHICLES[i]?.paints;if(allowed&&!allowed.includes(color))color=allowed[0];car.select(i);car.paint.color.set(color);addHeadlights();carChoice={i,color};try{localStorage.setItem('nyc-car',JSON.stringify({...carChoice,name:VEHICLES[i]?.name}));}catch{}needsRender=true;};
-try{const saved=JSON.parse(localStorage.getItem('nyc-car')||'null');if(CHASE&&saved){const before=VEHICLES.filter(v=>v.name!=='Cybertruck'),name=saved.name??before[saved.i]?.name,i=VEHICLES.findIndex(v=>v.name===name);   // older saves: a position in the list before the Cybertruck
-  if(VEHICLES[i])applyCar({i,color:saved.color});}}catch{}
+// The saved garage choice (by name; older saves held a position in the list before the Teslas).
+// A Tesla is loaded first if that is the saved car; otherwise the Teslas follow quietly.
+const EXTRAS=MODELS.filter(M=>M.garageOnly).map(M=>M.name);let extrasLoading=null;
+const loadGarageExtras=()=>extrasLoading??=loadModels(softenShadows,{garageOnly:true}).then(()=>{addModelVehicles();needsRender=true;}).catch(e=>console.warn('garage models',e));
+try{const saved=JSON.parse(localStorage.getItem('nyc-car')||'null');if(CHASE&&saved){const name=saved.name??VEHICLES[saved.i]?.name,pick=()=>{const i=VEHICLES.findIndex(v=>v.name===name);if(i>=0)applyCar({i,color:saved.color});};
+  if(EXTRAS.includes(name))loadGarageExtras().then(pick);else pick();}}catch{}
+if(CHASE)setTimeout(loadGarageExtras,2500);
 // Parking: stop in a bay in front of a place and press Enter for its card; the
 // camera turns to the store while the card is open.
 const visit=world.parking?createVisit({
-  garage:{models:VEHICLES.map(v=>v.name),colors:PAINTS,colorsFor:i=>VEHICLES[i]?.paints??PAINTS,current:()=>carChoice,choose:(i,color)=>applyCar({i,color}),preview:(i,color)=>world.garage?.preview(i,color)},
+  garage:{get models(){return VEHICLES.map(v=>v.name);},colors:PAINTS,colorsFor:i=>VEHICLES[i]?.paints??PAINTS,current:()=>carChoice,choose:(i,color)=>applyCar({i,color}),preview:(i,color)=>world.garage?.preview(i,color)},
   onOpen:b=>{if(b.id==='garage'&&world.garage){   // the camera goes in to the preview turntable; the arrows pick, not drive
       const t=world.garage.table;car.lock(true);const gy=car.shown?.y??0,sd=Math.sign(b.x-t.x)||1;focus={x:t.x,z:t.z,y:gy+.75,eye:{x:t.x+sd*3,y:gy+2.3,z:t.z+5.6},zoom};followHold=0;needsRender=true;return;}
     const ax=b.axis==='z'?'x':'z',side=Math.sign(ax==='x'?b.x-b.store.x:b.z-b.store.z)||1;focus={x:b.store.x,z:b.store.z,y:3.2,dist:21,side,axis:ax,zoom};followHold=0;needsRender=true;},

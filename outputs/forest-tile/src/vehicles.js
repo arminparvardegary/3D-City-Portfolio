@@ -220,6 +220,11 @@ export const VEHICLES=[
 // while driving), the wheels hang off the rig so they stay planted.
 // New York drives the downloaded models (cars/models.js): once they are loaded,
 // the vehicle list becomes those 21 cars.
+// Models that finished loading later (the garage only Teslas) join the end of
+// the list, so no car's position changes while someone drives.
+export function addModelVehicles(){
+  for(const M of MODELS){const C=modelInfo(M.id);if(C&&!VEHICLES.some(v=>v.model===M.id))VEHICLES.push({name:M.name,color:C.paintColor,model:M.id,real:true,drive:M.drive,paints:M.paints});}
+}
 export function useModelVehicles(){
   VEHICLES.length=0;
   for(const M of MODELS){const C=modelInfo(M.id);if(C)VEHICLES.push({name:M.name,color:C.paintColor,model:M.id,real:true,drive:M.drive,paints:M.paints});}
