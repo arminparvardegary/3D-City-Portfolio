@@ -101,16 +101,16 @@ function occupant(C){
   const put=(geo,color,x,y,z)=>{geo.translate(x,y+lift,z);const g=geo.index?geo.toNonIndexed():geo;const n=g.attributes.position.count,c=new THREE.Color(color),col=new Float32Array(n*3);for(let i=0;i<n;i++)col.set([c.r,c.g,c.b],i*3);g.setAttribute('color',new THREE.BufferAttribute(col,3));g.deleteAttribute('uv');out.push(g);};
   const span=B.max.z-B.min.z,winH=B.max.y-B.min.y,s=THREE.MathUtils.clamp(winH*1.15,.55,.85);   // seated torso to head height
   const halfW=(B.max.x-B.min.x)/2,cx=(B.max.x+B.min.x)/2;
-  const dx=cx+halfW*.42,dz=B.max.z-Math.min(1.05,span*.42),eye=B.min.y+winH*.42;   // driver: left seat, behind the windshield
+  const dx=cx+halfW*.36;let dz=B.max.z-Math.min(.75,span*.27);const eye=B.min.y+winH*.4;   // driver: left front seat, just behind the windshield
   const headR=s*.17,sh=eye-headR*1.4;   // shoulders
-  // Interior: a dark floor and seat block up to just under the window line, and the dash.
-  put(new THREE.BoxGeometry(halfW*1.8,.32,Math.max(.4,span*.85)),'#16171b',cx,B.min.y-.2,(B.max.z+B.min.z)/2-span*.02);
-  put(new THREE.BoxGeometry(halfW*1.8,.16,.32),'#202227',cx,B.min.y-.02,B.max.z-.22);
+  dz=Math.min(dz,B.max.z-s*.5-.06);   // the steering wheel stays behind the windshield
+  // The dash, well inside the windshield (narrower than the body, so it never shows outside).
+  put(new THREE.BoxGeometry(halfW*1.3,.12,.24),'#202227',cx,B.min.y-.04,B.max.z-.3);
   // The driver.
-  put(new THREE.BoxGeometry(s*.55,s*.62,s*.3),SHIRT[k%SHIRT.length],dx,sh-s*.25,dz);                 // torso
+  put(new THREE.BoxGeometry(s*.46,s*.6,s*.28),SHIRT[k%SHIRT.length],dx,sh-s*.25,dz);                 // torso
   put(new THREE.SphereGeometry(headR,12,10),SKIN[(k*3)%SKIN.length],dx,sh+headR*1.15,dz);             // head
   put(new THREE.SphereGeometry(headR*1.04,12,8,0,Math.PI*2,0,Math.PI*.5),HAIR[(k*5)%HAIR.length],dx,sh+headR*1.25,dz-headR*.08);   // hair
-  for(const sd of [-1,1]){const arm=new THREE.BoxGeometry(s*.12,s*.12,s*.42);arm.rotateX(.35);put(arm,SHIRT[k%SHIRT.length],dx+sd*s*.24,sh-s*.12,dz+s*.2);}
+  for(const sd of [-1,1]){const arm=new THREE.BoxGeometry(s*.12,s*.12,s*.42);arm.rotateX(.35);put(arm,SHIRT[k%SHIRT.length],dx+sd*s*.2,sh-s*.12,dz+s*.2);}
   put(new THREE.TorusGeometry(s*.17,s*.025,6,16),'#121316',dx,sh-s*.05,dz+s*.44);                     // steering wheel
   return out;
 }
