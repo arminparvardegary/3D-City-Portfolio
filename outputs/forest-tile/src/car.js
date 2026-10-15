@@ -46,7 +46,8 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
   const skid=createSkid(parent),smoke=createSkid(parent,{color:'#e4e1f0',size:2.1,rate:36,opacity:.42,life:2.2,rise:.9}),frontW=[{x:0,z:0},{x:0,z:0}];
   // The footprint as a row of circles along the car.
   let probes=[],r=1;
-  const footprint=()=>{r=parts.width/2+.05;const k=Math.max(0,parts.length/2-r*.9),n=Math.max(1,Math.ceil(k/r));probes=[];for(let i=-n;i<=n;i++)probes.push(k*i/n);};
+  const footprint=()=>{r=parts.width/2*.88;   // the body, not the mirrors: cars that look apart never touch
+    const k=Math.max(0,parts.length/2-r*.9),n=Math.max(1,Math.ceil(k/r));probes=[];for(let i=-n;i<=n;i++)probes.push(k*i/n);};
   footprint();
   // Collisions never trap the car. A pose is impossible where there is no road
   // (water, off the edge, a step up or down); otherwise a move is refused only if
