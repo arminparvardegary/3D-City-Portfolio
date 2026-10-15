@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>Rankd — 2A Flat (dark background)</title>
+  <rect width="1024" height="1024" rx="225" fill="#0A0A10"></rect>
+  <g transform="translate(512 512) rotate(-8) translate(-512 -512)">
+    
+    <path d="M174 348 Q174 317 205 317 L819 317 Q850 317 850 348&#xA;             L850 676 Q850 707 819 707 L205 707 Q174 707 174 676 Z" fill="#F5A623"></path>
+    
+    <circle cx="512" cy="317" r="30" fill="#0A0A10"></circle>
+    <circle cx="512" cy="707" r="30" fill="#0A0A10"></circle>
+    
+    <line x1="512" y1="368" x2="512" y2="656" stroke="#0A0A10" stroke-width="7" stroke-dasharray="15 15" opacity="0.5"></line>
+    
+    <text x="337" y="468" text-anchor="middle" font-family="Inter, sans-serif" font-weight="700" font-size="41" letter-spacing="9" fill="#0A0A10">RANK</text>
+    <text x="337" y="634" text-anchor="middle" font-family="Inter, sans-serif" font-weight="900" font-size="164" fill="#0A0A10">01</text>
+    
+    <text x="686" y="550" text-anchor="middle" font-family="Inter, sans-serif" font-weight="900" font-size="82" fill="#0A0A10">★★★</text>
+    <text x="686" y="634" text-anchor="middle" font-family="Inter, sans-serif" font-weight="700" font-size="36" letter-spacing="9" fill="#0A0A10">ADMIT ONE</text>
+  </g>
+</svg>

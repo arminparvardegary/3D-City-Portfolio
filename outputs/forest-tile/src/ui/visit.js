@@ -40,7 +40,7 @@ const cardCls=css`
   @media(max-width:520px){left:16px;right:16px;top:16px;width:auto;padding:22px;h2{font-size:40px;}}
 `;
 
-const LOGO={rush:null,hindra:BRAND.hindra.logo,aaq:BRAND.aaq.logo,bigup:BRAND.bigup.logo,keel:BRAND.keel.logo};
+const LOGO={rankd:BRAND.rankd.logo,rush:null,hindra:BRAND.hindra.logo,aaq:BRAND.aaq.logo,bigup:BRAND.bigup.logo,keel:BRAND.keel.logo};
 
 export function createVisit({onOpen,onClose}){
   const reduced=matchMedia('(prefers-reduced-motion: reduce)');
@@ -51,12 +51,16 @@ export function createVisit({onOpen,onClose}){
 
   function fill(b){
     const job=JOBS.find(j=>j.id===b.id),logo=LOGO[b.id.startsWith('keel')?'keel':b.id];
-    const logoHtml=logo?`<div class="logo" style="background-image:url('${url(logo)}');${b.id.startsWith('keel')?'background-size:cover;':''}"></div>`
+    const logoHtml=logo?`<div class="logo" style="background-image:url('${url(logo)}');${b.id.startsWith('keel')||b.id==='rankd'?'background-size:cover;':''}"></div>`
       :`<div class="logo" style="background:#141416;display:grid;place-items:center;color:${BRAND.rush.color};font:italic 900 30px ${FONT}">RUSH</div>`;
     if(job){
       card.innerHTML=`${logoHtml}<p class="label">Experience</p><h2>${b.name}</h2><p class="role">${job.role}</p>
         <div class="meta"><div><b>${duration(job)}</b><span>${span(job)}</span></div><div><b>${job.place.split(' · ')[0]}</b><span>${job.place.includes('·')?job.place.split(' · ')[1]:'On site'}</span></div></div>
         ${job.note?`<p class="note">${job.note}</p>`:''}<div class="row"><span></span><button data-close>Close ×</button></div>`;
+    }else if(b.id==='rankd'){
+      card.innerHTML=`${logoHtml}<p class="label">My project</p><h2>Rankd</h2><p class="role">Bring your list. Leave with a real one.</p>
+        <p class="note">Head to head ranking for movies, TV and books. Rankd asks one question at a time, which is better, until every title has its own number. No stars. No ties.</p>
+        <div class="row"><a href="https://therankd.com" target="_blank" rel="noopener">therankd.com ›</a><button data-close>Close ×</button></div>`;
     }else if(b.id.startsWith('lux')){   // a Brooklyn boutique: no branding
       card.innerHTML=`<p class="label">Brooklyn</p><h2>Boutique</h2><p class="role">Glass, gold and marble on the river</p>
         <p class="note">One of six boutiques along the Brooklyn waterfront. Walk round the glass and look inside.</p><div class="row"><span></span><button data-close>Close ×</button></div>`;

@@ -110,3 +110,49 @@ export function buildKeelBoutique({x,z,top,w=9,d=18,h=5.4,facing=-1}){
     bubbles.forEach((b,i)=>{b.sp.position.set(x+f*(hw-1.5)+Math.sin(clock*.5+b.ph)*.4,b.y+Math.sin(clock*1.1+b.ph)*.18,z+(i-1)*3.2);b.sp.material.opacity=.85+.15*Math.sin(clock*1.3+b.ph);});
     blue.emissiveIntensity=2.1+Math.sin(clock*1.2)*.4;}};
 }
+
+// Rankd's boutique: a cinema in Rankd's colours (near black glass, amber glow),
+// the RANKD wordmark lit on the roof, the ticket logo glowing by the door, a wall
+// of ranked poster tiles (#01 to #12, drawn, not real posters) and a "Which is
+// better?" duel screen inside, rank badges floating slowly above.
+export function buildRankdBoutique({x,z,top,w=9,d=17,h=5.2,facing=-1}){
+  const AMBER='#f5a623',INKD='#0a0a10',f=facing;
+  const base=buildLux({x,z,top,w,d,h,facing,band:false,palette:{gold:AMBER,tint:'#14121e'}});
+  const root=base.root,hw=w/2,hd=d/2,face=f>0?Math.PI/2:-Math.PI/2;
+  const amber=new THREE.MeshStandardMaterial({color:AMBER,emissive:AMBER,emissiveIntensity:2.2,roughness:.4});
+  const add=(geo,m,px,py,pz,ry=0)=>{const o=new THREE.Mesh(geo,m);o.position.set(px,py,pz);o.rotation.y=ry;root.add(o);return o;};
+  const lit=(tex,k=1)=>new THREE.MeshStandardMaterial({map:tex,emissiveMap:tex,emissive:'#ffffff',emissiveIntensity:k,roughness:.4,transparent:true});
+  add(new THREE.BoxGeometry(w+.62,.1,d+.62),amber,x,top+h+.16,z);
+  // RANKD on the roof: white letters, the A in amber.
+  const word=imgTex('rankd-roof',2048,560,[],g=>{g.clearRect(0,0,2048,560);g.font=`700 400px ${SANS}`;g.textBaseline='alphabetic';g.textAlign='left';
+    const parts=[['R','#ffffff'],['A',AMBER],['NKD','#ffffff']];let total=0;for(const [t] of parts)total+=g.measureText(t).width+28;let cx=(2048-total)/2;
+    for(const [t,c] of parts){g.fillStyle=c;g.fillText(t,cx,440);cx+=g.measureText(t).width+28;}});
+  add(new THREE.PlaneGeometry(8.6,2.35),Object.assign(lit(word,1.1),{depthWrite:false,side:THREE.DoubleSide}),x+f*(hw-.6),top+h+1.75,z,face);
+  // The ticket logo, big and glowing, standing by the door.
+  const ticket=new THREE.TextureLoader().load(url('logos/rankd.svg'));ticket.colorSpace=THREE.SRGBColorSpace;
+  add(new THREE.BoxGeometry(.2,2.4,2.4),new THREE.MeshStandardMaterial({color:INKD,roughness:.4}),x+f*(hw+1.2),top+1.45,z-hd+2.4);
+  add(new THREE.PlaneGeometry(2.3,2.3),lit(ticket,.8),x+f*(hw+1.31),top+1.45,z-hd+2.4,face);
+  // Inside: a wall of ranked poster tiles on the back wall.
+  const WW=d-3,WH=h-1.4,TH=Math.round(2048*WH/WW);
+  const wall=imgTex('rankd-wall',2048,TH,[],g=>{g.fillStyle=INKD;g.fillRect(0,0,2048,TH);const cols=['#2b3a67','#6a2c3f','#2f5a4a','#7a4b1e','#3c2a63','#1f4f6e','#5c2a2a','#2a5d5d'];
+    const n=8,gap=26,w2=(2048-gap*(n+1))/n,h2=Math.min(TH-60,w2*1.5),y0=(TH-h2)/2;
+    for(let i=0;i<n;i++){const cx=gap+i*(w2+gap),grd=g.createLinearGradient(cx,y0,cx,y0+h2);grd.addColorStop(0,cols[i]);grd.addColorStop(1,'#0a0a10');
+      g.fillStyle=grd;g.beginPath();g.roundRect(cx,y0,w2,h2,16);g.fill();g.fillStyle='rgba(255,255,255,.12)';g.fillRect(cx+24,y0+h2*.66,w2-48,12);g.fillRect(cx+24,y0+h2*.66+26,w2-90,9);
+      g.fillStyle=i===0?AMBER:'#ffffff';g.beginPath();g.roundRect(cx+14,y0+14,100,62,31);g.fill();g.fillStyle=INKD;g.font=`900 42px ${SANS}`;g.textAlign='center';g.textBaseline='middle';g.fillText('#'+String(i+1).padStart(2,'0'),cx+64,y0+46);}});
+  add(new THREE.PlaneGeometry(WW,WH),lit(wall,.7),x-f*(hw-.12),top+.3+WH/2+.3,z,face);
+  // The duel screen: which is better?
+  const duel=imgTex('rankd-duel',1600,900,[],g=>{g.fillStyle=INKD;g.fillRect(0,0,1600,900);g.fillStyle='#ffffff';g.font=`700 110px ${SANS}`;g.textAlign='center';g.fillText('Which is better?',800,150);
+    for(const [cx,c] of [[420,'#2b3a67'],[1180,'#6a2c3f']]){const grd=g.createLinearGradient(0,240,0,820);grd.addColorStop(0,c);grd.addColorStop(1,'#0a0a10');g.fillStyle=grd;g.beginPath();g.roundRect(cx-230,240,460,580,24);g.fill();}
+    g.fillStyle=AMBER;g.beginPath();g.arc(800,530,90,0,7);g.fill();g.fillStyle=INKD;g.font=`900 70px ${SANS}`;g.textBaseline='middle';g.fillText('VS',800,534);});
+  add(new THREE.BoxGeometry(.25,2.1,3.6),new THREE.MeshStandardMaterial({color:INKD,roughness:.3}),x,top+.25+1.6,z+hd*.45);
+  add(new THREE.PlaneGeometry(3.4,1.9),lit(duel,.8),x+f*.14,top+.25+1.6,z+hd*.45,face);
+  // Rank badges floating above the roof.
+  const badge=(n,i)=>{const t=imgTex('rankd-badge-'+n,512,256,[],g=>{g.clearRect(0,0,512,256);g.fillStyle=i===0?AMBER:'#ffffff';g.beginPath();g.roundRect(16,40,480,176,88);g.fill();
+      g.fillStyle=INKD;g.font=`900 120px ${SANS}`;g.textAlign='center';g.textBaseline='middle';g.fillText('#'+n,256,132);});
+    const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthWrite:false,fog:false,color:'#c9c9d6'}));sp.scale.set(2.4,1.2,1);root.add(sp);return sp;};
+  const badges=['01','02','03'].map((n,i)=>({sp:badge(n,i),y:top+h+4.2+i*.9,ph:i*1.7}));
+  let clock=0;
+  return {root,solid:base.solid,update(dt){clock+=Math.min(dt,.1);
+    badges.forEach((b,i)=>{b.sp.position.set(x+f*(hw-1.5)+Math.sin(clock*.45+b.ph)*.5,b.y+Math.sin(clock*1+b.ph)*.2,z+(i-1)*3.4);});
+    amber.emissiveIntensity=1.9+Math.sin(clock*1.1)*.4;}};
+}

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { THEME } from '../world/theme.js';
 import { buildKeelSign } from './keel.js';
 import { buildParking, experienceBoard } from './parking.js';
-import { buildLux, buildKeelBoutique } from './lux.js';
+import { buildLux, buildKeelBoutique, buildRankdBoutique } from './lux.js';
 import { mountStores } from '../stores/mount.tsx';
 import AppleBlock from '../stores/AppleBlock.tsx';
 import NikeBlock from '../stores/NikeBlock.tsx';
@@ -44,9 +44,9 @@ export function buildNYCWorld({prep,materials,player}){
   const storeSolids=spots.map(p=>[p.x,p.z,PW/2,PW/2]);
   // Brooklyn: a big one floor glass boutique on every block, facing the river.
   // The first one, where the bridge lands, is Keel's flagship.
-  const KEEL_BK=5;
+  const KEEL_BK=5,RANKD_BK=4;   // the second one is Rankd
   const lux=BK.map((key,j)=>{const b=find(9,j),cx=(b.x0+b.x1)/2,cz=(b.z0+b.z1)/2;
-    const L=j===KEEL_BK?buildKeelBoutique({x:cx,z:cz,top,facing:-1}):buildLux({x:cx,z:cz,top,w:9,d:17,facing:-1,style:j});group.add(L.root);return {...L,x:cx,z:cz,j};});
+    const L=j===KEEL_BK?buildKeelBoutique({x:cx,z:cz,top,facing:-1}):j===RANKD_BK?buildRankdBoutique({x:cx,z:cz,top,facing:-1}):buildLux({x:cx,z:cz,top,w:9,d:17,facing:-1,style:j});group.add(L.root);return {...L,x:cx,z:cz,j};});
   // A parking bay in front of every place: park, press Enter.
   const IDS=['rush','hindra','aaq','bigup'],NAMES=['Rush Graphics','Hindra Studio','AAQ Properties','Big Uppetite'];
   // Parallel bays in the parking lane of street 78, in front of each store; Keel's
@@ -54,7 +54,7 @@ export function buildNYCWorld({prep,materials,player}){
   const parking=buildParking({top,places:[...spots.map((p,i)=>({id:IDS[i],name:NAMES[i],x:p.x,z:ST[5]+(EDGE+HALF)/2,side:1,store:{x:p.x,z:p.z}})),
     {id:'keel',name:'Keel',x:kx,z:ST[5]-(EDGE+HALF)/2,side:-1,store:{x:kx,z:kz}},
     // Each Brooklyn boutique: a bay on the riverside road, right in front of it.
-    ...lux.map(L=>({id:L.j===KEEL_BK?'keel-bk':'lux'+L.j,name:L.j===KEEL_BK?'Keel':'',x:BAV[0]+(EDGE+HALF)/2,z:L.z,side:1,axis:'z',store:{x:L.x,z:L.z}}))]});
+    ...lux.map(L=>({id:L.j===KEEL_BK?'keel-bk':L.j===RANKD_BK?'rankd':'lux'+L.j,name:L.j===KEEL_BK?'Keel':L.j===RANKD_BK?'Rankd':'',x:BAV[0]+(EDGE+HALF)/2,z:L.z,side:1,axis:'z',store:{x:L.x,z:L.z}}))]});
   group.add(parking.root);
   // A smart board on the plaza at the start of the row, turned toward the crossing
   // you come from (east, on street 78).

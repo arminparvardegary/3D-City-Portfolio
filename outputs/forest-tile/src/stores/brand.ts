@@ -6,6 +6,7 @@ export const BRAND = {
   hindra: { name: "Hindra Studio", short: "HINDRA", sub: "STUDIO", color: "#5ab4f0", dark: "#121212", logo: "logos/hindra.png" },
   aaq: { name: "AAQ Properties", short: "AAQ", sub: "PROPERTIES", color: "#c9a957", dark: "#58585a", logo: "logos/aaq.png" },
   bigup: { name: "Big Uppetite", short: "Big Uppetite", sub: "BU", color: "#ffc93a", dark: "#2a211a", logo: "logos/biguppetite.svg", logoWhite: "logos/biguppetite-white.svg" },
+  rankd: { name: "Rankd", short: "RANKD", sub: "Rank everything", color: "#f5a623", dark: "#0a0a10", logo: "logos/rankd.svg" },
   keel: { name: "Keel", short: "Keel", sub: "Your AI assistant", color: "#2f6bff", dark: "#1d1d1f", logo: "keel/avatar.jpg", banner: "keel/pose-chat.webp" },
 };
 export const url = (p: string) => `${import.meta.env.BASE_URL}${p}`;
