@@ -4,7 +4,7 @@
 // gears and soft burbles when you lift off; tyre roll and wind stay calm, as in
 // a quiet cabin; a warm two tone horn (H). The city sits in a real acoustic
 // space (reverb): a low traffic rumble, nearby cars, distant horns and sirens,
-// the police car's siren when close, birds in Central Park, water at the edge.
+// the police car's siren when close, water at the edge.
 // A soft lounge pad plays underneath (N toggles it). Sound starts on the first
 // key press or click; the button mutes; both are remembered.
 const KEY='nyc-sound',MKEY='nyc-music';
@@ -121,7 +121,6 @@ export function createAudio({car,world,maxSpeed=()=>9.6}){
   const hit=s=>{thump(.9*s,.45,260);tone1(58,.35,.35*s,{slide:.6,dest:N.near});};
   const burble=()=>{thump(.25,.12,500);};
   const distantHorn=()=>{const f=[311,349,392][Math.floor(Math.random()*3)];tone1(f,.4,.018,{type:'triangle'});tone1(f*1.25,.4,.014,{type:'triangle'});};
-  const chirp=()=>{const f=2800+Math.random()*1600;for(let k=0;k<2+Math.floor(Math.random()*3);k++)tone1(f*(1+Math.random()*.15),.08,.025,{slide:1.35,delay:k*.1});};
   const ui={prompt:()=>{tone1(784,.5,.07);tone1(1175,.7,.05,{delay:.12});},step:()=>tone1(988,.25,.04),open:()=>{tone1(523,.6,.06);tone1(659,.7,.05,{delay:.1});tone1(988,.9,.04,{delay:.2});}};
 
   const typing=t=>t&&(t.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
@@ -137,7 +136,7 @@ export function createAudio({car,world,maxSpeed=()=>9.6}){
   // Lounge chords (MIDI notes): Dmaj9, Bm9, Gmaj7#11, A13sus.
   const CHORDS=[[50,57,61,64,66],[47,54,57,61,62],[43,50,54,59,61],[45,52,55,59,62]];
   const midi=n=>440*Math.pow(2,(n-69)/12);
-  let shown={},time=0,nextHorn=5,nextSiren=25,nextChirp=0,chord=-1,nextChord=0,nextBell=6,lastThr=0;
+  let shown={},time=0,nextHorn=5,nextSiren=25,chord=-1,nextChord=0,nextBell=6,lastThr=0;
   function update(dt){
     if(!ctx||!on||ctx.state!=='running'){if(ctx&&on&&ctx.state==='suspended'&&!document.hidden)ctx.resume();return;}
     time+=dt;const T=ctx.currentTime,p=car.pose(),v=Math.abs(car.speed),k=Math.min(1,v/maxSpeed()),thr=Math.max(0,car.throttle),set=(param,val,tc=.08)=>param.setTargetAtTime(val,T,tc);
@@ -160,10 +159,9 @@ export function createAudio({car,world,maxSpeed=()=>9.6}){
     let near=1e9,police=1e9;for(const c of world.trafficCars??[]){const d=Math.hypot(c.x-p.x,c.z-p.z);if(d<near)near=d;if(String(c.type).startsWith('police')&&d<police)police=d;}
     set(N.traffic.g.gain,.14/(1+near/7),.3);
     set(N.siren.o.frequency,650+Math.sin(time*2)*230,.06);set(N.siren.g.gain,police<40?.025*(1-police/40):0,.3);
-    // Water at the edge of the island, birds in Central Park.
+    // Water at the edge of the island.
     const edge=Math.min(Math.abs(p.x-54),Math.abs(p.x-82),Math.abs(p.x+120),Math.abs(p.z-120),Math.abs(p.z+120));
     set(N.water.g.gain,edge<18?.05*(1-edge/18)*(.75+.25*Math.sin(time*.8)):0,.4);
-    if(p.x<-35&&p.z<-39&&time>nextChirp){chirp();nextChirp=time+.5+Math.random()*1.8;}
     if(time>nextHorn){distantHorn();nextHorn=time+7+Math.random()*12;}
     if(time>nextSiren){const t0=T,o=ctx.createOscillator(),gg=ctx.createGain();o.type='sine';gg.gain.setValueAtTime(0,t0);gg.gain.linearRampToValueAtTime(.008,t0+2);gg.gain.linearRampToValueAtTime(0,t0+8);
       for(let i=0;i<16;i++)o.frequency.setValueAtTime(i%2?700:920,t0+i*.5);o.connect(gg).connect(N.space);o.start(t0);o.stop(t0+8.2);nextSiren=time+45+Math.random()*45;}
