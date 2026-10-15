@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { THEME } from '../world/theme.js';
 import { buildKeelSign } from './keel.js';
-import { buildParking } from './parking.js';
+import { buildParking, experienceWall } from './parking.js';
 import { mountStores } from '../stores/mount.tsx';
 import AppleBlock from '../stores/AppleBlock.tsx';
 import NikeBlock from '../stores/NikeBlock.tsx';
@@ -46,6 +46,9 @@ export function buildNYCWorld({prep,materials,player}){
   const parking=buildParking({top,places:[...spots.map((p,i)=>({id:IDS[i],name:NAMES[i],x:p.x,z:ST[5]+(EDGE+HALF)/2,side:1})),
     {id:'keel',name:'Keel',x:kx,z:ST[5]-(EDGE+HALF)/2,side:-1}]});
   group.add(parking.root);
+  // "WORK EXPERIENCE" on the dark side wall of the first store (Rush), facing the
+  // crossing you come from; the arrow points along the row.
+  group.add(experienceWall({x:spots[0].x+3.56,y:top+2.5,z:spots[0].z,w:5.4,h:4.2,arrow:1}));
   const bridge=buildBridge({prep});group.add(bridge.root);
   for(const o of [city.root])o.traverse(m=>{if(m.isMesh)[].concat(m.material).forEach(x=>prep?.(x));});
   // Traffic: about twenty cars of every type, each with its own speed.
