@@ -11,7 +11,8 @@ import { createSkid } from './fx/skid.js';
 // (it squats, dives and leans, and bounces on hits), the lights follow what you
 // do, and a handbrake drift leaves fading tyre marks and dust. All feel
 // constants live in FEEL (motion.js). select(i) swaps the vehicle in place.
-const KEYS={KeyW:'gas',ArrowUp:'gas',KeyS:'brake',ArrowDown:'brake',KeyA:'left',ArrowLeft:'left',KeyD:'right',ArrowRight:'right',Space:'hand'};
+// Space: handbrake (rear wheels lock). Command: front brake (front wheels lock, the tyres smoke).
+const KEYS={KeyW:'gas',ArrowUp:'gas',KeyS:'brake',ArrowDown:'brake',KeyA:'left',ArrowLeft:'left',KeyD:'right',ArrowRight:'right',Space:'hand',MetaLeft:'front',MetaRight:'front'};
 // Static solids the car cannot pass ([x,z,halfW,halfD] boxes, [x,z,r] circles); the world adds them.
 const BOXES=[];
 const CIRCLES=[];
@@ -34,7 +35,7 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
   // Sprung body: angles (rad) and heave (units), each with its own velocity.
   let pitch=0,pitchV=0,roll=0,rollV=0,heave=0,heaveV=0;
   let parts=buildVehicle(index,parent,m,prep);addContact(parts);let current=index,bodyY=parts.car.position.y,rigY=parts.rig.position.y-SEAT;parts.rig.rotation.order='YXZ';
-  const skid=createSkid(parent);
+  const skid=createSkid(parent),smoke=createSkid(parent,{color:'#e4e1f0',size:2.1,rate:36,opacity:.42,life:2.2,rise:.9}),frontW=[{x:0,z:0},{x:0,z:0}];
   // The footprint as a row of circles along the car.
   let probes=[],r=1;
   const footprint=()=>{r=parts.width/2+.05;const k=Math.max(0,parts.length/2-r*.9),n=Math.max(1,Math.ceil(k/r));probes=[];for(let i=-n;i<=n;i++)probes.push(k*i/n);};
@@ -73,11 +74,14 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
   m.headlight.emissive.set('#fff6e0');m.tailLight.emissive.set('#ff2a22');
   const typing=t=>t&&(t.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
   addEventListener('keydown',e=>{
-    if(locked||typing(e.target)||e.metaKey||e.ctrlKey||e.altKey)return;
+    if(locked||typing(e.target)||e.ctrlKey||e.altKey)return;
+    // With Command held only driving keys count (Command plus a letter stays the browser's).
+    if(e.metaKey&&!/^(Meta|Arrow|Space)/.test(e.code))return;
     if(e.code==='KeyR'){api.reset();return;}
     const k=KEYS[e.code];if(!k)return;down.add(k);e.preventDefault();
   });
-  addEventListener('keyup',e=>{const k=KEYS[e.code];if(k)down.delete(k);});
+  // macOS sends no keyup for keys let go while Command is down: releasing Command clears them.
+  addEventListener('keyup',e=>{const k=KEYS[e.code];if(k)down.delete(k);if(k==='front')down.clear();});
   addEventListener('blur',()=>down.clear());
 
   // Fixed timestep: the simulation always advances in 1/120 s steps, whatever the
@@ -144,14 +148,17 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
   // handbrake (Space) locks the rear: grip drops, the tail steps out and the car
   // slides until you let go.
   function step(dt){
-    const gas=down.has('gas'),brake=down.has('brake'),hand=down.has('hand');
+    const gas=down.has('gas'),brake=down.has('brake'),hand=down.has('hand'),front=down.has('front');
+    const held=(hand||front)&&Math.abs(v)<.6;   // a locked axle holds the car: the engine cannot push it
     brakeRamp=damp(brakeRamp,brake&&v>.15||gas&&v<-.15?1:0,16,dt);
     let acc;
-    if(gas&&v>=-.15)acc=C.engine*(1-Math.max(v,0)/C.maxSpeed);
+    if(held){v=0;acc=0;}
+    else if(gas&&v>=-.15&&!hand)acc=C.engine*(1-Math.max(v,0)/C.maxSpeed);
     else if(brake&&v<=.15)acc=-C.engine*.7*(1-Math.max(-v,0)/C.maxReverse);
     else acc=-Math.sign(v)*(C.coast+C.drag*v*v);
     acc-=Math.sign(v)*C.brake*brakeRamp;
-    if(hand)acc-=Math.sign(v)*6.5;
+    if(hand&&!held)acc-=Math.sign(v)*6.5;
+    if(front&&!held)acc-=Math.sign(v)*C.brake*.75;   // front brake: a hard stop with the tyres locked
     const prevV=v;v+=acc*dt;
     if(prevV!==0&&Math.sign(v)!==Math.sign(prevV)&&!(gas&&prevV<0)&&!(brake&&prevV>0))v=0;   // brakes stop, they do not reverse
     v=THREE.MathUtils.clamp(v,-C.maxReverse,C.maxSpeed);
@@ -165,6 +172,7 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
     let yawWant=v/parts.wheelbase*Math.tan(steer);
     const cap=grip/Math.max(speed,.6);yawWant=THREE.MathUtils.clamp(yawWant,-cap,cap);
     if(hand&&speed>1.2)yawWant*=C.handSwing;                // the tail swings round when the rear locks
+    if(front&&speed>1.5)yawWant*=.3;                        // locked fronts barely steer
     yaw=damp(yaw,yawWant,hand?5:9,dt);   // turns build up smoothly
     // Sideways slip: decays fast with grip, lingers while the handbrake is on.
     vy+=-yaw*v*dt*(hand?.55:.08);vy=damp(vy,0,hand?1.6:14,dt);
@@ -223,6 +231,11 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
     const tr=parts.track,rz=parts.rearZ,cs=Math.cos(h),sn=Math.sin(h);
     rear[0].x=x+sn*rz+cs*tr;rear[0].z=z+cs*rz-sn*tr;rear[1].x=x+sn*rz-cs*tr;rear[1].z=z+cs*rz+sn*tr;
     skid.step(dt,rear,slide,fx*v+fz*vy,fz*v-fx*vy);
+    // Tyre smoke: locked fronts while moving smoke at the front; Command and gas
+    // standing still is a burnout, the rear wheels spin and smoke.
+    const fzw=rz+parts.wheelbase;frontW[0].x=x+sn*fzw+cs*tr;frontW[0].z=z+cs*fzw-sn*tr;frontW[1].x=x+sn*fzw-cs*tr;frontW[1].z=z+cs*fzw+sn*tr;
+    const lockup=front&&speed>1.2?.6+speed/C.maxSpeed:0,burnout=front&&gas&&speed<1.2?1.6:0;
+    smoke.step(dt,burnout?rear:frontW,Math.max(lockup,burnout),fx*v,fz*v);
 
     const moving=speed>.03,braking=brakeRamp>.2||hand&&moving;
     tail=damp(tail,braking?1.9:(v<-.03?1.1:.45),14,dt);
@@ -246,7 +259,7 @@ export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
     // The ambulance light bar pulses.
     const flashing=current===AMBULANCE;
     if(flashing)m.siren.emissiveIntensity=.4+1.2*Math.max(0,Math.sin(time*.012));
-    const fx=skid.update(frame);
+    const fx=skid.update(frame)|smoke.update(frame);
     const springs=Math.abs(pitchV)+Math.abs(rollV)+Math.abs(heaveV)>1e-4||Math.abs(pitch)+Math.abs(roll)+Math.abs(heave)>1e-4;
     return Math.abs(v)>.02||Math.abs(vy)>.01||Math.abs(steer)>.001||springs||Math.abs(x-prev.x)+Math.abs(z-prev.z)>1e-6||flashing||fx;
   };

@@ -6,9 +6,10 @@ import { THEME } from '../world/theme.js';
 // rear wheel; each remembers when it was laid and the shader fades it out, so
 // nothing is updated per frame once laid. Dust puffs rise, grow and vanish.
 // Both are one instanced draw call from a fixed pool (no allocations).
-const MARKS=600,PUFFS=64,SEG=.18,Y=.125;
+const MARKS=600,PUFFS=96,SEG=.18,Y=.125;
 
-export function createSkid(parent){
+// Options make a second, smokier instance: colour, puff size, how many and how fast.
+export function createSkid(parent,{color=THEME.palette.dust,size=1,rate=22,opacity=.5,life=1.4,rise=.5}={}){
   const clock={value:0};
   // --- Marks ---------------------------------------------------------------
   const markMat=new THREE.MeshBasicMaterial({color:THEME.palette.tyreMark,transparent:true,opacity:.42,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1});
@@ -37,8 +38,8 @@ export function createSkid(parent){
   }
 
   // --- Dust ----------------------------------------------------------------
-  const dustMat=new THREE.MeshStandardMaterial({color:THEME.palette.dust,roughness:1,transparent:true,opacity:.5,depthWrite:false});
-  const dust=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(.22,1),dustMat,PUFFS);dust.frustumCulled=false;parent.add(dust);
+  const dustMat=new THREE.MeshStandardMaterial({color,roughness:1,transparent:true,opacity,depthWrite:false});
+  const dust=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(.22*size,1),dustMat,PUFFS);dust.frustumCulled=false;parent.add(dust);
   const puffs=Array.from({length:PUFFS},()=>({age:9,x:0,y:0,z:0,vx:0,vz:0}));let nextPuff=0,emit=0,alive=0;
   for(let i=0;i<PUFFS;i++)dust.setMatrixAt(i,zero);
   const o=new THREE.Object3D();
@@ -50,7 +51,7 @@ export function createSkid(parent){
       const on=slide>FEEL.drift.slip;
       wheels.forEach((w,i)=>{if(on)lay(trails[i],w.x,w.z);else trails[i].on=false;});
       if(on&&FEEL.drift.dust>0){
-        emit+=dt*FEEL.drift.dust*Math.min(2,slide)*22;
+        emit+=dt*FEEL.drift.dust*Math.min(2,slide)*rate;
         while(emit>=1){emit-=1;const w=wheels[nextPuff&1],s=puffs[nextPuff];nextPuff=(nextPuff+1)%PUFFS;
           s.age=0;s.x=w.x;s.y=.2;s.z=w.z;s.vx=-vx*.15+(Math.random()-.5)*.6;s.vz=-vz*.15+(Math.random()-.5)*.6;}
       }
@@ -58,8 +59,8 @@ export function createSkid(parent){
     // Called once per rendered frame. Returns true while dust is in the air or marks are still fading.
     update(dt){
       alive=0;
-      for(let i=0;i<PUFFS;i++){const s=puffs[i];if(s.age>=1.4)continue;s.age+=dt;const k=Math.min(1,s.age/1.4);alive++;
-        s.x+=s.vx*dt;s.z+=s.vz*dt;s.y+=dt*.5;s.vx=damp(s.vx,0,2,dt);s.vz=damp(s.vz,0,2,dt);
+      for(let i=0;i<PUFFS;i++){const s=puffs[i];if(s.age>=life)continue;s.age+=dt;const k=Math.min(1,s.age/life);alive++;
+        s.x+=s.vx*dt;s.z+=s.vz*dt;s.y+=dt*rise;s.vx=damp(s.vx,0,2,dt);s.vz=damp(s.vz,0,2,dt);
         o.position.set(s.x,s.y,s.z);o.scale.setScalar(k>=1?0:(.5+k*1.8)*(1-k)**1.5);o.updateMatrix();dust.setMatrixAt(i,o.matrix);}
       if(alive||dust.userData.live){dust.instanceMatrix.needsUpdate=true;dust.userData.live=alive>0;}
       return alive>0||clock.value-lastLaid<FEEL.drift.markLife;
