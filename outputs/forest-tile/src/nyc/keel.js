@@ -65,16 +65,26 @@ export function buildKeel({block:b,top}){
   return {root,solids,occluders,place:{x:cx,z:cz,y:top+4,dist:28}};
 }
 
-// Just the giant "Keel." name on two posts, for the roof of Keel's store.
+// Keel's roof billboard on two posts: the character, "Meet Keel." and the call to action from keeltwin.com.
 export function buildKeelSign({x,z,y,width}){
   const root=new THREE.Group();root.name='keel-sign';
   const white=new THREE.MeshStandardMaterial({color:'#f4f5f7',roughness:.35,metalness:.05});
-  const signTex=canvasTexture(2048,614,g=>{
-    g.fillStyle='#ffffff';g.fillRect(0,0,2048,614);
-    g.font=`700 470px ${FONT}`;g.textBaseline='alphabetic';const t='Keel',w=g.measureText(t).width,dot=g.measureText('.').width,x0=(2048-w-dot)/2;
-    g.fillStyle=INK;g.fillText(t,x0,500);g.fillStyle=BLUE;g.fillText('.',x0+w,500);});
+  // A billboard from keeltwin.com: the character, the headline and the button.
+  const W=3072,H=922;
+  const signTex=canvasTexture(W,H,(g,[pose])=>{
+    const grd=g.createLinearGradient(0,0,W,0);grd.addColorStop(0,'#ffffff');grd.addColorStop(1,'#eaf0ff');g.fillStyle=grd;g.fillRect(0,0,W,H);
+    contain(g,pose,40,30,760,H-30);
+    g.textBaseline='alphabetic';g.textAlign='left';
+    g.font=`700 250px ${FONT}`;g.fillStyle=INK;g.fillText('Meet',860,350);const mw=g.measureText('Meet ').width;g.fillStyle=BLUE;g.fillText('Keel.',860+mw,350);
+    g.font=`500 92px ${FONT}`;g.fillStyle='#6e6e73';g.fillText('The AI assistant you text like a friend.',866,500);
+    g.font=`500 76px ${FONT}`;g.fillText('Remembers the small stuff. Plans your day.',866,600);
+    // The call to action, as on the site.
+    const bx=866,by=680,bw=1180,bh=170;g.fillStyle=BLUE;g.beginPath();g.roundRect(bx,by,bw,bh,bh/2);g.fill();
+    g.fillStyle='#ffffff';g.font=`600 84px ${FONT}`;g.textAlign='center';g.fillText('Text Keel on iMessage  ›',bx+bw/2,by+bh/2+30);
+    g.textAlign='left';g.fillStyle=BLUE;g.font=`600 76px ${FONT}`;g.fillText('keeltwin.com',2180,790);
+  },['pose-remind.webp']);
   const sign=new THREE.MeshStandardMaterial({map:signTex,emissiveMap:signTex,emissive:'#ffffff',emissiveIntensity:.42,roughness:.6});
-  const h=width*.3,board=new THREE.Mesh(new THREE.BoxGeometry(width,h,.4),[white,white,white,white,sign,white]);
+  const h=width*H/W,board=new THREE.Mesh(new THREE.BoxGeometry(width,h,.4),[white,white,white,white,sign,white]);
   board.position.set(x,y+1.4+h/2,z);board.castShadow=true;root.add(board);
   for(const s of [-1,1]){const p=new THREE.Mesh(new THREE.BoxGeometry(.4,1.5,.4),white);p.position.set(x+s*width*.35,y+.75,z);p.castShadow=true;root.add(p);}
   return root;

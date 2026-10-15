@@ -51,7 +51,7 @@ export function createVisit({onOpen,onClose}){
 
   function fill(b){
     const job=JOBS.find(j=>j.id===b.id),logo=LOGO[b.id];
-    const logoHtml=logo?`<div class="logo" style="background-image:url('${url(logo)}')"></div>`
+    const logoHtml=logo?`<div class="logo" style="background-image:url('${url(logo)}');${b.id==='keel'?'background-size:cover;':''}"></div>`
       :`<div class="logo" style="background:#141416;display:grid;place-items:center;color:${BRAND.rush.color};font:italic 900 30px ${FONT}">RUSH</div>`;
     if(job){
       card.innerHTML=`${logoHtml}<p class="label">Experience</p><h2>${b.name}</h2><p class="role">${job.role}</p>
