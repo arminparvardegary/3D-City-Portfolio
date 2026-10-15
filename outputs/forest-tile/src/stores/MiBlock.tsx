@@ -2,7 +2,7 @@
 import { useMemo } from "react";
 import * as THREE from "three";
 import { RoundedBox } from "@react-three/drei";
-import { BRAND, imgTex, round } from "./brand";
+import { BRAND, imgTex } from "./brand";
 import { Block, Foliage, Mat, Platform, ctex, noise, rng, roundedShape, stucco } from "./kit";
 
 /* ---------- palette (sampled from the reference) ---------- */
@@ -102,11 +102,8 @@ function T() {
     }, { repeat: [4, 4] }),
     gravelBump: ctex("mi-gravel-b", 256, 256, (g, w, h) => noise(g, w, h, 5, 128, 180, 2.5), { repeat: [4, 4], color: false }),
     // Hindra Studio: the deer logo from the brand guidelines.
-    logo: imgTex("hindra-logo", 512, 512, [BRAND.hindra.logo!], (g, [im]) => {
-      g.fillStyle = "#111";
-      g.beginPath(); g.roundRect(0, 0, 512, 512, 120); g.fill();
-      round(g, im, 256, 256, 236);
-    }),
+    // Slightly over-scaled inside the circle so the crop's light margin never shows.
+    logo: imgTex("hindra-logo", 512, 512, [BRAND.hindra.logo!], (g, [im]) => { if (!im) return; g.save(); g.beginPath(); g.arc(256, 256, 256, 0, Math.PI * 2); g.clip(); g.fillStyle = "#111"; g.fillRect(0, 0, 512, 512); g.drawImage(im, -40, -40, 592, 592); g.restore(); }),
     menu: ctex("mi-menu", 512, 112, (g) => {
       g.fillStyle = C.red;
       g.fillRect(0, 0, 512, 112);
@@ -374,11 +371,13 @@ function Building({ t }: { t: Tex }) {
           </RoundedBox>
         </group>
         <group position={[-0.78, GF.h + 0.72, 0.1]}>
-          <RoundedBox args={[0.62, 0.62, 0.06]} radius={0.1} smoothness={4}>
-            <Mat c="#f46f20" r={0.4} />
-          </RoundedBox>
+          {/* Hindra's deer badge: a full black disc, the logo round on top */}
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.33, 0.33, 0.06, 48]} />
+            <Mat c="#111111" r={0.4} />
+          </mesh>
           <mesh position={[0, 0, 0.031]}>
-            <planeGeometry args={[0.62, 0.62]} />
+            <circleGeometry args={[0.31, 48]} />
             <meshStandardMaterial map={t.logo} transparent roughness={0.35} emissive="#ffffff" emissiveMap={t.logo} emissiveIntensity={0.15} />
           </mesh>
         </group>

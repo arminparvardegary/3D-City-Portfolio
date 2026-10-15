@@ -1,6 +1,6 @@
 
 import { RoundedBox } from "@react-three/drei";
-import { BRAND, contain, imgTex } from "./brand";
+import { BRAND, imgTex } from "./brand";
 import { Block, Mat, Person, ctex, stucco } from "./kit";
 import { Base, Bench, Bollard, Curtain, FONT, GLOW, Label, Planter, ProductShelf, WARM } from "./shop";
 
@@ -16,8 +16,9 @@ const PRODUCTS = ["#f4f4f2", "#202124", "#a8c7fa", "#f6c3c0", "#c4eed0", "#fde29
 function T() {
   return {
     // AAQ Properties: the real logo (gold buildings, grey name).
-    logo: imgTex("aaq-logo", 1024, 320, [BRAND.aaq.logo!], (g, [im]) => contain(g, im, 0, 0, 1024, 320)),
-    small: imgTex("aaq-small", 512, 128, [BRAND.aaq.logo!], (g, [im]) => contain(g, im, 0, 0, 512, 128)),
+    // The logo cropped to its content (the PNG has wide margins), so it fills the sign.
+    logo: imgTex("aaq-logo", 1400, 1000, [BRAND.aaq.logo!], (g, [im]) => { if (im) g.drawImage(im, 229, 186, 1036, 740, 0, 0, 1400, 1000); }),
+    small: imgTex("aaq-small", 700, 500, [BRAND.aaq.logo!], (g, [im]) => { if (im) g.drawImage(im, 229, 186, 1036, 740, 0, 0, 700, 500); }),
   };
 }
 type Tex = ReturnType<typeof T>;
@@ -163,8 +164,8 @@ function Store({ t }: { t: Tex }) {
         <boxGeometry args={[0.16, U, S - 0.1]} />
         <Mat c={GG.white} r={0.85} bump={plaster} bs={0.6} />
       </mesh>
-      <group position={[-0.45, G + BAND + U / 2 + 0.05, h + 0.01]}>
-        <Label map={t.logo} w={1.9} h={0.6} ei={0.25} lit />
+      <group position={[-0.5, G + BAND + U / 2, h + 0.01]}>
+        <Label map={t.logo} w={1.55} h={1.1} ei={0.25} lit />
       </group>
       <mesh position={[1.15, G + BAND + U / 2, h + 0.01]}>
         <boxGeometry args={[0.9, U, 0.04]} />
@@ -179,7 +180,7 @@ function Store({ t }: { t: Tex }) {
         </group>
       ))}
       <group position={[h + 0.02, G - 0.25, -1.2]} rotation={[0, Math.PI / 2, 0]}>
-        <Label map={t.small} w={0.6} h={0.15} ei={0.4} />
+        <Label map={t.small} w={0.42} h={0.3} ei={0.4} />
       </group>
 
       {/* roof: cornice with blue trim */}
