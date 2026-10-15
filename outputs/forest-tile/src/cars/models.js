@@ -85,6 +85,23 @@ export async function loadModels(prep){
 }
 export const modelInfo=id=>cache.get(id);
 
+// The Roadster is open topped, so it has a driver you can see: seated in the
+// left seat, leaning back a touch, hands on the wheel. Vertex coloured, in model
+// space, so the traffic batches can merge it too.
+function roadsterDriver(lift){
+  const out=[],put=(geo,color,x,y,z,rx=0)=>{if(rx)geo.rotateX(rx);geo.translate(x,y+lift,z);const g=geo.index?geo.toNonIndexed():geo;g.deleteAttribute('uv');
+    const n=g.attributes.position.count,c=new THREE.Color(color),col=new Float32Array(n*3);for(let i=0;i<n;i++)col.set([c.r,c.g,c.b],i*3);g.setAttribute('color',new THREE.BufferAttribute(col,3));out.push(g);};
+  const x=.27,z=-.24,SHIRT='#e8e4da',SKIN='#d9a27c';
+  put(new THREE.BoxGeometry(.36,.44,.22),SHIRT,x,.84,z,-.18);                         // torso, leaning back
+  put(new THREE.CylinderGeometry(.055,.06,.07,10),SKIN,x,1.08,z-.03);                  // neck
+  put(new THREE.SphereGeometry(.105,16,12),SKIN,x,1.19,z-.02);                         // head
+  put(new THREE.SphereGeometry(.11,16,8,0,Math.PI*2,0,Math.PI*.5),'#2a1d15',x,1.21,z-.04);   // hair
+  put(new THREE.BoxGeometry(.17,.04,.03),'#15161a',x,1.215,z+.075);                   // sunglasses, across the eyes
+  for(const sd of [-1,1]){put(new THREE.BoxGeometry(.08,.08,.34),SHIRT,x+sd*.17,.9,z+.17,.55);   // arms to the wheel
+    put(new THREE.SphereGeometry(.04,8,6),SKIN,x+sd*.13,.86,z+.34);}                   // hands
+  return out;
+}
+
 // A drivable copy for the player (and the garage): rig > body + wheel pivots,
 // the format car.js expects. Paint is its own material, so it can be recoloured.
 export function buildModelVehicle(id,parent){
@@ -103,6 +120,7 @@ export function buildModelVehicle(id,parent){
     const inv=new THREE.Matrix4().makeTranslation(-w.c.x,-(w.c.y+C.lift),-w.c.z);mesh.matrix.copy(inv.multiply(m));mesh.matrix.decompose(mesh.position,mesh.quaternion,mesh.scale);spin.add(mesh);
     spins.push(spin);}
   body.add(copy);
+  if(id==='roadster'){const m=new THREE.Mesh(mergeGeometries(roadsterDriver(C.lift),false),new THREE.MeshStandardMaterial({vertexColors:true,roughness:.7}));m.castShadow=true;body.add(m);}
   paint=paint??new THREE.MeshPhysicalMaterial({color:C.paintColor});
   return {rig,car:body,wheels:spins,paint,color:C.paintColor,name:C.M.name,wheelR:C.wheelR,wheelbase:C.front-C.rear,rearZ:C.rear,track:C.track,length:C.L,width:C.Wd};
 }
@@ -129,6 +147,7 @@ export function createModelFleet({cars,prep}){
       return {geo:mergeGeometries(out.wheel,false),at:new THREE.Vector3(w.c.x,w.c.y+C.lift,w.c.z),front:w.front,r:Math.max(.05,w.r)};});};
   const bake=(id)=>{if(geos[id])return geos[id];const C=cache.get(id),out={solid:[],glass:[],lamp:[]};C.root.updateMatrixWorld(true);
     C.root.traverse(o=>{if(!o.isMesh||WHEEL.test(o.name))return;bakeMesh(o,new THREE.Matrix4().makeTranslation(0,C.lift,0).multiply(o.matrixWorld),out);});
+    if(id==='roadster')out.solid.push(...roadsterDriver(C.lift));
     const merged={};for(const b in out)if(out[b].length)merged[b]=mergeGeometries(out[b],false);return geos[id]=merged;};
   const P=m=>{prep?.(m);return m;};
   const mats={solid:P(new THREE.MeshStandardMaterial({vertexColors:true,roughness:.4,metalness:.3,envMapIntensity:1.1})),
