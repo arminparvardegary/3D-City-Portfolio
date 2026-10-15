@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { createRoot, createPortal, extend, _roots } from '@react-three/fiber';
 import type { ComponentType } from 'react';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { BrandContext, type Brand } from './brand';
 
 // The store blocks are React Three Fiber components. They are rendered by a
 // hidden R3F root straight into a group of the city's own scene (a portal), so
@@ -11,7 +12,16 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 // <Canvas> normally registers three's classes; without it, register them here.
 extend(THREE as any);
 
-export type Store = { C: ComponentType; x: number; y: number; z: number; rot: number; scale: number };
+// brand: whose store this is (default: the store's own built-in brand).
+export type Store = {
+  C: ComponentType;
+  x: number;
+  y: number;
+  z: number;
+  rot: number;
+  scale: number;
+  brand?: Brand;
+};
 
 export function mountStores(parent: THREE.Object3D, stores: Store[]) {
   const group = new THREE.Group();
@@ -29,10 +39,12 @@ export function mountStores(parent: THREE.Object3D, stores: Store[]) {
   root.render(
     createPortal(
       <>
-        {stores.map(({ C, x, y, z, rot, scale }, i) => (
-          <group key={i} position={[x, y, z]} rotation={[0, rot, 0]} scale={scale}>
-            <C />
-          </group>
+        {stores.map(({ C, x, y, z, rot, scale, brand }, i) => (
+          <BrandContext.Provider key={i} value={brand ?? null}>
+            <group position={[x, y, z]} rotation={[0, rot, 0]} scale={scale}>
+              <C />
+            </group>
+          </BrandContext.Provider>
         ))}
       </>,
       group,

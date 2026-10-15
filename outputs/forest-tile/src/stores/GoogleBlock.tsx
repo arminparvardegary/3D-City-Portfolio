@@ -1,5 +1,5 @@
 import { RoundedBox } from '@react-three/drei';
-import { BRAND, imgTex } from './brand';
+import { BRAND, brandKey, contain, imgTex, useBrand, type Brand } from './brand';
 import { Block, Mat, Person, ctex, stucco } from './kit';
 import { Base, Bench, Bollard, Curtain, FONT, GLOW, Label, Planter, ProductShelf, WARM } from './shop';
 
@@ -12,16 +12,21 @@ const GG = {
 };
 const PRODUCTS = ['#f4f4f2', '#202124', '#a8c7fa', '#f6c3c0', '#c4eed0', '#fde293', '#e8eaed'];
 
-function T() {
+// AAQ's PNG has wide margins: its logo is cropped to the content so it fills the
+// sign. Any other logo is fitted whole.
+const draw =
+  (b: Brand, w: number, h: number) =>
+  (g: CanvasRenderingContext2D, [im]: (HTMLImageElement | null)[]) => {
+    if (!im) return;
+    if (b.custom) contain(g, im, w * 0.04, h * 0.04, w * 0.92, h * 0.92);
+    else g.drawImage(im, 229, 186, 1036, 740, 0, 0, w, h);
+  };
+function T(b: Brand) {
+  const src = b.logo ? [b.logo] : [];
   return {
-    // AAQ Properties: the real logo (gold buildings, grey name).
-    // The logo cropped to its content (the PNG has wide margins), so it fills the sign.
-    logo: imgTex('aaq-logo', 1400, 1000, [BRAND.aaq.logo!], (g, [im]) => {
-      if (im) g.drawImage(im, 229, 186, 1036, 740, 0, 0, 1400, 1000);
-    }),
-    small: imgTex('aaq-small', 700, 500, [BRAND.aaq.logo!], (g, [im]) => {
-      if (im) g.drawImage(im, 229, 186, 1036, 740, 0, 0, 700, 500);
-    }),
+    // The brand's logo (AAQ Properties' gold buildings and grey name by default).
+    logo: imgTex(brandKey(b, 'aaq-logo'), 1400, 1000, src, draw(b, 1400, 1000)),
+    small: imgTex(brandKey(b, 'aaq-small'), 700, 500, src, draw(b, 700, 500)),
   };
 }
 type Tex = ReturnType<typeof T>;
@@ -287,7 +292,7 @@ function StreetLight({ position }: { position: [number, number, number] }) {
 }
 
 export default function GoogleBlock() {
-  const t = T();
+  const t = T(useBrand(BRAND.aaq));
   return (
     <group>
       <Base kind="google" />

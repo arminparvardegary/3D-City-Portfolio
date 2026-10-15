@@ -108,8 +108,13 @@ const card = css`
     justify-content: center;
     margin-top: 16px;
   }
-  .links button {
+  .links {
+    gap: 22px;
+  }
+  .links button,
+  .links a {
     font-family: ${HAND};
+    text-decoration: none;
     font-size: 24px;
     color: ${INK};
     padding: 8px 4px;
@@ -160,21 +165,25 @@ const pillClass = css`
   }
 `;
 
-export function createIntro({ onPlace }) {
+// person: the owner of a builder city ({ name, title }); Armin when omitted.
+// Text from a plan goes into HTML: escape it.
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
+
+export function createIntro({ onPlace, person }) {
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const el = document.createElement('section');
   el.className = card;
   el.setAttribute('aria-label', 'About Armin');
   el.innerHTML = `<p class="label">Portfolio</p>
-    <h1>${PROFILE.name}</h1>
-    <p class="role">${PROFILE.role} · Founder of <b>Keel</b></p>
+    <h1>${esc(person?.name ?? PROFILE.name)}</h1>
+    <p class="role">${person ? esc(person.title) : `${PROFILE.role} · Founder of <b>Keel</b>`}</p>
     <p class="hint"><span class="p">P</span><span>Park at any company and press <kbd>Enter</kbd></span></p>
     <button class="go">Start driving</button>
-    <nav class="links"><button data-go="keel">See Keel ›</button></nav>`;
+    <nav class="links">${person ? '' : '<button data-go="keel">See Keel ›</button>'}<a class="build" href="${import.meta.env.BASE_URL}editor.html">${person ? 'Edit this city ›' : 'Build your own city ›'}</a></nav>`;
   const pill = document.createElement('button');
   pill.className = pillClass;
   pill.hidden = true;
-  pill.textContent = PROFILE.name.split(' ')[0];
+  pill.textContent = (person?.name ?? PROFILE.name).split(' ')[0];
   document.querySelector('.scene').append(el, pill);
 
   // The card lifts in and its rows follow.
@@ -210,13 +219,15 @@ export function createIntro({ onPlace }) {
     track('start_driving');
   };
   pill.onclick = open;
-  el.querySelector('.links').onclick = e => {
-    const go = e.target.closest('[data-go]')?.dataset.go;
-    if (!go) return;
-    close();
-    track('open_place', { place: go });
-    onPlace(go);
-  };
+  const links = el.querySelector('.links');
+  if (links)
+    links.onclick = e => {
+      const go = e.target.closest('[data-go]')?.dataset.go;
+      if (!go) return;
+      close();
+      track('open_place', { place: go });
+      onPlace(go);
+    };
   // Driving closes it.
   addEventListener('keydown', e => {
     if (!el.hidden && /^(Arrow|[wasdWASD]$)/.test(e.key)) close();

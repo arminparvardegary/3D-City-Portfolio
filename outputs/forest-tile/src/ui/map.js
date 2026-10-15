@@ -13,6 +13,7 @@ import {
   WHARF,
   BRIDGE,
   DECK_HALF,
+  PLAN,
 } from '../nyc/drive/layout.js';
 import { BRAND, url } from '../stores/brand.ts';
 import { track } from '../analytics.js';
@@ -126,6 +127,9 @@ const panelCls = css`
   }
 `;
 
+// Text from a plan goes into HTML: escape it.
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
+
 export function createMap({ world, car, goTo }) {
   const btn = document.createElement('button');
   btn.className = btnCls;
@@ -137,15 +141,14 @@ export function createMap({ world, car, goTo }) {
   panel.hidden = true;
   panel.setAttribute('role', 'dialog');
   panel.setAttribute('aria-label', 'Portfolio map');
-  panel.innerHTML =
-    '<div class="sheet" tabindex="-1"><div class="head"><h2>Armin\'s New York</h2><button class="close">Close ×</button></div><canvas></canvas><p class="hint">Click a place to drive there. Park in its bay and press Enter. Hold M to peek at the map.</p></div>';
+  panel.innerHTML = `<div class="sheet" tabindex="-1"><div class="head"><h2>${PLAN ? esc(PLAN.name) : "Armin's New York"}</h2><button class="close">Close ×</button></div><canvas></canvas><p class="hint">Click a place to drive there. Park in its bay and press Enter. Hold M to peek at the map.</p></div>`;
   document.querySelector('.scene').append(btn, panel);
   const cv = panel.querySelector('canvas'),
     g = cv.getContext('2d');
 
   // World bounds and the transform from world (x, z) to the canvas.
   const X0 = MAN.x0 - WHARF - 14,
-    X1 = BKN.x1 + WHARF + 14,
+    X1 = (BKN ?? MAN).x1 + WHARF + 14,
     Z0 = NS.z0 - WHARF - 26,
     Z1 = NS.z1 + WHARF + 40,
     DPR = Math.min(2, devicePixelRatio || 1);
@@ -165,6 +168,14 @@ export function createMap({ world, car, goTo }) {
       logos[id] = im;
     }
 
+  // A builder city's places bring their own logos (uploaded into the plan).
+  for (const b of world.parking)
+    if (b.place?.logo) {
+      const im = new Image();
+      im.src = b.place.logo;
+      im.onload = () => open && draw();
+      logos[b.id] = im;
+    }
   const places = world.parking.map(b => ({
     id: b.id === 'keel-bk' ? 'keel' : b.id,
     name: b.name || 'Boutique',
@@ -173,81 +184,21 @@ export function createMap({ world, car, goTo }) {
     bay: b,
     lux: b.id.startsWith('lux'),
   }));
-  const LANDMARK = { '1,3': 'Empire State', '2,2': 'Chrysler', '3,5': 'World Trade', '3,1': 'The Dome' };
+  // Landmarks by block: Armin's New York has four; a builder city has whatever its cells say.
+  const LM_NAMES = { empire: 'Empire State', chrysler: 'Chrysler', wtc: 'World Trade', dome: 'The Dome' };
+  const LANDMARK = PLAN
+    ? Object.fromEntries(
+        blocks()
+          .filter(b => LM_NAMES[b.cell.kind])
+          .map(b => [b.i + ',' + b.j, LM_NAMES[b.cell.kind]]),
+      )
+    : { '1,3': 'Empire State', '2,2': 'Chrysler', '3,5': 'World Trade', '3,1': 'The Dome' };
   let open = false,
     hover = null,
     raf = 0;
 
-  function draw() {
-    g.setTransform(DPR, 0, 0, DPR, 0, 0);
-    g.clearRect(0, 0, CW, CH);
-    // Sea: a soft gradient and a few gentle wave lines.
-    const sea = g.createRadialGradient(CW * 0.5, CH * 0.45, CW * 0.1, CW * 0.5, CH * 0.5, CW * 0.8);
-    sea.addColorStop(0, '#1d1650');
-    sea.addColorStop(1, '#0f0b2c');
-    g.fillStyle = sea;
-    g.beginPath();
-    g.roundRect(0, 0, CW, CH, 28);
-    g.fill();
-    g.strokeStyle = 'rgba(140,130,255,.10)';
-    g.lineWidth = 3;
-    for (let i = 0; i < 14; i++) {
-      const y = 40 + (i * CH) / 14;
-      g.beginPath();
-      for (let x = 0; x <= CW; x += 20) g[x ? 'lineTo' : 'moveTo'](x, y + Math.sin(x / 70 + i) * 6);
-      g.stroke();
-    }
-    // Land: rounded islands, a thin warm boardwalk round each, a soft shadow.
-    const R = (x0, z0, x1, z1, r) => {
-      g.beginPath();
-      g.roundRect(px(x0), pz(z0), (x1 - x0) * k, (z1 - z0) * k, r * k);
-    };
-    for (const L of [MAN, BKN]) {
-      g.save();
-      g.shadowColor = 'rgba(0,0,0,.45)';
-      g.shadowBlur = 30;
-      g.shadowOffsetY = 10;
-      g.fillStyle = '#b98b5e';
-      R(L.x0 - WHARF, NS.z0 - WHARF, L.x1 + WHARF, NS.z1 + WHARF, 16);
-      g.fill();
-      g.restore();
-      g.fillStyle = '#4e4796';
-      R(L.x0 - 0.6, NS.z0 - 0.6, L.x1 + 0.6, NS.z1 + 0.6, 13);
-      g.fill();
-    }
-    // Street centre lines, dashed.
-    const { edges } = network();
-    g.setLineDash([10, 12]);
-    g.lineCap = 'round';
-    g.strokeStyle = 'rgba(220,214,255,.28)';
-    g.lineWidth = 2;
-    for (const e of edges) {
-      if (e.kind === 'bridge' || e.a.x > e.b.x || (e.a.x === e.b.x && e.a.z > e.b.z)) continue;
-      g.beginPath();
-      g.moveTo(px(e.a.x), pz(e.a.z));
-      g.lineTo(px(e.b.x), pz(e.b.z));
-      g.stroke();
-    }
-    g.setLineDash([]);
-    // Blocks: rounded, with a soft shadow. Central Park is one green park.
-    const all = blocks(),
-      isPark = b => b.borough === 'man' && b.i <= 1 && b.j <= 1;
-    for (const b of all) {
-      if (isPark(b)) continue;
-      g.save();
-      g.shadowColor = 'rgba(0,0,0,.35)';
-      g.shadowBlur = 10;
-      g.shadowOffsetY = 4;
-      g.fillStyle = b.wide || (b.i === 1 && b.j === 4) ? '#3b2f86' : '#2e2670';
-      R(b.x0, b.z0, b.x1, b.z1, 4);
-      g.fill();
-      g.restore();
-    }
-    const pk = all.filter(isPark),
-      px0 = Math.min(...pk.map(b => b.x0)),
-      px1 = Math.max(...pk.map(b => b.x1)),
-      pz0 = Math.min(...pk.map(b => b.z0)),
-      pz1 = Math.max(...pk.map(b => b.z1));
+  // One park area: green, with trees; Central Park also gets its pond and name.
+  function drawPark({ x0: px0, x1: px1, z0: pz0, z1: pz1 }, central) {
     g.save();
     g.shadowColor = 'rgba(0,0,0,.35)';
     g.shadowBlur = 12;
@@ -256,9 +207,9 @@ export function createMap({ world, car, goTo }) {
     R(px0, pz0, px1, pz1, 8);
     g.fill();
     g.restore();
-    let rs = 7;
+    let rs = 7 + Math.round(px0);
     const rnd = () => (rs = (rs * 16807) % 2147483647) / 2147483647;
-    for (let i = 0; i < 70; i++) {
+    for (let i = 0; i < (central ? 70 : 14); i++) {
       const x = px0 + 3 + rnd() * (px1 - px0 - 6),
         z = pz0 + 3 + rnd() * (pz1 - pz0 - 6);
       g.fillStyle = i % 3 ? '#3f8a62' : '#4e9e72';
@@ -266,6 +217,7 @@ export function createMap({ world, car, goTo }) {
       g.arc(px(x), pz(z), (1.6 + rnd() * 1.4) * k, 0, 7);
       g.fill();
     }
+    if (!central) return;
     g.fillStyle = '#3b6fa8';
     g.beginPath();
     g.ellipse(px((px0 + px1) / 2 - 14), pz((pz0 + pz1) / 2 + 14), 9 * k, 6 * k, 0, 0, 7);
@@ -275,26 +227,10 @@ export function createMap({ world, car, goTo }) {
     g.textAlign = 'center';
     g.textBaseline = 'middle';
     g.fillText('Central Park', px((px0 + px1) / 2), pz(pz0) + 50);
-    // Landmarks: a small glowing marker and the name.
-    for (const b of all) {
-      const lm = LANDMARK[b.i + ',' + b.j];
-      if (!lm) continue;
-      const x = px((b.x0 + b.x1) / 2),
-        y = pz((b.z0 + b.z1) / 2);
-      g.fillStyle = '#cfc6ff';
-      g.shadowColor = '#8a7cff';
-      g.shadowBlur = 14;
-      g.beginPath();
-      g.moveTo(x, y - 22);
-      g.lineTo(x + 9, y + 4);
-      g.lineTo(x - 9, y + 4);
-      g.closePath();
-      g.fill();
-      g.shadowBlur = 0;
-      g.fillStyle = '#d8d2ff';
-      g.font = `700 34px ${HAND}`;
-      g.fillText(lm, x, y + 28);
-    }
+  }
+
+  // Armin's New York only: the bridge, the names of the areas and Liberty Island.
+  function drawNewYorkExtras() {
     // The bridge: the deck over the river and its two towers in the water.
     const bz = pz(BRIDGE.z),
       bx0 = px(BRIDGE.landM),
@@ -345,6 +281,113 @@ export function createMap({ world, car, goTo }) {
     g.fillStyle = '#b3a8f0';
     g.font = `700 36px ${HAND}`;
     g.fillText('Liberty Island', px(68), pz(150) - 11 * k - 24);
+  }
+
+  function draw() {
+    g.setTransform(DPR, 0, 0, DPR, 0, 0);
+    g.clearRect(0, 0, CW, CH);
+    // Sea: a soft gradient and a few gentle wave lines.
+    const sea = g.createRadialGradient(CW * 0.5, CH * 0.45, CW * 0.1, CW * 0.5, CH * 0.5, CW * 0.8);
+    sea.addColorStop(0, '#1d1650');
+    sea.addColorStop(1, '#0f0b2c');
+    g.fillStyle = sea;
+    g.beginPath();
+    g.roundRect(0, 0, CW, CH, 28);
+    g.fill();
+    g.strokeStyle = 'rgba(140,130,255,.10)';
+    g.lineWidth = 3;
+    for (let i = 0; i < 14; i++) {
+      const y = 40 + (i * CH) / 14;
+      g.beginPath();
+      for (let x = 0; x <= CW; x += 20) g[x ? 'lineTo' : 'moveTo'](x, y + Math.sin(x / 70 + i) * 6);
+      g.stroke();
+    }
+    // Land: rounded islands, a thin warm boardwalk round each, a soft shadow.
+    const R = (x0, z0, x1, z1, r) => {
+      g.beginPath();
+      g.roundRect(px(x0), pz(z0), (x1 - x0) * k, (z1 - z0) * k, r * k);
+    };
+    for (const L of [MAN, BKN].filter(Boolean)) {
+      g.save();
+      g.shadowColor = 'rgba(0,0,0,.45)';
+      g.shadowBlur = 30;
+      g.shadowOffsetY = 10;
+      g.fillStyle = '#b98b5e';
+      R(L.x0 - WHARF, NS.z0 - WHARF, L.x1 + WHARF, NS.z1 + WHARF, 16);
+      g.fill();
+      g.restore();
+      g.fillStyle = '#4e4796';
+      R(L.x0 - 0.6, NS.z0 - 0.6, L.x1 + 0.6, NS.z1 + 0.6, 13);
+      g.fill();
+    }
+    // Street centre lines, dashed.
+    const { edges } = network();
+    g.setLineDash([10, 12]);
+    g.lineCap = 'round';
+    g.strokeStyle = 'rgba(220,214,255,.28)';
+    g.lineWidth = 2;
+    for (const e of edges) {
+      if (e.kind === 'bridge' || e.a.x > e.b.x || (e.a.x === e.b.x && e.a.z > e.b.z)) continue;
+      g.beginPath();
+      g.moveTo(px(e.a.x), pz(e.a.z));
+      g.lineTo(px(e.b.x), pz(e.b.z));
+      g.stroke();
+    }
+    g.setLineDash([]);
+    // Blocks: rounded, with a soft shadow. Central Park is one green park.
+    const all = blocks(),
+      isPark = b =>
+        PLAN ? b.cell.kind === 'park' || b.cell.kind === 'pond' : b.borough === 'man' && b.i <= 1 && b.j <= 1;
+    for (const b of all) {
+      if (isPark(b)) continue;
+      g.save();
+      g.shadowColor = 'rgba(0,0,0,.35)';
+      g.shadowBlur = 10;
+      g.shadowOffsetY = 4;
+      g.fillStyle = b.wide || (b.i === 1 && b.j === 4) ? '#3b2f86' : '#2e2670';
+      R(b.x0, b.z0, b.x1, b.z1, 4);
+      g.fill();
+      g.restore();
+    }
+    // Parks: in Armin's New York the four park blocks are one Central Park; a
+    // builder city draws each park block on its own.
+    const parkAreas = PLAN
+      ? all.filter(isPark)
+      : [all.filter(isPark)].map(pk => ({
+          x0: Math.min(...pk.map(b => b.x0)),
+          x1: Math.max(...pk.map(b => b.x1)),
+          z0: Math.min(...pk.map(b => b.z0)),
+          z1: Math.max(...pk.map(b => b.z1)),
+        }));
+    for (const area of parkAreas) drawPark(area, !PLAN);
+    // Landmarks: a small glowing marker and the name.
+    for (const b of all) {
+      const lm = LANDMARK[b.i + ',' + b.j];
+      if (!lm) continue;
+      const x = px((b.x0 + b.x1) / 2),
+        y = pz((b.z0 + b.z1) / 2);
+      g.fillStyle = '#cfc6ff';
+      g.shadowColor = '#8a7cff';
+      g.shadowBlur = 14;
+      g.beginPath();
+      g.moveTo(x, y - 22);
+      g.lineTo(x + 9, y + 4);
+      g.lineTo(x - 9, y + 4);
+      g.closePath();
+      g.fill();
+      g.shadowBlur = 0;
+      g.fillStyle = '#d8d2ff';
+      g.font = `700 34px ${HAND}`;
+      g.fillText(lm, x, y + 28);
+    }
+    if (!PLAN) drawNewYorkExtras();
+    else {
+      // A builder city: its name over the island.
+      g.fillStyle = 'rgba(216,210,255,.85)';
+      g.font = `700 56px ${HAND}`;
+      g.textAlign = 'center';
+      g.fillText(PLAN.name, px((MAN.x0 + MAN.x1) / 2), pz(NS.z0) - 34);
+    }
     // Armin's places: a glowing pin with the logo, the name, and the P bay.
     // A P badge on the pin's corner (the place has parking), and names on a dark
     // pill so street lines never run through them.
@@ -434,7 +477,7 @@ export function createMap({ world, car, goTo }) {
         g.fillText('RUSH', x, y + 1);
       }
       badge(x + r * 0.74, y + r * 0.74);
-      if (P.id === 'keel' || hot) label(P.name, x, y - r - 30, P.id === 'keel' ? 46 : 38);
+      if (P.id === 'keel' || PLAN || hot) label(P.name, x, y - r - 30, P.id === 'keel' ? 46 : 38);
     }
     // The row's label.
     const row = places.filter(p => ['rush', 'hindra', 'aaq', 'bigup'].includes(p.id));

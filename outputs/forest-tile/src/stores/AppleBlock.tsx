@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { RoundedBox } from '@react-three/drei';
-import { BRAND, contain, imgTex, round } from './brand';
+import { BRAND, brandKey, contain, fitText, imgTex, round, useBrand, type Brand } from './brand';
 import { Block, Foliage, Mat, Person, Platform, brushed, ctex, noise, rng, stucco } from './kit';
 
 const A = {
@@ -15,7 +15,7 @@ const A = {
   leaf: ['#3f7d2a', '#4c8f31', '#5aa23a', '#6ab544', '#447f2c'],
 };
 
-function T() {
+function T(b: Brand) {
   const font = "-apple-system, 'SF Pro Display', 'Helvetica Neue', Arial";
   return {
     relief: ctex(
@@ -172,47 +172,63 @@ function T() {
       g.fillRect(509, 0, 3, 512);
       g.fillRect(0, 254, 512, 3);
     }),
-    // Keel: the avatar as the store logo, the name, and the landing banner on the display wall.
-    logo: imgTex('keel-logo', 256, 256, [BRAND.keel.logo!], (g, [im]) => {
+    // The brand's logo, its name, and a banner on the display wall (Keel's avatar
+    // and landing banner by default).
+    logo: imgTex(brandKey(b, 'keel-logo'), 256, 256, b.logo ? [b.logo] : [], (g, [im]) => {
       g.fillStyle = '#fff';
       g.beginPath();
       g.arc(128, 128, 124, 0, Math.PI * 2);
       g.fill();
-      round(g, im, 128, 128, 116);
+      if (b.custom) contain(g, im, 44, 44, 168, 168);
+      else round(g, im, 128, 128, 116);
     }),
-    text: ctex('keel-text', 512, 128, g => {
+    text: ctex(brandKey(b, 'keel-text'), 512, 128, g => {
       g.fillStyle = '#fff';
       g.font = `700 76px ${font}`;
       g.textAlign = 'center';
       g.textBaseline = 'middle';
-      g.fillText('Keel.', 256, 66);
+      fitText(g, b.custom ? b.short : 'Keel.', 256, 66, 480);
     }),
-    screen: imgTex('keel-banner', 1600, 800, [BRAND.keel.banner!], (g, [pose]) => {
-      const grd = g.createLinearGradient(0, 0, 0, 800);
-      grd.addColorStop(0, '#ffffff');
-      grd.addColorStop(1, '#eaf0ff');
-      g.fillStyle = grd;
-      g.fillRect(0, 0, 1600, 800);
-      g.fillStyle = '#1d1d1f';
-      g.font = `700 190px ${font}`;
-      g.textBaseline = 'alphabetic';
-      g.textAlign = 'left';
-      g.fillText('Meet', 80, 260);
-      g.fillStyle = BRAND.keel.color;
-      g.fillText('Keel.', 80, 450);
-      g.fillStyle = '#6e6e73';
-      g.font = `500 58px ${font}`;
-      g.fillText('The AI assistant', 84, 570);
-      g.fillText('you text like a friend.', 84, 640);
-      g.fillStyle = BRAND.keel.color;
-      g.beginPath();
-      g.roundRect(80, 680, 470, 96, 48);
-      g.fill();
-      g.fillStyle = '#fff';
-      g.font = `600 44px ${font}`;
-      g.fillText('keeltwin.com', 150, 742);
-      contain(g, pose, 820, 20, 760, 780);
-    }),
+    screen: imgTex(
+      brandKey(b, 'keel-banner'),
+      1600,
+      800,
+      (b.banner ?? b.logo) ? [(b.banner ?? b.logo)!] : [],
+      (g, [pose]) => {
+        const grd = g.createLinearGradient(0, 0, 0, 800);
+        grd.addColorStop(0, '#ffffff');
+        grd.addColorStop(1, '#eaf0ff');
+        g.fillStyle = grd;
+        g.fillRect(0, 0, 1600, 800);
+        g.fillStyle = '#1d1d1f';
+        g.font = `700 190px ${font}`;
+        g.textBaseline = 'alphabetic';
+        g.textAlign = 'left';
+        g.fillText('Meet', 80, 260);
+        g.fillStyle = b.color;
+        fitText(g, b.custom ? `${b.short}.` : 'Keel.', 80, 450, 720);
+        g.fillStyle = '#6e6e73';
+        g.font = `500 58px ${font}`;
+        // The tagline in two lines (Keel's by default).
+        const words = (b.custom ? (b.tagline ?? '') : 'The AI assistant you text like a friend.').split(' ');
+        const half = Math.ceil(words.length / 2);
+        g.fillText(words.slice(0, half).join(' '), 84, 570);
+        g.fillText(words.slice(half).join(' '), 84, 640);
+        const link = b.custom
+          ? (b.link ?? '').replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')
+          : 'keeltwin.com';
+        if (link) {
+          g.fillStyle = b.color;
+          g.beginPath();
+          g.roundRect(80, 680, 470, 96, 48);
+          g.fill();
+          g.fillStyle = '#fff';
+          g.font = `600 44px ${font}`;
+          g.fillText(link.slice(0, 18), 150, 742);
+        }
+        contain(g, pose, 820, 20, 760, 780);
+      },
+    ),
     laptop: ctex('ap-laptop', 128, 80, g => {
       const grd = g.createLinearGradient(0, 0, 128, 80);
       grd.addColorStop(0, '#5aa7ff');
@@ -720,7 +736,7 @@ function Bollard({ position }: { position: [number, number, number] }) {
 }
 
 export default function AppleBlock() {
-  const t = T();
+  const t = T(useBrand(BRAND.keel));
   return (
     <group>
       <Platform

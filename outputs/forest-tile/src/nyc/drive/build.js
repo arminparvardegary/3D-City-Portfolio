@@ -21,6 +21,8 @@ import {
   blocks,
   network,
   CORNER_R,
+  PLAN,
+  planBlocks,
 } from './layout.js';
 
 // The city itself (world units): land and water, sidewalks with curbs, street
@@ -140,7 +142,7 @@ export function buildCity({ reserved = new Set(), pave = new Set(), fills = [] }
     box(x1 - x0 + 0.02, 1.2, NS.z1 - NS.z0 + 0.02, (x0 + x1) / 2, G - 2.6, 0, stone);
   };
   land(MAN.x0, MAN.x1);
-  land(BKN.x0, BKN.x1);
+  if (BKN) land(BKN.x0, BKN.x1);
   // The sea: wave trains of different lengths and directions move the surface and
   // its normals, so the sky and the sun break into moving highlights. A fine
   // grid round the city, a flat plane out to the horizon.
@@ -220,10 +222,14 @@ export function buildCity({ reserved = new Set(), pave = new Set(), fills = [] }
     walkRect(e, MAN.x1, NS.z0, ST[0] - HALF);
     walkRect(e, MAN.x1, ST.at(-1) + HALF, NS.z1);
     walkRect(AV.at(-1) + HALF, MAN.x1, ST[0] - HALF, ST.at(-1) + HALF, true);
-    walkRect(BKN.x0, BAV[0] - HALF, ST[0] - HALF, ST.at(-1) + HALF, true);
-    walkRect(BKN.x0, BKN.x1, NS.z0, ST[0] - HALF);
-    walkRect(BKN.x0, BKN.x1, ST.at(-1) + HALF, NS.z1);
-    walkRect(BAV[1] + HALF, BKN.x1, ST[0] - HALF, ST.at(-1) + HALF);
+    if (BKN) {
+      walkRect(BKN.x0, BAV[0] - HALF, ST[0] - HALF, ST.at(-1) + HALF, true);
+      walkRect(BKN.x0, BKN.x1, NS.z0, ST[0] - HALF);
+      walkRect(BKN.x0, BKN.x1, ST.at(-1) + HALF, NS.z1);
+      walkRect(BAV[1] + HALF, BKN.x1, ST[0] - HALF, ST.at(-1) + HALF);
+    }
+    // A builder city: road segments the plan leaves out are paved over.
+    if (PLAN) for (const r of planBlocks().gaps) walkRect(r.x0, r.x1, r.z0, r.z1);
   }
 
   // --- Street engineering: markings, crosswalks, stop bars, arrows, drainage, parking --
@@ -337,7 +343,7 @@ export function buildCity({ reserved = new Set(), pave = new Set(), fills = [] }
     const edgeRoad =
       (Math.abs(dx) < 1 && (e.a.x === AV[0] || e.a.x === AV.at(-1) || e.a.x === BAV[0])) ||
       (Math.abs(dz) < 1 && (e.a.z === ST[0] || e.a.z === ST.at(-1))); // (the Brooklyn riverside road keeps its lane for the boutiques' bays)
-    if (!(Math.abs(dz) < 1 && e.a.z === ST[5]) && !edgeRoad)
+    if (!(!PLAN && Math.abs(dz) < 1 && e.a.z === ST[5]) && !edgeRoad)
       for (const sd of [-1, 1])
         for (let t = s0 + 3; t < s1 - 3; t += 6.2)
           if (rand() < 0.55)
@@ -456,7 +462,7 @@ export function buildCity({ reserved = new Set(), pave = new Set(), fills = [] }
       });
   const lights = [];
   for (const n of nodes) {
-    if (n.degree < 3) continue;
+    if (n.degree < 3 || n.lightsOff) continue; // a crossing whose lights the builder turned off
     lights.push(n);
     for (const e of n.out) {
       const dx = e.b.x - n.x,
@@ -1003,6 +1009,22 @@ export function buildCity({ reserved = new Set(), pave = new Set(), fills = [] }
     sidewalk(b);
     const inner = { x0: b.x0 + WALK, x1: b.x1 - WALK, z0: b.z0 + WALK, z1: b.z1 - WALK };
     loops.push({ x0: b.x0 + 1, x1: b.x1 - 1, z0: b.z0 + 1, z1: b.z1 - 1, y: top });
+    // A builder city: the block is whatever its cell says.
+    if (PLAN) {
+      const kind = b.cell.kind;
+      if (kind === 'park' || kind === 'pond') {
+        park(b, { pond: kind === 'pond' });
+        streetFurniture(b);
+      } else if (LM[kind]) {
+        streetFurniture(b);
+        LM[kind](b);
+      } else if (kind === 'plaza') streetFurniture(b, { trees: true });
+      else {
+        streetFurniture(b, { trees: kind === 'low' || kind === 'brownstone' });
+        fill(inner, kind === 'brownstone' ? 'bkn' : kind);
+      }
+      continue;
+    }
     if (b.borough === 'man' && b.i <= 1 && b.j <= 1) {
       park(b, { pond: b.i === 0 && b.j === 1 });
       streetFurniture(b);
@@ -1026,7 +1048,7 @@ export function buildCity({ reserved = new Set(), pave = new Set(), fills = [] }
   for (const r of fills) fill(r, r.zone ?? 'low');
 
   // String lights with glowing bulbs across the streets of Armin's corner.
-  {
+  if (!PLAN) {
     const bulb = mat('#fff3c4', { emissive: '#ffb347', emissiveIntensity: 5, roughness: 0.4 }),
       wire = mat('#2b2b2f');
     for (const [z, x0, x1] of [
@@ -1102,7 +1124,13 @@ export function buildCity({ reserved = new Set(), pave = new Set(), fills = [] }
   const SUBWAY = new Set(['1,2', '2,3', '3,4', '2,0', '3,2', '2,5']);
   for (const b of blocks()) {
     const key = b.i + ',' + b.j;
-    if (reserved.has(key) || (b.borough === 'man' && b.i <= 1 && b.j <= 1)) continue;
+    if (
+      reserved.has(key) ||
+      (PLAN
+        ? !['low', 'mid', 'tall', 'brownstone', 'plaza'].includes(b.cell.kind)
+        : b.borough === 'man' && b.i <= 1 && b.j <= 1)
+    )
+      continue;
     // 2.2 in from the corner: on the sidewalk even at the big curved corners.
     const corners = [
         [b.x0 + 2.2, b.z0 + 2.2],
@@ -1113,7 +1141,7 @@ export function buildCity({ reserved = new Set(), pave = new Set(), fills = [] }
       c = (b.i + b.j) % 4;
     hydrant(...corners[c]);
     bin(...corners[(c + 2) % 4]);
-    if (SUBWAY.has(key)) subway(b.x0 + WALK + 4, b.z1 - 1.3);
+    if (!PLAN && SUBWAY.has(key)) subway(b.x0 + WALK + 4, b.z1 - 1.3);
   }
   const steam = [];
   for (let k = 0; k < 3 && parking.length; k++) {
@@ -1163,7 +1191,7 @@ export function buildCity({ reserved = new Set(), pave = new Set(), fills = [] }
       band = (x, z) =>
         Math.abs(z - BRIDGE.z) < DECK_HALF + 1.5 && x > BRIDGE.landM - 2 && x < BRIDGE.landB + 2;
     const strips = [];
-    for (const L of [MAN, BKN]) {
+    for (const L of [MAN, BKN].filter(Boolean)) {
       strips.push(
         { axis: 'x', a0: L.x0 - W, a1: L.x1 + W, edge: NS.z0 - W, s: 1 },
         { axis: 'x', a0: L.x0 - W, a1: L.x1 + W, edge: NS.z1 + W, s: -1 },
@@ -1256,8 +1284,8 @@ export function buildCity({ reserved = new Set(), pave = new Set(), fills = [] }
   }
 
   // --- Liberty Island, in the harbour south of the bridge -----------------------------
-  // Out in the harbour, south of the bridge.
-  {
+  // Out in the harbour, south of the bridge (Armin's New York only).
+  if (!PLAN) {
     const x = 68,
       z = 150,
       grass = mat('#5f8f3f', { roughness: 0.95 });

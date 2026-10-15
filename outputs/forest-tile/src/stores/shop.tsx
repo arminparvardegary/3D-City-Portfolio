@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 import { RoundedBox } from '@react-three/drei';
 import { Foliage, Mat, Platform, ctex, noise, rng } from './kit';
+import { fitText } from './brand';
 
 /* Shared parts for the store blocks: glass, signs, furniture, lamps, paving. */
 
@@ -309,7 +310,7 @@ export function signTex(
     g.font = `${opts.weight ?? 700} ${opts.size ?? 70}px ${opts.family ?? FONT}`;
     g.textAlign = 'center';
     g.textBaseline = 'middle';
-    g.fillText(text, w / 2, h / 2 + 4);
+    fitText(g, text, w / 2, h / 2 + 4, w * 0.92);
   });
 }
 

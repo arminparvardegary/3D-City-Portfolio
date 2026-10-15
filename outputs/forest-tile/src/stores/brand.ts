@@ -1,9 +1,18 @@
 import * as THREE from 'three';
+import { createContext, useContext } from 'react';
 
 // Armin's companies on the store blocks: names, colours and logo images.
 export const BRAND = {
-  rush: { name: 'Rush Graphics', short: 'RUSH', sub: 'GRAPHICS', color: '#ff6b5e', dark: '#141416' },
+  rush: {
+    key: 'rush',
+    name: 'Rush Graphics',
+    short: 'RUSH',
+    sub: 'GRAPHICS',
+    color: '#ff6b5e',
+    dark: '#141416',
+  },
   hindra: {
+    key: 'hindra',
     name: 'Hindra Studio',
     short: 'HINDRA',
     sub: 'STUDIO',
@@ -12,6 +21,7 @@ export const BRAND = {
     logo: 'logos/hindra.png',
   },
   aaq: {
+    key: 'aaq',
     name: 'AAQ Properties',
     short: 'AAQ',
     sub: 'PROPERTIES',
@@ -20,6 +30,7 @@ export const BRAND = {
     logo: 'logos/aaq.png',
   },
   bigup: {
+    key: 'bigup',
     name: 'Big Uppetite',
     short: 'Big Uppetite',
     sub: 'BU',
@@ -29,6 +40,7 @@ export const BRAND = {
     logoWhite: 'logos/biguppetite-white.svg',
   },
   rankd: {
+    key: 'rankd',
     name: 'Rankd',
     short: 'RANKD',
     sub: 'Rank everything',
@@ -37,6 +49,7 @@ export const BRAND = {
     logo: 'logos/rankd.svg',
   },
   keel: {
+    key: 'keel',
     name: 'Keel',
     short: 'Keel',
     sub: 'Your AI assistant',
@@ -46,7 +59,36 @@ export const BRAND = {
     banner: 'keel/pose-chat.webp',
   },
 };
-export const url = (p: string) => `${import.meta.env.BASE_URL}${p}`;
+// A path in public/ gets the site's base; an uploaded logo (a data URL) or a full URL is used as is.
+export const url = (p: string) => (/^(data:|blob:|https?:)/.test(p) ? p : `${import.meta.env.BASE_URL}${p}`);
+
+// A store's brand: what its signs, logos and banner show. The built-in stores
+// default to Armin's companies; a city made in the builder gives each store the
+// brand of the place it stands for (BrandContext, set by mountStores).
+export type Brand = {
+  key: string;
+  name: string;
+  short: string;
+  sub: string;
+  color: string;
+  dark?: string;
+  logo?: string;
+  logoWhite?: string;
+  banner?: string;
+  tagline?: string;
+  link?: string;
+  custom?: boolean;
+};
+export const BrandContext = createContext<Brand | null>(null);
+export const useBrand = (fallback: Brand): Brand => useContext(BrandContext) ?? fallback;
+// Text no wider than maxW: the font shrinks only if it must, so any name fits its sign.
+export function fitText(g: CanvasRenderingContext2D, text: string, x: number, y: number, maxW: number) {
+  const w = g.measureText(text).width;
+  if (w > maxW) g.font = g.font.replace(/(\d+(?:\.\d+)?)px/, (_, n) => `${(+n * maxW) / w}px`);
+  g.fillText(text, x, y);
+}
+// Texture cache key: the built-in brands keep their keys; each custom brand gets its own.
+export const brandKey = (b: Brand, key: string) => (b.custom ? `${b.key}:${key}` : key);
 
 // A canvas texture drawn now and drawn again once its images have loaded.
 const cache = new Map<string, THREE.CanvasTexture>();

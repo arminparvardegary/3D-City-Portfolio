@@ -256,6 +256,9 @@ const LOGO = {
   keel: BRAND.keel.logo,
 };
 
+// Text from a plan goes into HTML: escape it.
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
+
 export function createVisit({ onOpen, onClose, garage }) {
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const prompt = document.createElement('button');
@@ -310,7 +313,19 @@ export function createVisit({ onOpen, onClose, garage }) {
     const logoHtml = logo
       ? `<div class="logo" style="background-image:url('${url(logo)}');${b.id.startsWith('keel') || b.id === 'rankd' ? 'background-size:cover;' : ''}"></div>`
       : `<div class="logo" style="background:#141416;display:grid;place-items:center;color:${BRAND.rush.color};font:italic 900 30px ${FONT}">RUSH</div>`;
-    if (job) {
+    if (b.place) {
+      // A place from a builder city: everything comes from its plan (escaped).
+      const p = b.place,
+        link = p.link && /^https?:\/\//.test(p.link) ? p.link : p.link ? `https://${p.link}` : '';
+      const mark = p.logo
+        ? `<div class="logo" style="background-image:url('${esc(p.logo)}')"></div>`
+        : `<div class="logo" style="background:${esc(p.color)};display:grid;place-items:center;color:#fff;font:700 40px ${HAND}">${esc(p.name.slice(0, 1))}</div>`;
+      const years = [p.from, p.to].filter(Boolean).join(' to ');
+      card.innerHTML = `${mark}<p class="label">Experience</p><h2>${esc(p.name)}</h2><p class="role">${esc(p.role)}</p>
+        ${years ? `<div class="meta"><div><b>${esc(years)}</b><span>Years</span></div></div>` : ''}
+        ${p.note ? `<p class="note">${esc(p.note)}</p>` : ''}
+        <div class="row">${link ? `<a href="${esc(link)}" target="_blank" rel="noopener">${esc(link.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, ''))} ›</a>` : '<span></span>'}<button data-close>Close ×</button></div>`;
+    } else if (job) {
       card.innerHTML = `${logoHtml}<p class="label">Experience</p><h2>${b.name}</h2><p class="role">${job.role}</p>
         <div class="meta"><div><b>${duration(job)}</b><span>${span(job)}</span></div><div><b>${job.place.split(' · ')[0]}</b><span>${job.place.includes('·') ? job.place.split(' · ')[1] : 'On site'}</span></div></div>
         ${job.note ? `<p class="note">${job.note}</p>` : ''}<div class="row"><span></span><button data-close>Close ×</button></div>`;

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { RoundedBox } from '@react-three/drei';
-import { BRAND, contain, imgTex } from './brand';
+import { BRAND, brandKey, contain, fitText, imgTex, useBrand, type Brand } from './brand';
 import { Block, Mat, Person, ctex, rng, stucco } from './kit';
 import {
   Base,
@@ -29,22 +29,29 @@ const M = {
   metal: '#3a3d42',
 };
 
-function T() {
+function T(b: Brand) {
   return {
-    // Big Uppetite: the real logo, white on the dark sign.
-    sign: imgTex('bu-sign', 1024, 256, [BRAND.bigup.logoWhite!], (g, [im]) => {
-      g.fillStyle = M.red;
-      g.fillRect(0, 0, 1024, 256);
-      contain(g, im, 60, 20, 904, 200);
-    }),
+    // The brand's logo on the dark sign (Big Uppetite's, in white, by default).
+    sign: imgTex(
+      brandKey(b, 'bu-sign'),
+      1024,
+      256,
+      b.logoWhite || b.logo ? [(b.logoWhite ?? b.logo)!] : [],
+      (g, [im]) => {
+        g.fillStyle = M.red;
+        g.fillRect(0, 0, 1024, 256);
+        contain(g, im, 60, 20, 904, 200);
+      },
+    ),
     // Big Uppetite: a BU mark in its yellow where the arches were.
     // The "bu" letters of the logo in a yellow circle.
-    arches: imgTex('bu-mark', 256, 256, [BRAND.bigup.logo!], (g, [im]) => {
-      g.fillStyle = M.yellow;
+    arches: imgTex(brandKey(b, 'bu-mark'), 256, 256, b.logo ? [b.logo] : [], (g, [im]) => {
+      g.fillStyle = b.custom ? b.color : M.yellow;
       g.beginPath();
       g.arc(128, 128, 118, 0, Math.PI * 2);
       g.fill();
-      if (im) {
+      if (im && b.custom) contain(g, im, 58, 58, 140, 140);
+      else if (im) {
         const sw = 336,
           sh = 337,
           k = 150 / sh;
@@ -93,7 +100,7 @@ function T() {
       for (let i = 1; i <= 8; i++) g.lineTo(14 + i * 30, 140 - i * 4 - r() * 14);
       g.stroke();
     }),
-    poster: ctex('bu-campaign', 256, 384, g => {
+    poster: ctex(brandKey(b, 'bu-campaign'), 256, 384, g => {
       const grd = g.createLinearGradient(0, 0, 0, 384);
       grd.addColorStop(0, '#1b1d23');
       grd.addColorStop(1, '#3a2f1a');
@@ -107,11 +114,11 @@ function T() {
       g.font = `900 64px ${FONT}`;
       g.textAlign = 'center';
       g.textBaseline = 'middle';
-      g.fillText('BU', 128, 154);
+      g.fillText(b.custom ? b.short.slice(0, 3).toUpperCase() : 'BU', 128, 154);
       g.fillStyle = '#fff';
       g.font = `800 34px ${FONT}`;
-      g.fillText('BRANDS', 128, 270);
-      g.fillText('THAT GROW', 128, 308);
+      fitText(g, b.custom ? b.name.toUpperCase() : 'BRANDS', 128, 270, 232);
+      g.fillText(b.custom ? '' : 'THAT GROW', 128, 308);
     }),
   };
 }
@@ -403,7 +410,7 @@ function Store({ t }: { t: Tex }) {
 }
 
 export default function McDonaldsBlock() {
-  const t = T();
+  const t = T(useBrand(BRAND.bigup));
   return (
     <group>
       <Base kind="mcd" />

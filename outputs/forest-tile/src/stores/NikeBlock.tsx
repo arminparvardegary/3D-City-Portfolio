@@ -1,7 +1,7 @@
 import { Suspense, useMemo } from 'react';
 import * as THREE from 'three';
 import { RoundedBox, useGLTF } from '@react-three/drei';
-import { BRAND, url } from './brand';
+import { BRAND, brandKey, contain, fitText, imgTex, url, useBrand, type Brand } from './brand';
 import { Block, Foliage, Mat, Person, ctex } from './kit';
 import {
   Base,
@@ -43,30 +43,30 @@ function swoosh(g: CanvasRenderingContext2D, x: number, y: number, s: number) {
   g.restore();
 }
 
-function T() {
+function T(b: Brand) {
   return {
-    // Rush Graphics: the wordmark where the swoosh was.
-    swoosh: ctex('rush-mark', 512, 256, g => {
+    // The brand's wordmark where the swoosh was (Rush Graphics by default).
+    swoosh: ctex(brandKey(b, 'rush-mark'), 512, 256, g => {
       g.fillStyle = '#fff';
       g.font = `italic 900 170px ${FONT}`;
       g.textAlign = 'center';
       g.textBaseline = 'middle';
-      g.fillText('RUSH', 256, 116);
-      g.fillStyle = BRAND.rush.color;
+      fitText(g, b.short.toUpperCase(), 256, 116, 470);
+      g.fillStyle = b.color;
       g.fillRect(96, 206, 320, 14);
     }),
-    wordmark: ctex('rush-wordmark', 256, 256, g => {
+    wordmark: ctex(brandKey(b, 'rush-wordmark'), 256, 256, g => {
       g.fillStyle = '#fff';
       g.font = `italic 900 92px ${FONT}`;
       g.textAlign = 'center';
-      g.fillText('RUSH', 128, 112);
-      g.fillStyle = BRAND.rush.color;
+      fitText(g, b.short.toUpperCase(), 128, 112, 236);
+      g.fillStyle = b.color;
       g.font = `800 34px ${FONT}`;
-      g.fillText('GRAPHICS', 128, 170);
+      fitText(g, b.sub.toUpperCase(), 128, 170, 236);
     }),
-    sign: signTex('rush-sign', 'RUSH GRAPHICS', {
+    sign: signTex(brandKey(b, 'rush-sign'), b.name.toUpperCase(), {
       bg: N.black,
-      fg: BRAND.rush.color,
+      fg: b.color,
       size: 56,
       weight: 900,
       family: `italic ${FONT}`,
@@ -319,15 +319,38 @@ function RushLogo({ y }: { y: number }) {
   return <primitive object={logo} position={[0, y, 0]} />;
 }
 
+// Another brand's logo on the roof: a lit panel standing on the parapet.
+function RoofLogo({ src, id, y }: { src: string; id: string; y: number }) {
+  const tex = imgTex(`${id}:roof-logo`, 512, 512, [src], (g, [im]) => contain(g, im, 16, 16, 480, 480));
+  return (
+    <mesh position={[0, y + 0.85, 0]} castShadow>
+      <planeGeometry args={[1.7, 1.7]} />
+      <meshStandardMaterial
+        map={tex}
+        emissiveMap={tex}
+        emissive="#ffffff"
+        emissiveIntensity={0.8}
+        transparent
+        side={2}
+      />
+    </mesh>
+  );
+}
+
 export default function NikeBlock() {
-  const t = T();
+  const b = useBrand(BRAND.rush),
+    t = T(b);
   return (
     <group>
       <Base kind="nike" />
       <Store t={t} />
-      <Suspense fallback={null}>
-        <RushLogo y={TOP + 0.3} />
-      </Suspense>
+      {b.custom ? (
+        b.logo && <RoofLogo src={b.logo} id={b.key} y={TOP + 0.3} />
+      ) : (
+        <Suspense fallback={null}>
+          <RushLogo y={TOP + 0.3} />
+        </Suspense>
+      )}
       <group position={[0, 0.045, 0]}>
         <Bench position={[-1.0, 0, 2.55]} />
         <Bench position={[2.55, 0, -0.9]} rotation={-Math.PI / 2} />

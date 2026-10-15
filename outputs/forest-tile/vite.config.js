@@ -49,7 +49,7 @@ export default defineConfig({
     chunkSizeWarningLimit: 700,
     rollupOptions: {
       // Pages: the map (index), the corner block and New York.
-      input: { main: 'index.html', block: 'block.html', nyc: 'nyc.html' },
+      input: { main: 'index.html', block: 'block.html', nyc: 'nyc.html', editor: 'editor.html' },
       output: {
         manualChunks: { three: ['three'], effects: ['postprocessing', 'n8ao'] },
       },

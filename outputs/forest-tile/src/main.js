@@ -31,6 +31,8 @@ import { createMap } from './ui/map.js';
 import { startAnalytics, track } from './analytics.js';
 startAnalytics();
 import { buildNYCWorld } from './nyc/world.js';
+import { buildCustomWorld } from './nyc/custom.js';
+import { PLAN } from './nyc/drive/layout.js';
 import { createStory } from './world/story.js';
 import { JOBS, PROFILE } from './data/profile.js';
 import { createAudio } from './audio.js';
@@ -113,10 +115,15 @@ if (WORLD === 'nyc') {
   await loadModels(softenShadows, { garageOnly: false });
   useModelVehicles();
 }
+// Armin's New York, or a city made in the builder (opened with ?city=mine).
 const world =
-  WORLD === 'nyc'
-    ? buildNYCWorld({ prep: softenShadows, materials, player: () => carRef?.shown ?? null })
-    : buildCampus({ prep: softenShadows });
+  WORLD !== 'nyc'
+    ? buildCampus({ prep: softenShadows })
+    : (PLAN ? buildCustomWorld : buildNYCWorld)({
+        prep: softenShadows,
+        materials,
+        player: () => carRef?.shown ?? null,
+      });
 scene.add(world.group);
 const tb = tileGrid.bounds,
   bounds = world.bounds ?? { x0: tb.x0 + 0.4, x1: tb.x1 - 0.4, z0: tb.z0 + 0.4, z1: tb.z1 - 0.4 };
@@ -525,7 +532,7 @@ function openPlace(id) {
   } // the Keel billboard
   experience.open(id === 'work' ? experience.first : id);
 }
-if (WORLD === 'nyc') createIntro({ onPlace: focusOn });
+if (WORLD === 'nyc') createIntro({ onPlace: focusOn, person: PLAN?.owner });
 
 // --- Experience story: park in a bay at Experience Row and press Enter ------------
 const story = world.lot

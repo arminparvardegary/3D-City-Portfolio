@@ -20,6 +20,23 @@ Live: https://forest-tile.vercel.app
 | M (hold) or the map | Map: click a place to drive there              |
 | N or the note       | Music on / off                                 |
 
+## Build your own city
+
+Anyone can make a portfolio city like this one, without code: open
+[`/editor.html`](https://forest-tile.vercel.app/editor.html) (or **Build your own city** on the intro card).
+
+- **Roads**: drag along the grid lines to lay or remove them. Size the grid up to 8 x 8.
+- **Blocks**: drag one from the left onto a square, or pick it and paint: your places, a glass boutique,
+  a car garage, walk-ups, offices, towers, brownstones, parks, a plaza and four landmarks.
+- **Traffic lights**: on at every crossing of three or more roads; click one to switch it off.
+- **Your places**: name, role, years, what you did, a link, a colour, your logo and one of five store
+  designs. Park in front and press Enter to open the card.
+- **Save**: it saves in your browser as you go; Download and Open move a city as a file.
+- **Drive it**: opens the game with your city (`/?city=mine`).
+
+The plan format is in `src/plan/plan.js`; the city is built from it by the same code as mine
+(`src/nyc/drive/layout.js`, `build.js`, `src/nyc/custom.js`).
+
 ## Run it
 
 Node.js 20.19+ or 22.12+.

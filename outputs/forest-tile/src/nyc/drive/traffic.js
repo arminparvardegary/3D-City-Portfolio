@@ -42,6 +42,8 @@ const MIX = [
 
 export function createTraffic({ phase, player, prep, count = MIX.length, parked = [], seed = 3 }) {
   const { edges } = network();
+  // At most one car per lane (a small builder city may have only a few roads).
+  count = Math.min(count, edges.filter(e => e.kind === 'road').length);
   let r = seed;
   const rand = () => (r = (r * 16807) % 2147483647) / 2147483647;
   const cars = Array.from({ length: count }, (_, i) => {
@@ -97,7 +99,7 @@ export function createTraffic({ phase, player, prep, count = MIX.length, parked 
       x0: e.a.x + fx * s0 + rx * LANE,
       z0: e.a.z + fz * s0 + rz * LANE,
       axis: Math.abs(fx) > 0.5 ? 'x' : 'z',
-      light: e.b.degree > 2,
+      light: e.b.degree > 2 && !e.b.lightsOff,
     };
   }
   // The way through a crossing: a quadratic curve from the end of one lane to the start of the next.

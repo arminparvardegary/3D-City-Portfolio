@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { RoundedBox } from '@react-three/drei';
-import { BRAND, imgTex } from './brand';
+import { BRAND, brandKey, contain, fitText, imgTex, useBrand, type Brand } from './brand';
 import { Block, Foliage, Mat, Platform, ctex, noise, rng, roundedShape, stucco } from './kit';
 
 /* ---------- palette (sampled from the reference) ---------- */
@@ -25,7 +25,7 @@ const C = {
 };
 
 /* ---------- textures ---------- */
-function T() {
+function T(b: Brand) {
   const font = "-apple-system, 'SF Pro Display', Helvetica, Arial";
   return {
     tiles: ctex(
@@ -152,20 +152,20 @@ function T() {
       repeat: [4, 4],
       color: false,
     }),
-    // Hindra Studio: the deer logo from the brand guidelines.
-    // Slightly over-scaled inside the circle so the crop's light margin never shows.
-    logo: imgTex('hindra-logo', 512, 512, [BRAND.hindra.logo!], (g, [im]) => {
-      if (!im) return;
+    // The brand's logo in a round badge (Hindra Studio's deer by default, slightly
+    // over-scaled inside the circle so the crop's light margin never shows).
+    logo: imgTex(brandKey(b, 'hindra-logo'), 512, 512, b.logo ? [b.logo] : [], (g, [im]) => {
       g.save();
       g.beginPath();
       g.arc(256, 256, 256, 0, Math.PI * 2);
       g.clip();
-      g.fillStyle = '#111';
+      g.fillStyle = b.custom ? '#ffffff' : '#111';
       g.fillRect(0, 0, 512, 512);
-      g.drawImage(im, -40, -40, 592, 592);
+      if (im && !b.custom) g.drawImage(im, -40, -40, 592, 592);
+      else if (im) contain(g, im, 70, 70, 372, 372);
       g.restore();
     }),
-    menu: ctex('mi-menu', 512, 112, g => {
+    menu: ctex(brandKey(b, 'mi-menu'), 512, 112, g => {
       g.fillStyle = C.red;
       g.fillRect(0, 0, 512, 112);
       g.strokeStyle = 'rgba(255,255,255,.85)';
@@ -175,18 +175,18 @@ function T() {
       g.font = `800 64px ${font}`;
       g.textAlign = 'center';
       g.textBaseline = 'middle';
-      g.fillText('STUDIO', 200, 60);
+      fitText(g, b.sub.toUpperCase(), 200, 60, 270);
       g.font = `700 40px ${font}`;
       g.fillText('OPEN', 395, 60);
     }),
-    shopSign: ctex('mi-shopsign', 512, 112, g => {
+    shopSign: ctex(brandKey(b, 'mi-shopsign'), 512, 112, g => {
       g.fillStyle = C.orange;
       g.fillRect(0, 0, 512, 112);
       g.fillStyle = '#fff';
       g.font = `800 66px ${font}`;
       g.textAlign = 'center';
       g.textBaseline = 'middle';
-      g.fillText('HINDRA', 256, 60);
+      fitText(g, b.short.toUpperCase(), 256, 60, 480);
     }),
     upperGlass: ctex('mi-glass', 256, 256, g => {
       const grd = g.createLinearGradient(0, 0, 0, 256);
@@ -1191,7 +1191,7 @@ function SandwichBoard({
 
 /* ---------- block ---------- */
 export default function MiBlock() {
-  const t = T();
+  const t = T(useBrand(BRAND.hindra));
   return (
     <group>
       <Platform
