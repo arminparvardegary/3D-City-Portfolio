@@ -21,6 +21,7 @@ export default defineConfig({
   // Rapier is imported lazily; pre-bundle it so the dev server never serves a stale copy.
   optimizeDeps: { include: ['@dimforge/rapier3d-compat'] },
   build: {
+    target: 'es2022',   // main.js loads the car models with a top level await
     chunkSizeWarningLimit: 700,
     rollupOptions: {
       // Pages: the map (index), the corner block and New York.

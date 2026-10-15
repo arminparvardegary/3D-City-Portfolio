@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { G,HALF,LANE,network,bridgeHeight,onBridgeBand,CORNER_R } from './layout.js';
-import { TYPES, createFleet } from './carfamily.js';
+import { modelType, createModelFleet } from '../../cars/models.js';
 import { dampAngle } from '../../motion.js';
 
 // Traffic that lives on the road network: about twenty cars of every type
@@ -11,16 +11,17 @@ import { dampAngle } from '../../motion.js';
 // red lights and keeps its distance from the car ahead (yours too). Cars never
 // appear or vanish.
 const STOP=HALF+6.1,ACCEL=3,BRAKE=7.5,TURN_SPEED=3.6;
-const MIX=['sedan','taxi','suv','bus','hatch','taxi','truck','jeep','sedan','convertible','taxi','beetle','pickup','muscle','suv','van','taxi','coupe','wagon','police','sports','city'];
+// The downloaded models (cars/models.js), as New York traffic.
+const MIX=['sedan','taxi','suv','bus','hatchback','taxi','truck','pickup','sedan','roadster','taxi','muscle','police-sedan','suv','van','taxi','limousine','sports','muscle-2','police-suv','ambulance','hatchback'];
 
 export function createTraffic({phase,player,prep,count=MIX.length,parked=[],seed=3}){
   const {edges}=network();
   let r=seed;const rand=()=>((r=(r*16807)%2147483647)/2147483647);
-  const cars=Array.from({length:count},(_,i)=>{const type=MIX[i%MIX.length],T=TYPES[type];return {type,color:T.colors[Math.floor(rand()*T.colors.length)],cruise:T.speed*(.9+rand()*.2),len:T.L};});
+  const cars=Array.from({length:count},(_,i)=>{const type=MIX[i%MIX.length],T=modelType(type);return {type,color:T.colors[Math.floor(rand()*T.colors.length)],cruise:T.speed*(.9+rand()*.2),len:T.L};});
   // Parked cars along the curbs: the same family, drawn in the same batches, never moving.
-  const PARKED=['sedan','suv','hatch','city','wagon','coupe','van','pickup','beetle','jeep','muscle','convertible','sedan','taxi','suv'];
-  const still=parked.map((p,i)=>{const type=PARKED[Math.floor(rand()*PARKED.length)],T=TYPES[type];return {...p,type,color:T.colors[Math.floor(rand()*T.colors.length)],len:T.L};});
-  const fleet=createFleet({cars:[...cars,...still],prep});
+  const PARKED=['sedan','suv','hatchback','van','pickup','muscle','roadster','sedan','taxi','suv','sports','limousine'];
+  const still=parked.map((p,i)=>{const type=PARKED[Math.floor(rand()*PARKED.length)],T=modelType(type);return {...p,type,color:T.colors[Math.floor(rand()*T.colors.length)],len:T.L};});
+  const fleet=createModelFleet({cars:[...cars,...still],prep});
   still.forEach((p,i)=>fleet.set(count+i,p.x,G,p.z,p.h));
   const height=e=>e.kind==='bridge'?bridgeHeight:()=>0;
   // A lane: from just after the start crossing to just before the end one.
@@ -116,6 +117,6 @@ export function createTraffic({phase,player,prep,count=MIX.length,parked=[],seed
   // Parked cars are two circles each (front and back), at street level.
   // Each moving car is three circles as wide as the car, nose to tail, so a
   // near miss is a miss and a bumper hit is a hit.
-  const half=t=>(TYPES[t.type]?.W??1.66)/2,circles=[...state.flatMap(()=>[[0,0,1,0],[0,0,1,0],[0,0,1,0]]),...still.flatMap(p=>[-1,1].map(k=>[p.x+Math.sin(p.h)*k*1.1,p.z+Math.cos(p.h)*k*1.1,.9,0]))];
+  const half=t=>(modelType(t.type)?.W??1.66)/2,circles=[...state.flatMap(()=>[[0,0,1,0],[0,0,1,0],[0,0,1,0]]),...still.flatMap(p=>[-1,1].map(k=>[p.x+Math.sin(p.h)*k*1.1,p.z+Math.cos(p.h)*k*1.1,.9,0]))];
   return {root:fleet.root,update,cars:state,obstacles(){state.forEach((t,i)=>{const r=half(t),k=Math.max(0,(t.len??4)/2-r),fx=Math.sin(t.h),fz=Math.cos(t.h);for(let j=0;j<3;j++){const c=circles[i*3+j],o=(j-1)*k;c[0]=t.x+fx*o;c[1]=t.z+fz*o;c[2]=r;c[3]=t.y-G;}});return circles;}};
 }

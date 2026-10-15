@@ -253,7 +253,7 @@ export function buildGarage({x,z,top,w=9,d=17,h=5.2,facing=-1,makeCar}){
     add(new THREE.TorusGeometry(2.75,.05,8,72).rotateX(Math.PI/2),white,x,top+.44,z+tz);
     add(new THREE.TorusGeometry(2.2,.04,8,64).rotateX(Math.PI/2),white,x,top+h-.6,z+tz);
     const spin=new THREE.Group();spin.position.set(x,top+.43,z+tz);root.add(spin);
-    try{makeCar?.(k?4:0,spin);}catch{}
+    try{makeCar?.(k?2:1,spin);}catch(e){console.warn(e);}   // Roadster and Muscle on the turntables
     tables.push(spin);}
   let clock=0;
   return {root,solid:base.solid,update(dt){clock+=Math.min(dt,.1);tables.forEach((t,i)=>{t.rotation.y=clock*.25*(i?-1:1);});white.emissiveIntensity=2+Math.sin(clock*1.2)*.3;}};

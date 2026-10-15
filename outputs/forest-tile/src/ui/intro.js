@@ -19,7 +19,7 @@ const card=css`
   .role b{color:${WARM};font-weight:600;}
   .hint{display:flex;align-items:center;gap:10px;margin:18px 0 0;font-size:15px;color:${DIM};}
   .hint .p{flex:none;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:${WARM};color:#1a1035;font:900 17px ${FONT};}
-  .hint kbd{white-space:nowrap;font:inherit;color:${INK};border:1px solid #ffffff33;border-radius:6px;padding:0 6px;}
+  .hint kbd{display:inline-block;width:auto;white-space:nowrap;font:inherit;color:${INK};border:1px solid #ffffff33;border-radius:6px;padding:0 6px;}
   .go{margin-top:24px;width:100%;height:56px;border-radius:28px;background:${WARM};color:#1a1035;font-family:${HAND};font-size:28px;font-weight:700;box-shadow:0 0 24px #ff9a4a66;transition:transform .3s ${SPRING};}
   .go:active{transform:scale(.97);}
   .links{display:flex;justify-content:center;margin-top:16px;}

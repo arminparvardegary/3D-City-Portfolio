@@ -26,9 +26,10 @@ function addContact(parts){const m=new THREE.Mesh(new THREE.PlaneGeometry(parts.
   m.position.y=SEAT+.035;m.renderOrder=1;parts.rig.add(m);}
 // Road height under a point (null where there is no road), for bridges and ramps.
 let surface=null;
-const AMBULANCE=VEHICLES.findIndex(q=>q.name==='Ambulance');
+let AMBULANCE=-1;   // the siren flashes only on the built-in ambulance (set when the controls are made)
 
 export function createCarControls(parent,m,{prep,index=0,home:start=null}={}){
+  AMBULANCE=VEHICLES.findIndex(q=>q.name==='Ambulance'&&!q.model);
   const home=start??{x:ART.car.position[0],z:ART.car.position[2],h:ART.car.rotation};
   const C=FEEL.car,S=FEEL.suspension;
   let cy=0,x=home.x,z=home.z,h=home.h,v=0,vy=0,yaw=0,steer=0,a=0,lat=0,brakeRamp=0,head=.55,tail=.45,slide=0,rollAngle=0;

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { ART } from './config.js';
 import { box, mesh, tint, mergeStatic } from './geometry.js';
 import { buildRealCar, realWheels, physicalPaint } from './realcar.js';
+import { MODELS, modelInfo, buildModelVehicle } from './cars/models.js';
 
 // A small kit of clean toy vehicles in the style of the tile: soft rounded
 // bodies with real wheel wells, a tinted glass cabin under a painted roof, dark
@@ -217,7 +218,15 @@ export const VEHICLES=[
 
 // Builds vehicle i into a rig: `car` is the sprung body (it pitches and rolls
 // while driving), the wheels hang off the rig so they stay planted.
+// New York drives the downloaded models (cars/models.js): once they are loaded,
+// the vehicle list becomes those 21 cars.
+export function useModelVehicles(){
+  VEHICLES.length=0;
+  for(const M of MODELS){const C=modelInfo(M.id);if(C)VEHICLES.push({name:M.name,color:C.paintColor,model:M.id,real:true});}
+}
+
 export function buildVehicle(i,parent,m,prep,{merge=true}={}){
+  if(VEHICLES[i]?.model){const parts=buildModelVehicle(VEHICLES[i].model,parent);parts.rig.position.set(...ART.car.position);parts.rig.rotation.y=ART.car.rotation;parts.model=true;return parts;}
   const veh=VEHICLES[i],rig=new THREE.Group();rig.name='vehicle';
   rig.position.set(...ART.car.position);rig.rotation.y=ART.car.rotation;parent.add(rig);
   const body=new THREE.Group();rig.add(body);
@@ -234,6 +243,7 @@ export function buildVehicle(i,parent,m,prep,{merge=true}={}){
 export function disposeVehicle(parts,m){
   const shared=new Set(Object.values(m));
   parts.rig.removeFromParent();
+  if(parts.model){parts.paint?.dispose();return;}   // model geometry is shared with the loaded copy
   parts.rig.traverse(o=>{if(!o.isMesh)return;o.geometry.dispose();if(!shared.has(o.material)){o.material.map?.dispose();o.material.dispose();}});
 }
 

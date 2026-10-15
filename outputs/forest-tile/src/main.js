@@ -23,7 +23,8 @@ import { buildNYCWorld } from './nyc/world.js';
 import { createStory } from './world/story.js';
 import { JOBS, PROFILE } from './data/profile.js';
 import { createAudio } from './audio.js';
-import { VEHICLES } from './vehicles.js';
+import { VEHICLES, useModelVehicles } from './vehicles.js';
+import { loadModels } from './cars/models.js';
 import { FEEL, damp, dampAngle, spring } from './motion.js';
 
 const viewport=document.querySelector('#viewport');
@@ -75,6 +76,8 @@ Object.values(materials).forEach(softenShadows);
 // The numbered tiles show only with ?tiles; normally the playground floor is the map.
 const tileGrid=buildGrid(softenShadows);if(new URLSearchParams(location.search).has('tiles'))scene.add(tileGrid.group);
 let carRef=null;   // the world's traffic watches your car (set once the car exists)
+// New York's cars are the downloaded models: load them before the city (traffic) and the car.
+if(WORLD==='nyc'){await loadModels(softenShadows);useModelVehicles();}
 const world=WORLD==='nyc'?buildNYCWorld({prep:softenShadows,materials,player:()=>carRef?.shown??null}):buildCampus({prep:softenShadows});scene.add(world.group);
 const tb=tileGrid.bounds,bounds=world.bounds??{x0:tb.x0+.4,x1:tb.x1-.4,z0:tb.z0+.4,z1:tb.z1-.4};
 const skyTint=WORLD==='nyc'?THEME.nyc.sky:THEME.sky;
@@ -450,8 +453,8 @@ for(const b of document.querySelectorAll('[data-drive]')){
   for(const ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,()=>car.press(k,false));
 }
 
-// The vehicle is hardcoded: the City car.
-car.select(VEHICLES.findIndex(v=>v.name===CAR_MODEL));
+// The vehicle is hardcoded on the other pages (New York keeps the garage choice).
+if(!CHASE)car.select(VEHICLES.findIndex(v=>v.name===CAR_MODEL));
 // X-ray: where a building hides the car, its outline shows through in its colour
 // (drawn only where something is in front of it). Not needed behind the car.
 if(!CHASE){const ghost=new THREE.MeshBasicMaterial({color:world.carColor??'#ff6b5e',transparent:true,opacity:.55,depthWrite:false,depthFunc:THREE.GreaterDepth});
