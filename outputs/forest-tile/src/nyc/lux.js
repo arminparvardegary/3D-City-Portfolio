@@ -19,7 +19,7 @@ const marble=(()=>{let tex=null;return()=>{if(tex)return tex;const c=document.cr
   g.strokeStyle='rgba(120,110,100,.35)';for(let i=0;i<=256;i+=64){g.beginPath();g.moveTo(i,0);g.lineTo(i,256);g.moveTo(0,i);g.lineTo(256,i);g.stroke();}
   tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;tex.wrapS=tex.wrapT=THREE.RepeatWrapping;return tex;};})();
 
-export function buildLux({x,z,top,w=9,d=15,h=5,facing=-1,style=0,palette=null,band=true}){
+export function buildLux({x,z,top,w=9,d=15,h=5,facing=-1,style=0,palette=null,band=true,showroom=false}){
   const S=palette||LUX[style%LUX.length],K=createKit({flat:false}),{box,cyl,add,mat}=K,root=new THREE.Group(),f=facing;
   const gold=mat(S.gold,{metalness:.95,roughness:.25,envMapIntensity:1.6});
   const goldGlow=mat(S.gold,{emissive:S.gold,emissiveIntensity:2.2,roughness:.4});
@@ -51,26 +51,26 @@ export function buildLux({x,z,top,w=9,d=15,h=5,facing=-1,style=0,palette=null,ba
   for(let t=-hw+1.5;t<hw-1;t+=1.5)box(.06,.08,d-.3,x+t,top+h-.3,z,gold);
   // Floor: gold inlay lines and a round rug.
   for(let t=-hd+1;t<hd;t+=2.5)box(w-.4,.012,.05,x,top+.26,z+t,goldGlow);
-  add(new THREE.CylinderGeometry(2.3,2.3,.02,48),rug,[x,top+.27,z]);add(new THREE.TorusGeometry(2.3,.03,6,64).rotateX(Math.PI/2),gold,[x,top+.28,z]);
+  if(!showroom){add(new THREE.CylinderGeometry(2.3,2.3,.02,48),rug,[x,top+.27,z]);add(new THREE.TorusGeometry(2.3,.03,6,64).rotateX(Math.PI/2),gold,[x,top+.28,z]);}
   // Two crystal chandeliers.
   for(const cz of [-hd*.45,hd*.45]){cyl(.02,.02,1.2,6,x,top+h-1.5,z+cz,gold);
     for(const [r,n,y] of [[.75,14,h-1.6],[.5,10,h-1.85],[.25,6,h-2.1]])for(let i=0;i<n;i++){const a=i/n*Math.PI*2;add(new THREE.OctahedronGeometry(.07,0),crystal,[x+Math.cos(a)*r,top+y,z+cz+Math.sin(a)*r]);}
     add(new THREE.TorusGeometry(.75,.025,6,40).rotateX(Math.PI/2),gold,[x,top+h-1.55,z+cz]);add(new THREE.OctahedronGeometry(.14,0),crystal,[x,top+h-2.35,z+cz]);}
   // The lounge: a curved velvet sofa open toward the doors, a marble and gold table, two armchairs.
-  {const sofa=new THREE.TorusGeometry(1.55,.32,10,28,Math.PI).rotateX(Math.PI/2).rotateY(f>0?-Math.PI/2:Math.PI/2).scale(1,.75,1);add(sofa,velvet,[x,top+.55,z]);
+  if(!showroom){const sofa=new THREE.TorusGeometry(1.55,.32,10,28,Math.PI).rotateX(Math.PI/2).rotateY(f>0?-Math.PI/2:Math.PI/2).scale(1,.75,1);add(sofa,velvet,[x,top+.55,z]);
     cyl(.6,.6,.08,32,x,top+.72,z,floorM);add(new THREE.TorusGeometry(.6,.03,6,40).rotateX(Math.PI/2),gold,[x,top+.76,z]);cyl(.08,.14,.45,10,x,top+.27,z,gold);
     for(const s2 of [-1,1]){const [ax,az]=inner(-1.9,s2*1.1);box(.8,.42,.8,ax,top+.27,az,velvet);box(.8,.5,.16,ax-f*.32,top+.6,az,velvet);}}
   // Glass vitrines on gold frames along the walls, each with a lit piece.
-  const vglass=new THREE.MeshPhysicalMaterial({color:'#ffffff',transparent:true,opacity:.18,roughness:.02,metalness:0,envMapIntensity:2,depthWrite:false});
+  if(!showroom)for(const _ of [0]){const vglass=new THREE.MeshPhysicalMaterial({color:'#ffffff',transparent:true,opacity:.18,roughness:.02,metalness:0,envMapIntensity:2,depthWrite:false});
   for(const lz of [-hd+2.6,hd-2.6])for(const lx of [-1.6,1.6]){const [vx,vz]=inner(lx,lz);
     box(.8,.85,.8,vx,top+.27,vz,black);box(.84,.04,.84,vx,top+1.12,vz,gold);
     const g2=new THREE.Mesh(new THREE.BoxGeometry(.78,.7,.78),vglass);g2.position.set(vx,top+1.5,vz);g2.renderOrder=3;root.add(g2);
-    add(new THREE.IcosahedronGeometry(.16,1),crystal,[vx,top+1.36,vz]);}
+    add(new THREE.IcosahedronGeometry(.16,1),crystal,[vx,top+1.36,vz]);}}
   // Backlit gold slats on both end walls.
   for(const sz of [-1,1]){const wz=z+sz*(hd-.12);box(w-.6,h-1.2,.04,x,top+.6,wz,ceilGlow);
     for(let t=-hw+.6;t<=hw-.6;t+=.36)box(.08,h-1.2,.1,x+t,top+.6,wz-sz*.06,gold);}
   // A gold ring sculpture on a black plinth, toward the back.
-  {const [sx,sz]=inner(2.6,-hd*.25);box(.7,.6,.7,sx,top+.27,sz,black);add(new THREE.TorusGeometry(.75,.07,12,48).rotateY(Math.PI/2),gold,[sx,top+1.7,sz]);}
+  if(!showroom){const [sx,sz]=inner(2.6,-hd*.25);box(.7,.6,.7,sx,top+.27,sz,black);add(new THREE.TorusGeometry(.75,.07,12,48).rotateY(Math.PI/2),gold,[sx,top+1.7,sz]);}
   // Olive trees in black planters, in the back corners.
   for(const lz of [-hd+1,hd-1]){const [tx,tz]=inner(hw-.9,lz);cyl(.38,.3,.6,12,tx,top+.27,tz,black);cyl(.05,.07,1.6,6,tx,top+.85,tz,mat('#6a4a33'));
     for(const [ox,oy,oz] of [[0,2.6,0],[.3,2.3,.2],[-.3,2.4,-.2]])add(new THREE.SphereGeometry(.45,10,8),mat('#7d9466',{roughness:.9}),[tx+ox,top+oy,tz+oz]);}
@@ -230,4 +230,31 @@ export function buildRankdBoutique({x,z,top,w=9,d=17,h=5.2,facing=-1}){
   return {root,solid:base.solid,update(dt){clock+=Math.min(dt,.1);
     badges.forEach((b,i)=>{b.sp.position.set(x+f*(hw-1.5)+Math.sin(clock*.45+b.ph)*.5,b.y+Math.sin(clock*1+b.ph)*.2,z+(i-1)*3.4);});
     amber.emissiveIntensity=1.9+Math.sin(clock*1.1)*.4;}};
+}
+
+// The Lux Garage: a glass car showroom in platinum and dark glass, LUX GARAGE lit
+// on the roof, two glowing turntables slowly turning display cars. Park in its bay
+// and press Enter to change your own car. `makeCar(i)` builds a display car.
+export function buildGarage({x,z,top,w=9,d=17,h=5.2,facing=-1,makeCar}){
+  const PLAT='#d6dbe2',f=facing;
+  const base=buildLux({x,z,top,w,d,h,facing,band:false,showroom:true,palette:{gold:PLAT,tint:'#10151c',velvet:'#26272c'}});
+  const root=base.root,hw=w/2,hd=d/2,face=f>0?Math.PI/2:-Math.PI/2;
+  const white=new THREE.MeshStandardMaterial({color:'#eef4ff',emissive:'#cfe0ff',emissiveIntensity:2.2,roughness:.4});
+  const add=(geo,m,px,py,pz,ry=0)=>{const o=new THREE.Mesh(geo,m);o.position.set(px,py,pz);o.rotation.y=ry;root.add(o);return o;};
+  add(new THREE.BoxGeometry(w+.62,.1,d+.62),white,x,top+h+.16,z);
+  const word=imgTex('garage-roof',2048,460,[],g=>{g.clearRect(0,0,2048,460);g.font=`300 230px ${SANS}`;g.textAlign='center';g.textBaseline='middle';g.fillStyle='#ffffff';
+    g.fillText('L U X   G A R A G E',1024,230);});
+  const wm=new THREE.MeshStandardMaterial({map:word,emissiveMap:word,emissive:'#ffffff',emissiveIntensity:1.1,transparent:true,depthWrite:false,side:THREE.DoubleSide});
+  add(new THREE.PlaneGeometry(8.8,1.98),wm,x+f*(hw-.6),top+h+1.3,z,face);
+  // Turntables with display cars, slowly turning, each under a ring of light.
+  const tables=[];
+  for(const [k,tz] of [[0,-hd*.42],[1,hd*.42]]){
+    add(new THREE.CylinderGeometry(2.7,2.8,.18,48),new THREE.MeshStandardMaterial({color:'#1a1c22',roughness:.15,metalness:.6}),x,top+.34,z+tz);
+    add(new THREE.TorusGeometry(2.75,.05,8,72).rotateX(Math.PI/2),white,x,top+.44,z+tz);
+    add(new THREE.TorusGeometry(2.2,.04,8,64).rotateX(Math.PI/2),white,x,top+h-.6,z+tz);
+    const spin=new THREE.Group();spin.position.set(x,top+.43,z+tz);root.add(spin);
+    try{makeCar?.(k?4:0,spin);}catch{}
+    tables.push(spin);}
+  let clock=0;
+  return {root,solid:base.solid,update(dt){clock+=Math.min(dt,.1);tables.forEach((t,i)=>{t.rotation.y=clock*.25*(i?-1:1);});white.emissiveIntensity=2+Math.sin(clock*1.2)*.3;}};
 }

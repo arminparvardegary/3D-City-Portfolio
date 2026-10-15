@@ -37,12 +37,18 @@ const cardCls=css`
   a{color:${WARM};text-decoration:none;}
   button{padding:6px 2px;}
   a:focus-visible,button:focus-visible{outline:3px solid #ff9a4a88;outline-offset:2px;border-radius:8px;}
+  .models{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:34vh;overflow:auto;margin-top:8px;}
+  .models button{font:600 15px ${FONT};text-align:left;padding:10px 12px;border-radius:14px;background:#ffffff10;color:${INK};}
+  .models button[aria-pressed="true"]{background:${WARM};color:#1a1035;}
+  .paints{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0 16px;}
+  .paints button{width:34px;height:34px;padding:0;border-radius:50%;box-shadow:inset 0 0 0 2px #ffffff33;}
+  .paints button[aria-pressed="true"]{box-shadow:0 0 0 3px ${WARM};}
   @media(max-width:520px){left:16px;right:16px;top:16px;width:auto;padding:22px;h2{font-size:40px;}}
 `;
 
 const LOGO={rankd:BRAND.rankd.logo,rush:null,hindra:BRAND.hindra.logo,aaq:BRAND.aaq.logo,bigup:BRAND.bigup.logo,keel:BRAND.keel.logo};
 
-export function createVisit({onOpen,onClose}){
+export function createVisit({onOpen,onClose,garage}){
   const reduced=matchMedia('(prefers-reduced-motion: reduce)');
   const prompt=document.createElement('button');prompt.className=promptCls;prompt.hidden=true;
   const card=document.createElement('section');card.className=cardCls;card.hidden=true;card.setAttribute('aria-live','polite');
@@ -57,6 +63,15 @@ export function createVisit({onOpen,onClose}){
       card.innerHTML=`${logoHtml}<p class="label">Experience</p><h2>${b.name}</h2><p class="role">${job.role}</p>
         <div class="meta"><div><b>${duration(job)}</b><span>${span(job)}</span></div><div><b>${job.place.split(' · ')[0]}</b><span>${job.place.includes('·')?job.place.split(' · ')[1]:'On site'}</span></div></div>
         ${job.note?`<p class="note">${job.note}</p>`:''}<div class="row"><span></span><button data-close>Close ×</button></div>`;
+    }else if(b.id==='garage'&&garage){   // the Lux Garage: pick a car and a paint
+      const cur=garage.current();
+      card.innerHTML=`<p class="label">Lux Garage</p><h2>Choose your car</h2>
+        <div class="models">${garage.models.map((n,i)=>`<button data-i="${i}" aria-pressed="${i===cur.i}">${n}</button>`).join('')}</div>
+        <p class="label" style="margin-top:14px">Paint</p>
+        <div class="paints">${garage.colors.map(c=>`<button data-c="${c}" aria-label="Paint ${c}" aria-pressed="${c===cur.color}" style="background:${c}"></button>`).join('')}</div>
+        <div class="row"><span></span><button data-close>Done ×</button></div>`;
+      card.querySelector('.models').onclick=e=>{const t=e.target.closest('[data-i]');if(!t)return;garage.choose(+t.dataset.i,garage.current().color);fill(b);};
+      card.querySelector('.paints').onclick=e=>{const t=e.target.closest('[data-c]');if(!t)return;garage.choose(garage.current().i,t.dataset.c);fill(b);};
     }else if(b.id==='rankd'){
       card.innerHTML=`${logoHtml}<p class="label">My project</p><h2>Rankd</h2><p class="role">Bring your list. Leave with a real one.</p>
         <p class="note">Head to head ranking for movies, TV and books. Rankd asks one question at a time, which is better, until every title has its own number. No stars. No ties.</p>

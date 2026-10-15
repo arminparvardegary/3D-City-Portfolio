@@ -264,9 +264,18 @@ addEventListener('keydown',e=>{if(e.key==='Enter'&&!prompt.hidden&&!e.repeat){e.
 
 // Sound: engine, tyres, wind, horn (H), the city round you; M or the button mutes.
 const audio=createAudio({car,world,maxSpeed:()=>FEEL.car.maxSpeed});
+// Night driving: two warm headlight beams that light the road ahead (added again when the car changes).
+function addHeadlights(){if(!CHASE||car.rig.userData.beam)return;const beam=new THREE.SpotLight('#ffd7a1',60,38,.42,.55,1.3);beam.position.set(0,.75,1.7);beam.target.position.set(0,0,14);car.rig.add(beam,beam.target);car.rig.userData.beam=beam;}
+addHeadlights();
+// The car you drive: model and paint, chosen in the Lux Garage and remembered.
+const PAINTS=['#b5121b','#0f0f12','#f4f2ee','#c9a45c','#1f3a6b','#0f3a2c','#7a1f3d','#8a9099','#f5bf0a','#3c6fd1'];
+let carChoice={i:Math.max(0,VEHICLES.findIndex(v=>v.name===CAR_MODEL)),color:world.carColor??'#b5121b'};
+const applyCar=({i,color})=>{car.select(i);car.paint.color.set(color);addHeadlights();carChoice={i,color};try{localStorage.setItem('nyc-car',JSON.stringify(carChoice));}catch{}needsRender=true;};
+try{const saved=JSON.parse(localStorage.getItem('nyc-car')||'null');if(CHASE&&saved&&VEHICLES[saved.i])applyCar(saved);}catch{}
 // Parking: stop in a bay in front of a place and press Enter for its card; the
 // camera turns to the store while the card is open.
 const visit=world.parking?createVisit({
+  garage:{models:VEHICLES.map(v=>v.name),colors:PAINTS,current:()=>carChoice,choose:(i,color)=>applyCar({i,color})},
   onOpen:b=>{const ax=b.axis==='z'?'x':'z',side=Math.sign(ax==='x'?b.x-b.store.x:b.z-b.store.z)||1;focus={x:b.store.x,z:b.store.z,y:3.2,dist:21,side,axis:ax,zoom};followHold=0;needsRender=true;},
   onClose:()=>{focus=null;needsRender=true;},
 }):null;
@@ -279,8 +288,6 @@ const speedo=CHASE?document.createElement('div'):null;
 if(speedo){speedo.className='speedo';speedo.setAttribute('aria-hidden','true');speedo.innerHTML='<b>0</b><span>km/h</span>';document.querySelector('.scene').append(speedo);}
 let shownKmh=-1;
 const updateSpeedo=()=>{if(!speedo)return;const k=Math.round((car.shown?.speed??0)*5.4);if(k!==shownKmh){shownKmh=k;speedo.firstChild.textContent=k;}};
-// Night driving: two warm headlight beams that light the road ahead.
-if(CHASE){const beam=new THREE.SpotLight('#ffd7a1',60,38,.42,.55,1.3);beam.position.set(0,.75,1.7);beam.target.position.set(0,0,14);car.rig.add(beam,beam.target);}
 car.onHit=s=>{audio.hit(s);if(!reducedMotion.matches&&s>.2)trauma=Math.min(1,trauma+s*.8);};
 addEventListener('keydown',e=>{if(story?.active&&/^Arrow/.test(e.key))audio.ui.step();});
 
